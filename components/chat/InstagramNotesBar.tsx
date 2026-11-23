@@ -813,7 +813,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full flex items-center justify-center font-bold text-zinc-600 dark:text-zinc-300 text-base">
+                <div className="w-full h-full flex items-center justify-center font-semibold text-zinc-600 dark:text-zinc-300 text-base">
                   {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
                 </div>
               )}
@@ -870,7 +870,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   {note.photoURL ? (
                     <img src={note.photoURL} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-zinc-700 dark:text-zinc-300 text-sm">
+                    <div className="w-full h-full flex items-center justify-center font-semibold text-zinc-700 dark:text-zinc-300 text-sm">
                       {(note.displayName || 'U')[0]?.toUpperCase()}
                     </div>
                   )}
@@ -903,7 +903,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   {friend.photoURL ? (
                     <img src={friend.photoURL} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-zinc-700 dark:text-zinc-300 text-sm">
+                    <div className="w-full h-full flex items-center justify-center font-semibold text-zinc-700 dark:text-zinc-300 text-sm">
                       {(friend.displayName || friend.shopName || 'U')[0]?.toUpperCase()}
                     </div>
                   )}
@@ -938,7 +938,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                 <X className="w-6 h-6 stroke-[2.5]" />
               </button>
 
-              <h2 className="text-base font-bold text-zinc-900 dark:text-white">
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-white">
                 New note
               </h2>
 
@@ -1012,7 +1012,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center font-bold text-3xl text-zinc-600 dark:text-zinc-300">
+                      <div className="w-full h-full flex items-center justify-center font-semibold text-3xl text-zinc-600 dark:text-zinc-300">
                         {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
                       </div>
                     )}
@@ -1048,7 +1048,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                     )}
                     title="Add GIF"
                   >
-                    <span className="text-[12px] font-black tracking-wider">GIF</span>
+                    <span className="text-[12px] font-semibold tracking-wider">GIF</span>
                   </button>
 
                   {/* 3. Mood Smiley Button */}
@@ -1126,7 +1126,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                         )}
                       </div>
                       <div className="text-left max-w-[130px] truncate">
-                        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                        <p className="text-xs font-medium text-zinc-900 dark:text-white truncate">
                           {selectedMusic.title}
                         </p>
                         <p className="text-[10px] text-zinc-500 truncate">
@@ -1155,7 +1155,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowNoteSettings(true)}
-                  className="font-bold text-[#0064E0] hover:underline cursor-pointer"
+                  className="font-semibold text-[#0064E0] hover:underline cursor-pointer"
                 >
                   Change
                 </button>
@@ -1184,7 +1184,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                 Cancel
               </button>
 
-              <h3 className="font-bold text-base text-zinc-900 dark:text-white">
+              <h3 className="font-semibold text-base text-zinc-900 dark:text-white">
                 Note settings
               </h3>
 
@@ -1201,7 +1201,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
             <div className="flex-1 overflow-y-auto p-4 space-y-6 max-w-lg mx-auto w-full">
               {/* Section 1: Who can see your note? */}
               <div className="space-y-2">
-                <span className="text-xs font-bold text-zinc-500 uppercase px-2">
+                <span className="text-xs font-medium text-zinc-500 uppercase px-2">
                   Who can see your note?
                 </span>
 
@@ -1266,7 +1266,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
 
               {/* Section 2: Show note for */}
               <div className="space-y-2">
-                <span className="text-xs font-bold text-zinc-500 uppercase px-2">
+                <span className="text-xs font-medium text-zinc-500 uppercase px-2">
                   Show note for
                 </span>
 
@@ -1314,14 +1314,14 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                 <X className="w-6 h-6 stroke-[2.5]" />
               </button>
 
-              <h2 className="text-base font-bold text-zinc-900 dark:text-white">
+              <h2 className="text-base font-semibold text-zinc-900 dark:text-white">
                 New note
               </h2>
 
               <button
                 type="button"
                 onClick={() => setShowMoodPicker(false)}
-                className="font-bold text-base text-[#0064E0] cursor-pointer"
+                className="font-semibold text-base text-[#0064E0] cursor-pointer"
               >
                 Done
               </button>
@@ -1329,7 +1329,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
 
             <div className="flex-1 overflow-y-auto flex flex-col items-center max-w-md mx-auto w-full">
               {/* Subtitle (Exact IMG_5577) */}
-              <p className="text-sm font-bold text-zinc-900 dark:text-white pt-4 pb-2 px-6 text-center">
+              <p className="text-sm font-semibold text-zinc-900 dark:text-white pt-4 pb-2 px-6 text-center">
                 Choose up to three emojis to reveal your mood:
               </p>
 
@@ -1346,7 +1346,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                     ✕
                   </button>
 
-                  <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 mb-2">Mood</span>
+                  <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 mb-2">Mood</span>
 
                   {/* 3 Emoji Slots (Exact IMG_5577) */}
                   <div className="flex items-center gap-2">
@@ -1384,7 +1384,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   {currentUser?.photoURL ? (
                     <img src={currentUser.photoURL} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-2xl">
+                    <div className="w-full h-full flex items-center justify-center font-semibold text-2xl">
                       {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
                     </div>
                   )}
@@ -1397,7 +1397,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowNoteSettings(true)}
-                  className="font-bold text-[#0064E0]"
+                  className="font-semibold text-[#0064E0]"
                 >
                   Change
                 </button>
@@ -1466,13 +1466,13 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   {viewingNote.photoURL ? (
                     <img src={viewingNote.photoURL} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-sm">
+                    <div className="w-full h-full flex items-center justify-center font-semibold text-sm">
                       {(viewingNote.displayName || 'U')[0]?.toUpperCase()}
                     </div>
                   )}
                 </div>
                 <div>
-                  <h3 className="font-bold text-sm text-zinc-900 dark:text-white leading-tight">
+                  <h3 className="font-semibold text-sm text-zinc-900 dark:text-white leading-tight">
                     {viewingNote.displayName}
                   </h3>
                   <span className="text-[11px] text-zinc-400">Just now</span>
@@ -1517,7 +1517,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                         <button
                           type="button"
                           onClick={() => handleDeleteNote(viewingNote.userId)}
-                          className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-red-500 font-bold text-sm text-center hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
+                          className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-red-500 font-semibold text-sm text-center hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer"
                         >
                           Delete
                         </button>
@@ -1528,7 +1528,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                             setShowOptionsMenu(false);
                             handleOpenCreator(true);
                           }}
-                          className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm text-center hover:bg-zinc-300 dark:hover:bg-zinc-700 transition cursor-pointer"
+                          className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-sm text-center hover:bg-zinc-300 dark:hover:bg-zinc-700 transition cursor-pointer"
                         >
                           Replace Note
                         </button>
@@ -1539,7 +1539,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                             notify('Reported note', 'info');
                             setShowOptionsMenu(false);
                           }}
-                          className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-bold text-sm text-center hover:bg-zinc-300 dark:hover:bg-zinc-700 transition cursor-pointer"
+                          className="w-full py-3 px-6 rounded-2xl bg-[#E4E6EB] dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 font-semibold text-sm text-center hover:bg-zinc-300 dark:hover:bg-zinc-700 transition cursor-pointer"
                         >
                           Report
                         </button>
@@ -1575,20 +1575,20 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   {viewingNote.photoURL ? (
                     <img src={viewingNote.photoURL} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-3xl">
+                    <div className="w-full h-full flex items-center justify-center font-semibold text-3xl">
                       {(viewingNote.displayName || 'U')[0]?.toUpperCase()}
                     </div>
                   )}
                 </div>
 
                 {/* Author Name */}
-                <h2 className="text-lg font-bold text-zinc-900 dark:text-white mt-4">
+                <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mt-4">
                   {viewingNote.displayName}
                 </h2>
 
                 {/* "Shared with Friends" & "Expires in 24h" (Exact IMG_5578) */}
                 <p className="text-sm text-zinc-500 mt-1">
-                  Shared with <span className="font-bold text-zinc-800 dark:text-zinc-200">Friends</span>
+                  Shared with <span className="font-semibold text-zinc-800 dark:text-zinc-200">Friends</span>
                 </p>
                 <p className="text-sm text-zinc-400 mt-0.5">
                   Expires in {formatExpiresIn(viewingNote.expiresAtMs)}
@@ -1624,7 +1624,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                       )}
                     </div>
                     <div className="text-left min-w-0 max-w-[165px]">
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                      <p className="text-xs font-medium text-zinc-900 dark:text-white truncate">
                         {viewingNote.musicTitle}
                       </p>
                       <p className="text-[10px] text-zinc-500 truncate">
@@ -1678,7 +1678,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                         <span key={i} className="text-base">{r.emoji}</span>
                       ))}
                     </div>
-                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       {Object.keys(viewingNote.reactions).length}
                     </span>
                   </div>
@@ -1721,7 +1721,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                     <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                       <User className="w-5 h-5 fill-current" />
                     </div>
-                    <span className="text-xs font-bold">See activity</span>
+                    <span className="text-xs font-medium">See activity</span>
                   </button>
 
                   <button
@@ -1732,7 +1732,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                     <div className="w-10 h-10 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
                       <PlusCircle className="w-5 h-5 fill-current" />
                     </div>
-                    <span className="text-xs font-bold">Replace note</span>
+                    <span className="text-xs font-medium">Replace note</span>
                   </button>
                 </div>
               ) : (
@@ -1784,7 +1784,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
               <button
                 type="button"
                 onClick={() => setShowActivitySheet(false)}
-                className="text-base text-[#0064E0] font-bold cursor-pointer"
+                className="text-base text-[#0064E0] font-semibold cursor-pointer"
               >
                 Done
               </button>
@@ -1808,17 +1808,17 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                   {viewingNote.photoURL ? (
                     <img src={viewingNote.photoURL} alt="" className="w-full h-full object-cover" />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center font-bold text-2xl">
+                    <div className="w-full h-full flex items-center justify-center font-semibold text-2xl">
                       {(viewingNote.displayName || 'Y')[0]?.toUpperCase()}
                     </div>
                   )}
                 </div>
 
-                <h3 className="text-base font-bold text-zinc-900 dark:text-white mt-3">
+                <h3 className="text-base font-semibold text-zinc-900 dark:text-white mt-3">
                   {viewingNote.displayName}
                 </h3>
                 <p className="text-xs text-zinc-500 mt-0.5">
-                  Shared with <span className="font-bold text-zinc-700 dark:text-zinc-300">Friends</span>
+                  Shared with <span className="font-semibold text-zinc-700 dark:text-zinc-300">Friends</span>
                 </p>
                 <p className="text-xs text-zinc-400 mt-0.5">
                   Expires in {formatExpiresIn(viewingNote.expiresAtMs)}
@@ -1827,7 +1827,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
 
               {/* Reactions Section Header (Exact IMG_5580) */}
               <div className="mt-8 border-t border-zinc-100 dark:border-zinc-800 pt-4">
-                <h4 className="font-bold text-sm text-zinc-500 uppercase tracking-wider mb-3">
+                <h4 className="font-semibold text-sm text-zinc-500 uppercase tracking-wider mb-3">
                   Reactions
                 </h4>
 
@@ -1840,7 +1840,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                             {r.userAvatar ? (
                               <img src={r.userAvatar} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-sm">
+                              <div className="w-full h-full flex items-center justify-center font-semibold text-sm">
                                 {r.userName[0]?.toUpperCase()}
                               </div>
                             )}
@@ -1933,7 +1933,7 @@ export const InstagramNotesBar: React.FC<InstagramNotesBarProps> = ({
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm text-zinc-900 dark:text-white truncate">{track.title}</p>
+                        <p className="font-semibold text-sm text-zinc-900 dark:text-white truncate">{track.title}</p>
                         <p className="text-xs text-zinc-500 truncate">{track.artist}</p>
                       </div>
                     </div>

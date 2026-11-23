@@ -174,7 +174,7 @@ const ManageConfig: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5 text-shine">
               App Settings
             </h1>
-            <p className="text-zinc-400 text-[10px] md:text-xs font-bold tracking-normal">
+            <p className="text-zinc-400 text-[10px] md:text-xs font-normal tracking-normal">
               Manage Connections and Keys
             </p>
           </div>
@@ -353,7 +353,7 @@ const ManageConfig: React.FC = () => {
               Paste raw SVG code strings below for the Shop Bottom Navigation icons. Custom SVGs completely replace the default website icons.
             </p>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
                 Home Icon SVG Code
               </label>
               <textarea
@@ -367,7 +367,7 @@ const ManageConfig: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
                 Document / Orders Icon SVG Code
               </label>
               <textarea
@@ -381,7 +381,7 @@ const ManageConfig: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
                 Search Icon SVG Code
               </label>
               <textarea
@@ -395,7 +395,7 @@ const ManageConfig: React.FC = () => {
               />
             </div>
             <div className="space-y-2">
-              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
                 Profile Icon SVG Code
               </label>
               <textarea
@@ -457,7 +457,7 @@ const ManageConfig: React.FC = () => {
                 }
               />
               {!configs.storeOpen && (
-                <p className="text-[10px]  font-bold text-red-500 mt-4 tracking-normal px-1">
+                <p className="text-[10px]  font-semibold text-red-500 mt-4 tracking-normal px-1">
                   Orders are currently paused
                 </p>
               )}
@@ -474,13 +474,13 @@ const ManageConfig: React.FC = () => {
                   })
                 }
               />
-              <p className="text-[10px]  font-bold text-zinc-500 mt-4 tracking-normal px-1">
+              <p className="text-[10px]  font-normal text-zinc-500 mt-4 tracking-normal px-1">
                 Controls Mystery Box visibility
               </p>
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+              <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                 Base Delivery Charge (৳)
               </label>
               <input
@@ -497,7 +497,7 @@ const ManageConfig: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+              <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                 Global Store Notice (Optional)
               </label>
               <textarea
@@ -511,7 +511,7 @@ const ManageConfig: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+              <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                 Flash Deal End Time
               </label>
               <input
@@ -566,7 +566,7 @@ const ManageConfig: React.FC = () => {
             />
 
             <div className="pt-6 border-t border-zinc-200 dark:border-zinc-700">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">Bank Details (For Foreign Orders)</h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">Bank Details (For Foreign Orders)</h3>
               <div className="space-y-4">
                 <Field
                   label="Bank Name"
@@ -616,7 +616,7 @@ const ManageConfig: React.FC = () => {
         >
           <div className="space-y-4">
             <div>
-              <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+              <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                 Minimum Withdrawal (৳)
               </label>
               <input
@@ -633,7 +633,7 @@ const ManageConfig: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T1 Target
                 </label>
                 <input
@@ -649,7 +649,7 @@ const ManageConfig: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T1 Commission (৳)
                 </label>
                 <input
@@ -667,7 +667,7 @@ const ManageConfig: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T2 Target
                 </label>
                 <input
@@ -683,7 +683,7 @@ const ManageConfig: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T2 Commission (৳)
                 </label>
                 <input
@@ -701,7 +701,7 @@ const ManageConfig: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T3 Target
                 </label>
                 <input
@@ -717,7 +717,7 @@ const ManageConfig: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T3 Commission (৳)
                 </label>
                 <input
@@ -735,7 +735,7 @@ const ManageConfig: React.FC = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T4 Target
                 </label>
                 <input
@@ -751,7 +751,7 @@ const ManageConfig: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-zinc-400  mb-2 block tracking-normal">
+                <label className="text-[10px] font-medium text-zinc-400  mb-2 block tracking-normal">
                   T4 Commission (৳)
                 </label>
                 <input
@@ -783,8 +783,8 @@ const ManageConfig: React.FC = () => {
             {voiceBotOptions.map((opt, idx) => (
               <div key={opt.id} className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-800 space-y-4">
                 <div className="flex justify-between items-center">
-                  <h4 className="text-xs font-bold text-zinc-600 dark:text-zinc-400">Option {idx + 1}</h4>
-                  <button onClick={() => setVoiceBotOptions(voiceBotOptions.filter((_, i) => i !== idx))} className="text-red-500 text-xs font-bold hover:underline">Remove</button>
+                  <h4 className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Option {idx + 1}</h4>
+                  <button onClick={() => setVoiceBotOptions(voiceBotOptions.filter((_, i) => i !== idx))} className="text-red-500 text-xs font-semibold hover:underline">Remove</button>
                 </div>
                 <Field
                   label="Button Text (User asks)"
@@ -805,7 +805,7 @@ const ManageConfig: React.FC = () => {
                   }}
                 />
                 <div>
-                    <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block tracking-normal">Duration (seconds)</label>
+                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block tracking-normal">Duration (seconds)</label>
                     <input type="number" 
                       className="w-full bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl text-sm outline-none border border-zinc-200 dark:border-zinc-700 focus:border-black transition-colors"
                       value={opt.responseDuration} 
@@ -870,7 +870,7 @@ const ManageConfig: React.FC = () => {
         >
           <div className="space-y-6">
             <div className="p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/70 dark:border-blue-900/50 space-y-1.5">
-              <p className="text-xs font-bold text-zinc-900 dark:text-white">
+              <p className="text-xs font-medium text-zinc-900 dark:text-white">
                 Smart Android APK &amp; iOS Home Screen Detection
               </p>
               <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -883,7 +883,7 @@ const ManageConfig: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700">
                 <div>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                     Android APK Prompt
                   </p>
                   <p className="text-[11px] text-zinc-500">
@@ -905,7 +905,7 @@ const ManageConfig: React.FC = () => {
 
               <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-800/80 border border-zinc-200/80 dark:border-zinc-700">
                 <div>
-                  <p className="text-sm font-bold text-zinc-900 dark:text-white">
+                  <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                     iOS Home Screen Guide
                   </p>
                   <p className="text-[11px] text-zinc-500">
@@ -964,7 +964,7 @@ const ManageConfig: React.FC = () => {
             />
 
             <div>
-              <label className="text-[10px] font-bold text-zinc-400 mb-2 block tracking-normal">
+              <label className="text-[10px] font-medium text-zinc-400 mb-2 block tracking-normal">
                 Popup Style Template
               </label>
               <select
@@ -1000,7 +1000,7 @@ const ManageConfig: React.FC = () => {
         >
           <div className="space-y-8">
             <div className="p-5 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-800">
-              <h3 className="text-sm font-bold text-zinc-900 dark:text-white mb-2">Professional Custom Auth Domain</h3>
+              <h3 className="text-sm font-semibold text-zinc-900 dark:text-white mb-2">Professional Custom Auth Domain</h3>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-4 tracking-normal">
                 Normally Firebase uses <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded">project-id.firebaseapp.com</code>. For a professional look (e.g., <code className="bg-zinc-200 dark:bg-zinc-700 px-1 rounded">auth.yourdomain.com</code>), follow these steps:
               </p>
@@ -1105,7 +1105,7 @@ const ManageConfig: React.FC = () => {
         <button
           disabled={saving}
           onClick={handleSave}
-          className="w-full md:w-auto px-12 py-4 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-full font-bold tracking-wide shadow-xl active:scale-95 transition-all outline-none! hover-lift disabled:opacity-50 flex items-center justify-center gap-2"
+          className="w-full md:w-auto px-12 py-4 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-full font-semibold tracking-wide shadow-xl active:scale-95 transition-all outline-none! hover-lift disabled:opacity-50 flex items-center justify-center gap-2"
         >
           {saving ? (
             <>
@@ -1162,7 +1162,7 @@ const AccordionSection = ({
 
 const Field = ({ label, value, onChange, placeholder }: any) => (
   <div>
-    <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block tracking-normal">
+    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block tracking-normal">
       {label}
     </label>
     <input
@@ -1177,7 +1177,7 @@ const Field = ({ label, value, onChange, placeholder }: any) => (
 
 const Toggle = ({ label, active, onToggle }: any) => (
   <div className="flex justify-between items-center">
-    <span className="text-xs font-bold">{label}</span>
+    <span className="text-xs font-medium">{label}</span>
     <div
       onClick={onToggle}
       className={`w-12 h-7 rounded-full transition-all relative cursor-pointer p-1 ${active ? "bg-zinc-900" : "bg-zinc-200"}`}

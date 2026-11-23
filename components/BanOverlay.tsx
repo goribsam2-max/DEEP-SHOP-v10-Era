@@ -91,14 +91,14 @@ export default function BanOverlay() {
         <div className="w-16 h-16 bg-red-500/12 rounded-2xl border border-red-500/20 flex items-center justify-center mx-auto mb-5">
           <ShieldAlert className="w-8 h-8 text-[#FF453A]" />
         </div>
-        <h1 className="ds-apple-display text-[22px] font-bold text-[#F5F5F7] mb-2 tracking-tight">
+        <h1 className="ds-apple-display text-[22px] font-semibold text-[#F5F5F7] mb-2 tracking-tight">
           Access Denied
         </h1>
         <p className="text-[14px] text-[#98989D] mb-6 leading-relaxed">
           Access to this site from your account or device has been permanently restricted due to 3 repeated violations involving abusive language or fraudulent details.
         </p>
         <div className="bg-[#2C2C2E] p-4 rounded-2xl border border-red-500/20">
-          <p className="text-xs font-bold text-[#FF453A] uppercase tracking-wider">
+          <p className="text-xs font-medium text-[#FF453A] uppercase tracking-wider">
             Status: Permanently Banned
           </p>
           <p className="text-[11px] text-[#98989D] mt-1">

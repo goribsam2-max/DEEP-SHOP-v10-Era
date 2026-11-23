@@ -377,7 +377,7 @@ export default function ManageSecurity() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#090A0F] text-white font-bold text-sm">
+      <div className="min-h-screen flex items-center justify-center bg-[#090A0F] text-white font-semibold text-sm">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
           <span>Verifying Super Admin Security Clearance...</span>
@@ -400,11 +400,11 @@ export default function ManageSecurity() {
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-lg sm:text-xl md:text-2xl font-black tracking-tight text-white truncate">
+                <h1 className="text-lg sm:text-xl md:text-2xl font-semibold tracking-tight text-white truncate">
                   Platform Security & Threat Radar
                 </h1>
                 <span className={cn(
-                  "px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider flex items-center gap-1 border shrink-0",
+                  "px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider flex items-center gap-1 border shrink-0",
                   allWarningsFixed 
                     ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
                     : "bg-amber-500/20 text-amber-400 border-amber-500/30"
@@ -426,7 +426,7 @@ export default function ManageSecurity() {
               onClick={handleAutoFixAll}
               disabled={isHardening}
               className={cn(
-                "w-full sm:w-auto px-5 py-3 rounded-2xl font-black text-xs transition flex items-center justify-center gap-2 shadow-xl cursor-pointer active:scale-98",
+                "w-full sm:w-auto px-5 py-3 rounded-2xl font-semibold text-xs transition flex items-center justify-center gap-2 shadow-xl cursor-pointer active:scale-98",
                 allWarningsFixed
                   ? "bg-emerald-600/30 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/40"
                   : "bg-gradient-to-r from-amber-500 via-emerald-600 to-emerald-500 hover:from-amber-400 hover:to-emerald-400 text-white shadow-emerald-600/30 ring-2 ring-emerald-400/50"
@@ -445,7 +445,7 @@ export default function ManageSecurity() {
               ) : (
                 <>
                   <Zap className="w-4 h-4 text-amber-300 fill-amber-300 animate-pulse" />
-                  <span className="font-extrabold">⚡ 1-Click Auto-Fix & Harden All</span>
+                  <span className="font-semibold">⚡ 1-Click Auto-Fix & Harden All</span>
                 </>
               )}
             </button>
@@ -474,7 +474,7 @@ export default function ManageSecurity() {
                 {allWarningsFixed ? <Check className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
               </div>
               <div className="min-w-0">
-                <h4 className="text-xs sm:text-sm font-black text-white">
+                <h4 className="text-xs sm:text-sm font-semibold text-white">
                   {allWarningsFixed 
                     ? "Security Posture: 100% Fully Protected & Auto-Remediated" 
                     : "Security Radar: 2 Active Hardening Recommendations Detected"}
@@ -491,7 +491,7 @@ export default function ManageSecurity() {
               <button
                 type="button"
                 onClick={handleAutoFixAll}
-                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs transition shrink-0 cursor-pointer shadow-md flex items-center justify-center gap-1.5"
+                className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold text-xs transition shrink-0 cursor-pointer shadow-md flex items-center justify-center gap-1.5"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>Fix All Now (1-Click)</span>
@@ -504,8 +504,8 @@ export default function ManageSecurity() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <div className="p-4 sm:p-5 rounded-3xl bg-[#11131A] border border-zinc-800 shadow-md flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Platform Score</p>
-              <h3 className={cn("text-xl sm:text-2xl font-black mt-1", allWarningsFixed ? "text-emerald-400" : "text-amber-400")}>
+              <p className="text-[10px] sm:text-xs font-normal text-zinc-400 uppercase tracking-wider">Platform Score</p>
+              <h3 className={cn("text-xl sm:text-2xl font-semibold mt-1", allWarningsFixed ? "text-emerald-400" : "text-amber-400")}>
                 {stats.securityScore}%
               </h3>
               <p className="text-[10px] text-zinc-500 mt-0.5">{allWarningsFixed ? "Zero critical gaps" : "2 warnings to fix"}</p>
@@ -517,8 +517,8 @@ export default function ManageSecurity() {
 
           <div className="p-4 sm:p-5 rounded-3xl bg-[#11131A] border border-zinc-800 shadow-md flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Live Audit Events</p>
-              <h3 className="text-xl sm:text-2xl font-black text-white mt-1">{liveEvents.length}</h3>
+              <p className="text-[10px] sm:text-xs font-normal text-zinc-400 uppercase tracking-wider">Live Audit Events</p>
+              <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">{liveEvents.length}</h3>
               <p className="text-[10px] text-zinc-500 mt-0.5">Real-time DB sync</p>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
@@ -528,8 +528,8 @@ export default function ManageSecurity() {
 
           <div className="p-4 sm:p-5 rounded-3xl bg-[#11131A] border border-zinc-800 shadow-md flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">Banned Words</p>
-              <h3 className="text-xl sm:text-2xl font-black text-white mt-1">{stats.bannedWordsCount}</h3>
+              <p className="text-[10px] sm:text-xs font-normal text-zinc-400 uppercase tracking-wider">Banned Words</p>
+              <h3 className="text-xl sm:text-2xl font-semibold text-white mt-1">{stats.bannedWordsCount}</h3>
               <p className="text-[10px] text-zinc-500 mt-0.5">Chat & group filter</p>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center shrink-0">
@@ -539,8 +539,8 @@ export default function ManageSecurity() {
 
           <div className="p-4 sm:p-5 rounded-3xl bg-[#11131A] border border-zinc-800 shadow-md flex items-center justify-between">
             <div>
-              <p className="text-[10px] sm:text-xs font-bold text-zinc-400 uppercase tracking-wider">SSRF & Key Guard</p>
-              <h3 className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">
+              <p className="text-[10px] sm:text-xs font-normal text-zinc-400 uppercase tracking-wider">SSRF & Key Guard</p>
+              <h3 className="text-xl sm:text-2xl font-semibold text-emerald-400 mt-1">
                 {allWarningsFixed ? "Active" : "Enforcing"}
               </h3>
               <p className="text-[10px] text-zinc-500 mt-0.5">Backend proxy active</p>
@@ -569,7 +569,7 @@ export default function ManageSecurity() {
                 type="button"
                 onClick={() => setActiveTab(tab.id as any)}
                 className={cn(
-                  "px-3.5 sm:px-4 py-2.5 rounded-2xl text-xs font-bold transition flex items-center gap-2 cursor-pointer shrink-0 border",
+                  "px-3.5 sm:px-4 py-2.5 rounded-2xl text-xs font-medium transition flex items-center gap-2 cursor-pointer shrink-0 border",
                   isActive
                     ? "bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20"
                     : "bg-[#11131A] text-zinc-400 hover:text-white border-zinc-800 hover:border-zinc-700"
@@ -591,7 +591,7 @@ export default function ManageSecurity() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping" />
-                  <h2 className="text-sm sm:text-base font-black text-white">Live Platform Activity & Threat Radar</h2>
+                  <h2 className="text-sm sm:text-base font-semibold text-white">Live Platform Activity & Threat Radar</h2>
                 </div>
 
                 <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
@@ -605,7 +605,7 @@ export default function ManageSecurity() {
                       type="button"
                       onClick={() => setEventFilter(f.id as any)}
                       className={cn(
-                        "px-3 py-1 rounded-xl text-xs font-bold transition cursor-pointer shrink-0",
+                        "px-3 py-1 rounded-xl text-xs font-medium transition cursor-pointer shrink-0",
                         eventFilter === f.id ? "bg-zinc-700 text-white shadow-xs" : "text-zinc-400 hover:text-white"
                       )}
                     >
@@ -618,7 +618,7 @@ export default function ManageSecurity() {
               {/* Event Stream List */}
               <div className="space-y-2.5">
                 {eventsLoading ? (
-                  <div className="p-16 text-center text-xs text-zinc-400 font-bold flex flex-col items-center gap-2">
+                  <div className="p-16 text-center text-xs text-zinc-400 font-medium flex flex-col items-center gap-2">
                     <RefreshCw className="w-6 h-6 text-emerald-500 animate-spin" />
                     <span>Connecting live Firestore event radar...</span>
                   </div>
@@ -646,9 +646,9 @@ export default function ManageSecurity() {
 
                         <div className="min-w-0 flex-1 space-y-0.5">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-black text-white">{ev.title}</span>
+                            <span className="text-xs font-semibold text-white">{ev.title}</span>
                             <span className={cn(
-                              "text-[9px] font-black uppercase px-2 py-0.2 rounded",
+                              "text-[9px] font-medium uppercase px-2 py-0.2 rounded",
                               ev.severity === 'high' ? "bg-rose-500/20 text-rose-400" : ev.severity === 'medium' ? "bg-amber-500/20 text-amber-400" : "bg-emerald-500/20 text-emerald-400"
                             )}>
                               {ev.severity}
@@ -676,26 +676,26 @@ export default function ManageSecurity() {
         {activeTab === 'threat_model' && (
           <div className="space-y-6">
             <div className="p-4 sm:p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
-              <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
                 <Layers className="w-5 h-5 text-emerald-400" />
                 <span>Core Assets & Sensitivity Matrix</span>
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                 <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2">
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-400">Critical Sensitivity</span>
-                  <h3 className="text-xs sm:text-sm font-black text-white">KYC & Identity Documents</h3>
+                  <span className="text-[10px] font-medium uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-400">Critical Sensitivity</span>
+                  <h3 className="text-xs sm:text-sm font-semibold text-white">KYC & Identity Documents</h3>
                   <p className="text-xs text-zinc-400">National ID (NID) photos, passport scans, and verification status in `kyc_requests`.</p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2">
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-400">Critical Sensitivity</span>
-                  <h3 className="text-xs sm:text-sm font-black text-white">Financial & Payment Proofs</h3>
+                  <span className="text-[10px] font-medium uppercase px-2 py-0.5 rounded bg-rose-500/20 text-rose-400">Critical Sensitivity</span>
+                  <h3 className="text-xs sm:text-sm font-semibold text-white">Financial & Payment Proofs</h3>
                   <p className="text-xs text-zinc-400">bKash/Nagad TrxIDs, bank deposit slips, order payment receipts in `deposits` and `orders`.</p>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 space-y-2 sm:col-span-2 lg:col-span-1">
-                  <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400">High Sensitivity</span>
-                  <h3 className="text-xs sm:text-sm font-black text-white">Private Communications</h3>
+                  <span className="text-[10px] font-medium uppercase px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400">High Sensitivity</span>
+                  <h3 className="text-xs sm:text-sm font-semibold text-white">Private Communications</h3>
                   <p className="text-xs text-zinc-400">Direct buyer-seller messages, voice notes, and media in `chats` and `p2p_chats`.</p>
                 </div>
               </div>
@@ -704,7 +704,7 @@ export default function ManageSecurity() {
             {/* Top Threat Scenarios with 1-Click Fix Buttons */}
             <div className="p-4 sm:p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
                   <AlertTriangle className="w-5 h-5 text-amber-400" />
                   <span>Top Threat Scenarios & Mitigations</span>
                 </h2>
@@ -712,7 +712,7 @@ export default function ManageSecurity() {
                   <button
                     type="button"
                     onClick={handleAutoFixAll}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                   >
                     <Zap className="w-3.5 h-3.5" />
                     <span>Auto-Fix All</span>
@@ -724,12 +724,12 @@ export default function ManageSecurity() {
                 {/* Threat Scenario 1: SSRF */}
                 <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-black text-xs shrink-0">1</div>
+                    <div className="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center font-semibold text-xs shrink-0">1</div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-xs font-black text-white">SSRF (Server-Side Request Forgery) in Link Preview</h4>
+                        <h4 className="text-xs font-semibold text-white">SSRF (Server-Side Request Forgery) in Link Preview</h4>
                         <span className={cn(
-                          "text-[9px] font-black uppercase px-2 py-0.2 rounded",
+                          "text-[9px] font-medium uppercase px-2 py-0.2 rounded",
                           isSsrfFixed ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400"
                         )}>
                           {isSsrfFixed ? "Resolved & Protected" : "Action Needed"}
@@ -749,7 +749,7 @@ export default function ManageSecurity() {
                       notify("SSRF Protection Verified & Active!", "success");
                     }}
                     className={cn(
-                      "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer",
+                      "px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer",
                       isSsrfFixed
                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                         : "bg-amber-500 hover:bg-amber-400 text-zinc-950"
@@ -763,12 +763,12 @@ export default function ManageSecurity() {
                 {/* Threat Scenario 2: ImgBB Key */}
                 <div className="p-4 rounded-2xl bg-zinc-900/90 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0 flex-1">
-                    <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-black text-xs shrink-0">2</div>
+                    <div className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-semibold text-xs shrink-0">2</div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-xs font-black text-white">Client-Side Embedded API Keys</h4>
+                        <h4 className="text-xs font-semibold text-white">Client-Side Embedded API Keys</h4>
                         <span className={cn(
-                          "text-[9px] font-black uppercase px-2 py-0.2 rounded",
+                          "text-[9px] font-medium uppercase px-2 py-0.2 rounded",
                           isImgbbProxyFixed ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400"
                         )}>
                           {isImgbbProxyFixed ? "Resolved & Protected" : "Action Needed"}
@@ -788,7 +788,7 @@ export default function ManageSecurity() {
                       notify("Image Upload Proxy Verified & Active!", "success");
                     }}
                     className={cn(
-                      "px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer",
+                      "px-3.5 py-2 rounded-xl text-xs font-medium transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer",
                       isImgbbProxyFixed
                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                         : "bg-amber-500 hover:bg-amber-400 text-zinc-950"
@@ -808,7 +808,7 @@ export default function ManageSecurity() {
           <div className="space-y-6">
             <div className="p-4 sm:p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
                   <Key className="w-5 h-5 text-emerald-400" />
                   <span>Secrets & Key Storage Audit</span>
                 </h2>
@@ -816,7 +816,7 @@ export default function ManageSecurity() {
                   <button
                     type="button"
                     onClick={handleAutoFixAll}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                   >
                     <Zap className="w-3.5 h-3.5" />
                     <span>Auto-Protect All Keys</span>
@@ -827,30 +827,30 @@ export default function ManageSecurity() {
               <div className="space-y-3">
                 <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black text-white">Firebase Admin Service Account</p>
+                    <p className="text-xs font-semibold text-white">Firebase Admin Service Account</p>
                     <p className="text-[10px] text-zinc-400">Environment variable: `FIREBASE_SERVICE_ACCOUNT` (Server-side only)</p>
                   </div>
-                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto">
+                  <span className="text-[10px] font-medium uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto">
                     Protected
                   </span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black text-white">VAPID Push Notifications Private Key</p>
+                    <p className="text-xs font-semibold text-white">VAPID Push Notifications Private Key</p>
                     <p className="text-[10px] text-zinc-400">Environment variable: `VAPID_PRIVATE_KEY` (Server-side only)</p>
                   </div>
-                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto">
+                  <span className="text-[10px] font-medium uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto">
                     Protected
                   </span>
                 </div>
 
                 <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
-                    <p className="text-xs font-black text-white">Nodemailer SMTP Password</p>
+                    <p className="text-xs font-semibold text-white">Nodemailer SMTP Password</p>
                     <p className="text-[10px] text-zinc-400">Environment variable: `SMTP_PASS` (Server-side only)</p>
                   </div>
-                  <span className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto">
+                  <span className="text-[10px] font-medium uppercase px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 self-start sm:self-auto">
                     Protected
                   </span>
                 </div>
@@ -858,9 +858,9 @@ export default function ManageSecurity() {
                 <div className="p-4 rounded-2xl bg-zinc-900 border border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div>
                     <div className="flex items-center gap-2">
-                      <p className="text-xs font-black text-white">ImgBB Image Upload API Key</p>
+                      <p className="text-xs font-semibold text-white">ImgBB Image Upload API Key</p>
                       <span className={cn(
-                        "text-[9px] font-black uppercase px-2 py-0.2 rounded",
+                        "text-[9px] font-medium uppercase px-2 py-0.2 rounded",
                         isImgbbProxyFixed ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"
                       )}>
                         {isImgbbProxyFixed ? "Backend Proxied" : "Client Exposed"}
@@ -875,10 +875,10 @@ export default function ManageSecurity() {
                       notify("ImgBB Key Encapsulation Active!", "success");
                     }}
                     className={cn(
-                      "px-3.5 py-1.5 rounded-xl text-[10px] font-black uppercase transition cursor-pointer self-start sm:self-auto",
+                      "px-3.5 py-1.5 rounded-xl text-[10px] font-medium uppercase transition cursor-pointer self-start sm:self-auto",
                       isImgbbProxyFixed
                         ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                        : "bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold"
+                        : "bg-amber-500 hover:bg-amber-400 text-zinc-950 font-semibold"
                     )}
                   >
                     {isImgbbProxyFixed ? "100% Protected" : "1-Click Fix"}
@@ -893,45 +893,45 @@ export default function ManageSecurity() {
         {activeTab === 'attack_surface' && (
           <div className="space-y-6">
             <div className="p-4 sm:p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
-              <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+              <h2 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
                 <Globe className="w-5 h-5 text-emerald-400" />
                 <span>Reachable HTTP API Surface (`server.ts`)</span>
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800">
-                  <p className="text-xs font-mono font-bold text-emerald-400">GET /api/web-push/public-key</p>
+                  <p className="text-xs font-mono font-medium text-emerald-400">GET /api/web-push/public-key</p>
                   <p className="text-[10px] text-zinc-400">Public VAPID key distribution</p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-mono font-bold text-emerald-400">GET /api/link-preview?url=...</p>
-                    <span className="text-[9px] font-black uppercase px-2 py-0.2 rounded bg-emerald-500/20 text-emerald-400">SSRF Guard Active</span>
+                    <p className="text-xs font-mono font-medium text-emerald-400">GET /api/link-preview?url=...</p>
+                    <span className="text-[9px] font-medium uppercase px-2 py-0.2 rounded bg-emerald-500/20 text-emerald-400">SSRF Guard Active</span>
                   </div>
                   <p className="text-[10px] text-zinc-400">External URL metadata parser with private CIDR block filter</p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800">
                   <div className="flex items-center justify-between">
-                    <p className="text-xs font-mono font-bold text-emerald-400">POST /api/upload-image</p>
-                    <span className="text-[9px] font-black uppercase px-2 py-0.2 rounded bg-emerald-500/20 text-emerald-400">Protected Proxy</span>
+                    <p className="text-xs font-mono font-medium text-emerald-400">POST /api/upload-image</p>
+                    <span className="text-[9px] font-medium uppercase px-2 py-0.2 rounded bg-emerald-500/20 text-emerald-400">Protected Proxy</span>
                   </div>
                   <p className="text-[10px] text-zinc-400">Secure backend image upload proxy</p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800">
-                  <p className="text-xs font-mono font-bold text-indigo-400">POST /api/notify-telegram</p>
+                  <p className="text-xs font-mono font-medium text-indigo-400">POST /api/notify-telegram</p>
                   <p className="text-[10px] text-zinc-400">Telegram Bot alert dispatcher</p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800">
-                  <p className="text-xs font-mono font-bold text-indigo-400">POST /api/send-push-admin</p>
+                  <p className="text-xs font-mono font-medium text-indigo-400">POST /api/send-push-admin</p>
                   <p className="text-[10px] text-zinc-400">Admin broadcast notification relay</p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-zinc-900 border border-zinc-800">
-                  <p className="text-xs font-mono font-bold text-indigo-400">POST /api/reset-password-request</p>
+                  <p className="text-xs font-mono font-medium text-indigo-400">POST /api/reset-password-request</p>
                   <p className="text-[10px] text-zinc-400">Password recovery email dispatcher</p>
                 </div>
               </div>
@@ -944,7 +944,7 @@ export default function ManageSecurity() {
           <div className="space-y-4">
             <div className="p-4 sm:p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-semibold text-white flex items-center gap-2">
                   <ShieldCheck className="w-5 h-5 text-emerald-400" />
                   <span>20-Domain Security Checklist & Audit Status</span>
                 </h2>
@@ -952,7 +952,7 @@ export default function ManageSecurity() {
                   <button
                     type="button"
                     onClick={handleAutoFixAll}
-                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition flex items-center gap-1.5 self-start sm:self-auto cursor-pointer"
                   >
                     <Zap className="w-3.5 h-3.5" />
                     <span>Auto-Pass All 20 Controls</span>
@@ -995,13 +995,13 @@ export default function ManageSecurity() {
                         {item.status === 'Passed' ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-black text-white truncate">{item.domain}</p>
+                        <p className="text-xs font-semibold text-white truncate">{item.domain}</p>
                         <p className="text-[11px] text-zinc-400 truncate">{item.detail}</p>
                       </div>
                     </div>
 
                     <span className={cn(
-                      "text-[10px] font-black uppercase px-2.5 py-1 rounded-full shrink-0 self-start sm:self-auto",
+                      "text-[10px] font-medium uppercase px-2.5 py-1 rounded-full shrink-0 self-start sm:self-auto",
                       item.status === 'Passed' ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                     )}>
                       {item.status}
@@ -1022,7 +1022,7 @@ export default function ManageSecurity() {
               <div className="p-4 sm:p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
                 <div className="flex items-center gap-2">
                   <Globe className="w-5 h-5 text-emerald-400" />
-                  <h3 className="text-sm sm:text-base font-black text-white">SSRF Guard Live URL Tester</h3>
+                  <h3 className="text-sm sm:text-base font-semibold text-white">SSRF Guard Live URL Tester</h3>
                 </div>
                 <p className="text-xs text-zinc-400">
                   Test link preview URLs against internal loopback, private IPv4 CIDR blocks, and Cloud Metadata IPs (e.g. 169.254.169.254).
@@ -1039,7 +1039,7 @@ export default function ManageSecurity() {
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition shrink-0 cursor-pointer"
+                      className="px-4 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs transition shrink-0 cursor-pointer"
                     >
                       Scan URL
                     </button>
@@ -1053,7 +1053,7 @@ export default function ManageSecurity() {
                       ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
                       : "bg-rose-950/40 border-rose-500/40 text-rose-300"
                   )}>
-                    <div className="flex items-center gap-1.5 font-bold">
+                    <div className="flex items-center gap-1.5 font-semibold">
                       {urlScanResult.isSafe ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
                       <span>{urlScanResult.isSafe ? "URL PASSED INSPECTION" : "SECURITY THREAT BLOCKED"}</span>
                     </div>
@@ -1066,7 +1066,7 @@ export default function ManageSecurity() {
               <div className="p-4 sm:p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
                 <div className="flex items-center gap-2">
                   <Sliders className="w-5 h-5 text-indigo-400" />
-                  <h3 className="text-sm sm:text-base font-black text-white">Banned Word Filter Simulator</h3>
+                  <h3 className="text-sm sm:text-base font-semibold text-white">Banned Word Filter Simulator</h3>
                 </div>
                 <p className="text-xs text-zinc-400">
                   Simulate live message submission to check if harmful phrases trigger chat redaction.
@@ -1083,7 +1083,7 @@ export default function ManageSecurity() {
                     />
                     <button
                       type="submit"
-                      className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition shrink-0 cursor-pointer"
+                      className="px-4 py-2.5 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs transition shrink-0 cursor-pointer"
                     >
                       Test Text
                     </button>
@@ -1097,7 +1097,7 @@ export default function ManageSecurity() {
                       ? "bg-rose-950/40 border-rose-500/40 text-rose-300"
                       : "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
                   )}>
-                    <div className="flex items-center gap-1.5 font-bold">
+                    <div className="flex items-center gap-1.5 font-semibold">
                       {wordTestResult.isBlocked ? <XCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                       <span>{wordTestResult.isBlocked ? "MESSAGE BLOCKED" : "MESSAGE SAFE"}</span>
                     </div>

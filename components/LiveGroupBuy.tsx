@@ -113,7 +113,7 @@ export const LiveGroupBuy = ({ product, onGroupFull }: { product: any, onGroupFu
           <div className="flex items-center gap-2 text-[#0071E3] dark:text-[#0A84FF] font-semibold text-[11px] uppercase tracking-[0.06em] mb-1">
             Live Group Buy
           </div>
-          <h3 className="text-[18px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <h3 className="text-[18px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7]">
             Buy together, save more!
           </h3>
         </div>
@@ -129,7 +129,7 @@ export const LiveGroupBuy = ({ product, onGroupFull }: { product: any, onGroupFu
               Group Price
             </p>
             <div className="flex items-baseline gap-2 tabular-nums mt-0.5">
-              <span className="text-[24px] font-bold tracking-[-0.03em] text-[#248A3D] dark:text-[#30D158]">
+              <span className="text-[24px] font-semibold tracking-[-0.03em] text-[#248A3D] dark:text-[#30D158]">
                 ৳{groupPrice.toLocaleString()}
               </span>
               <span className="text-[13px] text-[#86868B] line-through font-medium">
@@ -145,7 +145,7 @@ export const LiveGroupBuy = ({ product, onGroupFull }: { product: any, onGroupFu
               {[...Array(totalNeeded)].map((_, i) => (
                 <div
                   key={i}
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold tabular-nums transition-colors ${
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-semibold tabular-nums transition-colors ${
                     i < joinedCount
                       ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
                       : "bg-black/[0.07] dark:bg-white/[0.1] text-[#86868B]"

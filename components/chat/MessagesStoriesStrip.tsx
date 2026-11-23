@@ -357,7 +357,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                             {item.avatar ? (
                               <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
                             ) : (
-                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-pink-600">
                                 {initial}
                               </div>
                             )}
@@ -369,7 +369,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                             {item.avatar ? (
                               <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
                             ) : (
-                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-pink-600">
                                 {initial}
                               </div>
                             )}
@@ -380,7 +380,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                           {item.avatar ? (
                             <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
                           ) : (
-                            <div className="w-full h-full rounded-full flex items-center justify-center bg-white/80 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                            <div className="w-full h-full rounded-full flex items-center justify-center bg-white/80 dark:bg-zinc-800 text-xs font-medium text-pink-600">
                               {initial}
                             </div>
                           )}
@@ -390,7 +390,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
 
                     {/* Underneath Name or LIVE badge */}
                     {item.isLive ? (
-                      <span className="mt-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-extrabold text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
+                      <span className="mt-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-medium text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
                         <span className="w-1.5 h-1.5 rounded-full bg-white" />
                         <span>LIVE</span>
                       </span>
@@ -470,7 +470,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                       className="w-full h-full rounded-full object-cover group-hover:scale-105 transition-transform"
                     />
                   ) : (
-                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-semibold text-xl">
                       {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
                     </div>
                   )}
@@ -486,7 +486,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                       className="w-full h-full rounded-full object-cover group-hover:scale-105 transition-transform"
                     />
                   ) : (
-                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-semibold text-xl">
                       {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
                     </div>
                   )}
@@ -502,7 +502,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                     className="w-full h-full rounded-full object-cover group-hover:scale-105 transition-transform"
                   />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-bold text-xl">
+                  <div className="w-full h-full rounded-full bg-gradient-to-tr from-pink-500 to-rose-400 flex items-center justify-center text-white font-semibold text-xl">
                     {(currentUser?.displayName || 'Y')[0]?.toUpperCase()}
                   </div>
                 )}
@@ -515,7 +515,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
             <button
               type="button"
               onClick={() => setWatchingStreamId(myLiveId)}
-              className="mt-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-[11px] font-black tracking-wide uppercase flex items-center gap-1 animate-pulse cursor-pointer"
+              className="mt-1.5 px-3 py-1 rounded-full bg-red-600 text-white text-[11px] font-medium tracking-wide uppercase flex items-center gap-1 animate-pulse cursor-pointer"
             >
               <span className="w-2 h-2 rounded-full bg-white" />
               <span>LIVE</span>
@@ -600,7 +600,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                             {item.avatar ? (
                               <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
                             ) : (
-                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-pink-600">
                                 {initial}
                               </div>
                             )}
@@ -612,7 +612,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                             {item.avatar ? (
                               <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
                             ) : (
-                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                              <div className="w-full h-full rounded-full flex items-center justify-center bg-zinc-100 dark:bg-zinc-800 text-xs font-medium text-pink-600">
                                 {initial}
                               </div>
                             )}
@@ -623,7 +623,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
                           {item.avatar ? (
                             <img src={item.avatar} alt={item.name} className="w-full h-full rounded-full object-cover" loading="lazy" />
                           ) : (
-                            <div className="w-full h-full rounded-full flex items-center justify-center bg-white/80 dark:bg-zinc-800 text-xs font-bold text-pink-600">
+                            <div className="w-full h-full rounded-full flex items-center justify-center bg-white/80 dark:bg-zinc-800 text-xs font-medium text-pink-600">
                               {initial}
                             </div>
                           )}
@@ -633,7 +633,7 @@ export const MessagesStoriesStrip: React.FC<MessagesStoriesStripProps> = ({
 
                     {/* Underneath Name or LIVE badge */}
                     {item.isLive ? (
-                      <span className="mt-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-extrabold text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
+                      <span className="mt-1 px-1.5 py-0.2 rounded-full bg-red-600 text-white font-medium text-[8.5px] tracking-wider uppercase flex items-center gap-1 shadow-xs animate-pulse">
                         <span className="w-1.5 h-1.5 rounded-full bg-white" />
                         <span>LIVE</span>
                       </span>

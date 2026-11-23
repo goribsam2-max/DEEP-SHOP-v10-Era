@@ -144,7 +144,7 @@ const SwipeableCartItem: React.FC<SwipeableCartItemProps> = ({
           offsetX > 6 ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex flex-col items-center gap-0.5 font-bold text-xs">
+        <div className="flex flex-col items-center gap-0.5 font-medium text-xs">
           <Plus className="w-4 h-4 stroke-[2.5]" />
           <span>+1 Qty</span>
         </div>
@@ -158,7 +158,7 @@ const SwipeableCartItem: React.FC<SwipeableCartItemProps> = ({
           setOffsetX(0);
           onRemove();
         }}
-        className={`absolute inset-y-0 right-0 w-[84px] flex flex-col items-center justify-center gap-1 rounded-r-[22px] bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs cursor-pointer transition-opacity ${
+        className={`absolute inset-y-0 right-0 w-[84px] flex flex-col items-center justify-center gap-1 rounded-r-[22px] bg-rose-500 hover:bg-rose-600 text-white font-medium text-xs cursor-pointer transition-opacity ${
           offsetX < -6 ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
         aria-label="Remove item"
@@ -411,7 +411,7 @@ const Cart: React.FC = () => {
               </div>
             )}
 
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white mb-2">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-slate-900 dark:text-white mb-2">
               Your cart is empty
             </h1>
             <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300/85 mb-8 max-w-md leading-relaxed">
@@ -446,7 +446,7 @@ const Cart: React.FC = () => {
               {/* Mobile Top Header Card */}
               <div className="ds-liquid-panel p-4 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <h1 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  <h1 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
                     Your Cart
                   </h1>
                   <p className="text-xs text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
@@ -502,7 +502,7 @@ const Cart: React.FC = () => {
                               <div className="flex items-start justify-between gap-2">
                                 <Link
                                   to={getItemUrl(item)}
-                                  className="font-bold text-[14px] text-slate-900 dark:text-white leading-snug line-clamp-2"
+                                  className="font-semibold text-[14px] text-slate-900 dark:text-white leading-snug line-clamp-2"
                                 >
                                   {item.name}
                                 </Link>
@@ -524,7 +524,7 @@ const Cart: React.FC = () => {
 
                               <div className="mt-2.5 pt-2.5 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
                                 <div className="tabular-nums">
-                                  <span className="text-[15px] font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
+                                  <span className="text-[15px] font-semibold text-slate-900 dark:text-white whitespace-nowrap">
                                     {formatPrice(lineTotal)}
                                   </span>
                                 </div>
@@ -538,7 +538,7 @@ const Cart: React.FC = () => {
                                   >
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
-                                  <span className="min-w-[24px] text-center text-xs font-extrabold text-slate-900 dark:text-white tabular-nums select-none">
+                                  <span className="min-w-[24px] text-center text-xs font-semibold text-slate-900 dark:text-white tabular-nums select-none">
                                     {qty}
                                   </span>
                                   <button
@@ -563,7 +563,7 @@ const Cart: React.FC = () => {
               {/* Mobile Promo & Voucher Panel */}
               <div className="ds-liquid-panel p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  <span className="text-xs font-medium text-slate-800 dark:text-slate-200">
                     Promo Code or Voucher
                   </span>
                   {myCoupons.length > 0 && !appliedPromo && (
@@ -617,7 +617,7 @@ const Cart: React.FC = () => {
 
               {/* Mobile Price Breakdown Card */}
               <div className="ds-liquid-panel p-4 space-y-3">
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
                   Order Summary
                 </h2>
                 <div className="space-y-2.5 text-xs sm:text-sm tabular-nums">
@@ -630,7 +630,7 @@ const Cart: React.FC = () => {
                   {appliedPromo && (
                     <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                       <span>Discount</span>
-                      <span className="font-bold">-{formatPrice(promoDiscount)}</span>
+                      <span className="font-semibold">-{formatPrice(promoDiscount)}</span>
                     </div>
                   )}
                   <div className="flex justify-between text-slate-600 dark:text-slate-300">
@@ -640,10 +640,10 @@ const Cart: React.FC = () => {
                     </span>
                   </div>
                   <div className="pt-2.5 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-baseline">
-                    <span className="font-bold text-slate-900 dark:text-white">
+                    <span className="font-semibold text-slate-900 dark:text-white">
                       Total Payable
                     </span>
-                    <span className="text-xl font-extrabold text-slate-900 dark:text-white">
+                    <span className="text-xl font-semibold text-slate-900 dark:text-white">
                       {formatPrice(grandTotal)}
                     </span>
                   </div>
@@ -663,7 +663,7 @@ const Cart: React.FC = () => {
               {/* Desktop Top Header Panel */}
               <div className="ds-liquid-panel px-7 py-5 flex items-center justify-between gap-6">
                 <div>
-                  <h1 className="text-2xl xl:text-[28px] font-extrabold tracking-tight text-slate-900 dark:text-white">
+                  <h1 className="text-2xl xl:text-[28px] font-semibold tracking-tight text-slate-900 dark:text-white">
                     Shopping Bag
                   </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-300/85 mt-1 tabular-nums">
@@ -741,7 +741,7 @@ const Cart: React.FC = () => {
                                 <div className="min-w-0 flex-1 space-y-1">
                                   <Link
                                     to={getItemUrl(item)}
-                                    className="font-bold text-base text-slate-900 dark:text-white leading-snug line-clamp-2 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                                    className="font-medium text-sm sm:text-base text-slate-900 dark:text-white leading-snug line-clamp-2 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
                                   >
                                     {item.name}
                                   </Link>
@@ -775,7 +775,7 @@ const Cart: React.FC = () => {
                                   >
                                     <Minus className="w-3.5 h-3.5" />
                                   </button>
-                                  <span className="min-w-[28px] text-center text-sm font-extrabold text-slate-900 dark:text-white tabular-nums select-none">
+                                  <span className="min-w-[28px] text-center text-sm font-semibold text-slate-900 dark:text-white tabular-nums select-none">
                                     {qty}
                                   </span>
                                   <button
@@ -791,7 +791,7 @@ const Cart: React.FC = () => {
 
                               {/* Line Subtotal + Remove */}
                               <div className="col-span-3 flex flex-col items-end justify-center gap-2">
-                                <div className="text-lg font-extrabold text-slate-900 dark:text-white tabular-nums whitespace-nowrap">
+                                <div className="text-lg font-semibold text-slate-900 dark:text-white tabular-nums whitespace-nowrap">
                                   {formatPrice(lineTotal)}
                                 </div>
                                 <button
@@ -830,7 +830,7 @@ const Cart: React.FC = () => {
                 <aside className="col-span-4 sticky top-24">
                   <div className="ds-liquid-panel p-6 space-y-6">
                     <div>
-                      <h2 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
+                      <h2 className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight">
                         Order Summary
                       </h2>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -921,7 +921,7 @@ const Cart: React.FC = () => {
                       {appliedPromo && (
                         <div className="flex justify-between text-emerald-600 dark:text-emerald-400">
                           <span>Voucher / Promo Discount</span>
-                          <span className="font-bold">
+                          <span className="font-semibold">
                             -{formatPrice(promoDiscount)}
                           </span>
                         </div>
@@ -935,10 +935,10 @@ const Cart: React.FC = () => {
                       </div>
 
                       <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex justify-between items-baseline">
-                        <span className="text-base font-bold text-slate-900 dark:text-white">
+                        <span className="text-base font-semibold text-slate-900 dark:text-white">
                           Total
                         </span>
-                        <span className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                        <span className="text-2xl font-semibold tracking-tight text-slate-900 dark:text-white">
                           {formatPrice(grandTotal)}
                         </span>
                       </div>
@@ -981,7 +981,7 @@ const Cart: React.FC = () => {
               <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 leading-none">
                 Total ({totalUnits} {totalUnits === 1 ? "unit" : "units"})
               </div>
-              <div className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight mt-0.5 truncate">
+              <div className="text-lg font-semibold text-slate-900 dark:text-white tracking-tight leading-tight mt-0.5 truncate">
                 {formatPrice(grandTotal)}
               </div>
             </div>
@@ -1037,7 +1037,7 @@ const Cart: React.FC = () => {
                   <div className="w-9 h-1 rounded-full bg-black/20 dark:bg-white/25 mx-auto mb-3 sm:hidden" />
                   <div className="pb-4 border-b border-black/[0.06] dark:border-white/[0.08] flex justify-between items-center shrink-0">
                     <div>
-                      <h3 className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <h3 className="font-semibold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
                         Your Vouchers
                       </h3>
                       <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93]">

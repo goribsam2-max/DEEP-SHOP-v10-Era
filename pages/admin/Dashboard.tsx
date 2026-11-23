@@ -476,7 +476,7 @@ const AdminDashboard: React.FC = () => {
                   : "Good Evening"}
               , {staffContext.isStaff ? 'Staff' : 'Admin'}
             </h1>
-            <p className="text-zinc-500 text-[10px] md:text-xs font-bold tracking-normal flex items-center">
+            <p className="text-zinc-500 text-[10px] md:text-xs font-normal tracking-normal flex items-center">
               <span className="w-2 h-2 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 animate-pulse mr-2"></span>
               System Online &bull;{" "}
               {new Date().toLocaleDateString("en-US", {
@@ -506,8 +506,8 @@ const AdminDashboard: React.FC = () => {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="text-xs sm:text-sm font-black text-white truncate">Live Platform Security Radar & Posture</h3>
-              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+              <h3 className="text-xs sm:text-sm font-semibold text-white truncate">Live Platform Security Radar & Posture</h3>
+              <span className="text-[9px] font-medium uppercase px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shrink-0">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> 100% Protected & Hardened
               </span>
             </div>
@@ -519,7 +519,7 @@ const AdminDashboard: React.FC = () => {
 
         <Link
           to="security"
-          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
+          className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-medium text-xs shadow-md shadow-emerald-600/20 transition flex items-center justify-center gap-1.5 cursor-pointer shrink-0 self-start sm:self-auto"
         >
           <span>Open Security Console</span>
           <ArrowRight className="w-3.5 h-3.5" />
@@ -575,7 +575,7 @@ const AdminDashboard: React.FC = () => {
                 <h3 className="font-semibold text-xl text-zinc-900 dark:text-zinc-100 tracking-tight">
                   Revenue Analytics (Last 7 Days)
                 </h3>
-                <p className="text-[10px] tracking-normal font-bold text-zinc-400 mt-1">
+                <p className="text-[10px] tracking-normal font-normal text-zinc-400 mt-1">
                   Sales Performance
                 </p>
               </div>
@@ -674,7 +674,7 @@ const AdminDashboard: React.FC = () => {
                           </div>
                        </div>
                        <div className="text-right">
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-400">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-500/10 text-red-400">
                              {p.stock} left
                           </span>
                        </div>
@@ -710,12 +710,12 @@ const AdminDashboard: React.FC = () => {
 
       <div>
         <div className="flex items-center justify-between mb-6 px-1">
-          <h3 className="text-[11px] font-bold text-zinc-400 tracking-normal">
+          <h3 className="text-[11px] font-semibold text-zinc-400 tracking-normal">
             Recent Activity
           </h3>
           <Link
             to="orders"
-            className="text-[10px] font-bold text-zinc-900 dark:text-zinc-100 tracking-normal hover:text-zinc-800 dark:text-zinc-200 transition-colors flex items-center"
+            className="text-[10px] font-semibold text-zinc-900 dark:text-zinc-100 tracking-normal hover:text-zinc-800 dark:text-zinc-200 transition-colors flex items-center"
           >
             View All <Icon name="arrow-right" className="ml-1.5 text-[8px]" />
           </Link>
@@ -735,7 +735,7 @@ const AdminDashboard: React.FC = () => {
                   <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-0.5 tracking-tight group-hover:text-zinc-900 transition-colors">
                     {order.customerName}
                   </p>
-                  <p className="text-[10px] font-bold text-zinc-400 tracking-normal">
+                  <p className="text-[10px] font-normal text-zinc-400 tracking-normal">
                     Order #{order.id.slice(0, 8)}
                   </p>
                 </div>
@@ -745,7 +745,7 @@ const AdminDashboard: React.FC = () => {
                   ৳{order.total}
                 </p>
                 <p
-                  className={`text-[9px] md:text-[10px] font-bold tracking-normal mt-0.5 ${order.status === "Delivered" ? "text-zinc-900 dark:text-zinc-100" : order.status === "Cancelled" ? "text-red-500" : "text-blue-500"}`}
+                  className={`text-[9px] md:text-[10px] font-semibold tracking-normal mt-0.5 ${order.status === "Delivered" ? "text-zinc-900 dark:text-zinc-100" : order.status === "Cancelled" ? "text-red-500" : "text-blue-500"}`}
                 >
                   {order.status}
                 </p>
@@ -757,7 +757,7 @@ const AdminDashboard: React.FC = () => {
               <div className="w-16 h-16 rounded-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-800 flex items-center justify-center mb-4">
                 <Icon name="inbox" className="text-xl text-zinc-300" />
               </div>
-              <div className="font-bold text-xs tracking-normal">
+              <div className="font-medium text-xs tracking-normal">
                 No recent orders
               </div>
             </div>
@@ -792,7 +792,7 @@ const StatCard = ({ title, value, icon, gradient, iconColor, trend }: any) => {
         </p>
         {trend && (
           <p
-            className={`text-[10px] font-bold  tracking-normal ${trend.includes("+") ? "text-zinc-900 dark:text-zinc-100" : trend.includes("attention") ? "text-red-500" : "text-zinc-400"}`}
+            className={`text-[10px] font-semibold  tracking-normal ${trend.includes("+") ? "text-zinc-900 dark:text-zinc-100" : trend.includes("attention") ? "text-red-500" : "text-zinc-400"}`}
           >
             {trend}
           </p>

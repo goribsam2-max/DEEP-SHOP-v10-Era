@@ -50,6 +50,7 @@ export interface Product {
   resellerPrice?: number;
   reviews?: any[];
   salesCount?: number;
+  coinReward?: number;
 }
 
 export interface UserProfile {
@@ -141,6 +142,7 @@ export interface UserProfile {
   loopsStrikeCount?: number;
   loopsPostingBlocked?: boolean;
   sessions?: any[];
+  canUseCourierShipping?: boolean;
 }
 
 export interface StoryHighlightSnapshot {
@@ -249,6 +251,12 @@ export interface Order {
   discount?: number;
   couponCode?: string | null;
   finalized?: boolean;
+  totalAmount?: number;
+  courierPaymentStatus?: string;
+  courierPaymentDetails?: any;
+  deliveryFee?: number;
+  advancePaid?: number;
+  trxId?: string;
 }
 
 export interface Blog {
@@ -445,6 +453,8 @@ export interface WithdrawRequest {
   userEmail?: string;
   userPhone?: string;
   reason?: string;
+  accountNumber?: string;
+  userName?: string;
 }
 
 export interface StorySong {

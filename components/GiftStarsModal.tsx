@@ -304,7 +304,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0">
               <Star className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
-              <h3 className="font-bold text-base sm:text-lg text-zinc-950 dark:text-white truncate">
+              <h3 className="font-semibold text-base sm:text-lg text-zinc-950 dark:text-white truncate">
                 {mode === "gift"
                   ? `Gift Stars to ${resolvedTargetName}`
                   : "Top Up Stars"}
@@ -352,7 +352,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
               <Sparkles className="w-4 h-4 shrink-0" />
               <span>Available balance</span>
             </span>
-            <span className="font-bold tabular-nums text-amber-600 dark:text-amber-400">
+            <span className="font-semibold tabular-nums text-amber-600 dark:text-amber-400">
               {userStarsBalance.toLocaleString()} ★
             </span>
           </div>
@@ -369,7 +369,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       key={count}
                       type="button"
                       onClick={() => setGiftStarsAmount(count)}
-                      className={`min-h-[42px] rounded-xl text-xs font-bold tabular-nums border transition cursor-pointer ${
+                      className={`min-h-[42px] rounded-xl text-xs font-semibold tabular-nums border transition cursor-pointer ${
                         giftStarsAmount === count
                           ? "bg-amber-500 text-white border-amber-500"
                           : "bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
@@ -394,7 +394,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       Math.max(1, parseInt(e.target.value, 10) || 1)
                     )
                   }
-                  className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 outline-none font-bold tabular-nums text-zinc-950 dark:text-white"
+                  className="w-full h-11 px-3.5 text-sm rounded-xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 outline-none font-semibold tabular-nums text-zinc-950 dark:text-white"
                 />
               </div>
 
@@ -403,7 +403,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                   type="button"
                   onClick={handleGiftSubmit}
                   disabled={isSubmitting}
-                  className="w-full min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm transition active:scale-[0.99] cursor-pointer disabled:opacity-50 tabular-nums whitespace-nowrap"
+                  className="w-full min-h-[48px] px-5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm transition active:scale-[0.99] cursor-pointer disabled:opacity-50 tabular-nums whitespace-nowrap"
                 >
                   {isSubmitting
                     ? "Sending..."
@@ -436,7 +436,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                           : "bg-zinc-50 dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-800"
                       }`}
                     >
-                      <span className="block font-bold tabular-nums text-xs">
+                      <span className="block font-semibold tabular-nums text-xs">
                         {pkg} ★
                       </span>
                       <span className="block text-[11px] opacity-80 tabular-nums">
@@ -459,7 +459,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedProvider("bKash")}
-                        className={`min-h-[40px] px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                        className={`min-h-[40px] px-3 rounded-xl text-xs font-medium border transition cursor-pointer ${
                           selectedProvider === "bKash"
                             ? "border-[#E2125B] bg-pink-50 dark:bg-pink-950/30 text-[#E2125B]"
                             : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -470,7 +470,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setSelectedProvider("Nagad")}
-                        className={`min-h-[40px] px-3 rounded-xl text-xs font-bold border transition cursor-pointer ${
+                        className={`min-h-[40px] px-3 rounded-xl text-xs font-medium border transition cursor-pointer ${
                           selectedProvider === "Nagad"
                             ? "border-[#F57C20] bg-orange-50 dark:bg-orange-950/30 text-[#F57C20]"
                             : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -544,7 +544,7 @@ export const GiftStarsModal: React.FC<GiftStarsModalProps> = ({
                     <button
                       type="submit"
                       disabled={isSubmitting || !activeAccount}
-                      className="w-full min-h-[48px] px-5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-sm transition active:scale-[0.99] cursor-pointer disabled:opacity-50 tabular-nums"
+                      className="w-full min-h-[48px] px-5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-semibold text-sm transition active:scale-[0.99] cursor-pointer disabled:opacity-50 tabular-nums"
                     >
                       {isSubmitting
                         ? "Submitting..."

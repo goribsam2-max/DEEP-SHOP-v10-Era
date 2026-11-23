@@ -180,7 +180,7 @@ export const SwipeableInboxRow: React.FC<SwipeableInboxRowProps> = ({
           >
             <div className="flex flex-col items-center gap-1">
               <Icon name={isUnread ? 'check-double' : 'message-circle'} className="w-4 h-4" />
-              <span className="text-[10px] font-bold whitespace-nowrap">
+              <span className="text-[10px] font-semibold whitespace-nowrap">
                 {isUnread ? 'Read' : 'Unread'}
               </span>
             </div>

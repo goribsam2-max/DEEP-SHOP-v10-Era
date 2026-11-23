@@ -88,7 +88,7 @@ const AlertDialogTitle = React.forwardRef<
   <AlertDialogPrimitive.Title
     ref={ref}
     className={cn(
-      "ds-liquid-popup-title ds-apple-display text-[20px] font-bold leading-[1.24] tracking-[-0.025em]",
+      "ds-liquid-popup-title ds-apple-display text-[20px] font-semibold leading-[1.24] tracking-[-0.025em]",
       className
     )}
     {...props}

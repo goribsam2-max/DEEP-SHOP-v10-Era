@@ -593,12 +593,12 @@ const ManageIcons: React.FC = () => {
         <div>
           <button
             onClick={() => navigate("/admin")}
-            className="flex items-center gap-1 text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 mb-2 transition-colors"
+            className="flex items-center gap-1 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 mb-2 transition-colors"
           >
             <Icon name="arrow-left" className="w-3.5 h-3.5" />
             Back to Admin Panel
           </button>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 dark:text-zinc-50 tracking-tight">
+          <h1 className="text-2xl sm:text-3xl font-semibold text-zinc-900 dark:text-zinc-50 tracking-tight">
             Universal SVG Icon Override Manager
           </h1>
           <p className="text-xs sm:text-sm text-zinc-500 font-semibold mt-1">
@@ -608,7 +608,7 @@ const ManageIcons: React.FC = () => {
         
         <button
           onClick={handleResetAll}
-          className="px-4 py-2.5 text-xs font-bold bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-xl transition-all shadow-sm shrink-0 self-start sm:self-center"
+          className="px-4 py-2.5 text-xs font-medium bg-rose-500 hover:bg-rose-600 active:scale-95 text-white rounded-xl transition-all shadow-sm shrink-0 self-start sm:self-center"
         >
           Reset All Overrides
         </button>
@@ -621,7 +621,7 @@ const ManageIcons: React.FC = () => {
             <Icon name="info-circle" className="text-xl" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-300 mb-1">
+            <h3 className="text-sm font-semibold text-indigo-900 dark:text-indigo-300 mb-1">
               Real-time SVG Injection Guide
             </h3>
             <p className="text-xs text-indigo-800 dark:text-indigo-400/90 font-medium leading-relaxed mb-3">
@@ -638,7 +638,7 @@ const ManageIcons: React.FC = () => {
 
       {/* Dynamic Key Registration Form */}
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 mb-8 shadow-sm">
-        <h2 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-1.5 flex items-center gap-2">
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 mb-1.5 flex items-center gap-2">
           <Icon name="plus" className="w-4 h-4 text-indigo-500" />
           Register Custom / Dynamic Icon Key
         </h2>
@@ -648,7 +648,7 @@ const ManageIcons: React.FC = () => {
 
         <form onSubmit={handleRegisterCustomKey} className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            <label className="block text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-1">
               Icon Name Key (e.g. affiliate, payout-wallet) *
             </label>
             <input
@@ -662,7 +662,7 @@ const ManageIcons: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+            <label className="block text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-1">
               Readable Display Name (Optional)
             </label>
             <input
@@ -677,7 +677,7 @@ const ManageIcons: React.FC = () => {
           <div className="flex items-end">
             <button
               type="submit"
-              className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1.5 active:scale-95"
+              className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-medium text-xs rounded-xl transition-colors shadow-sm flex items-center justify-center gap-1.5 active:scale-95"
             >
               <Icon name="plus" className="w-3.5 h-3.5" />
               Register Key Override
@@ -694,7 +694,7 @@ const ManageIcons: React.FC = () => {
             <button
               key={cat.id}
               onClick={() => setActiveTab(cat.id as any)}
-              className={`px-3.5 py-1.5 text-xs font-bold rounded-full whitespace-nowrap transition-all ${
+              className={`px-3.5 py-1.5 text-xs font-medium rounded-full whitespace-nowrap transition-all ${
                 activeTab === cat.id
                   ? "bg-zinc-900 text-white dark:bg-indigo-600 dark:text-white shadow-sm"
                   : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800"
@@ -725,7 +725,7 @@ const ManageIcons: React.FC = () => {
               onChange={(e) => setAutoConvertColors(e.target.checked)}
               className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
             />
-            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+            <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
               Auto-Convert Hardcoded SVG Colors (Supports Dark/Light)
             </span>
           </label>
@@ -736,7 +736,7 @@ const ManageIcons: React.FC = () => {
       {filteredIcons.length === 0 ? (
         <div className="text-center py-16 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl mt-6">
           <Icon name="search" className="text-4xl text-zinc-300 dark:text-zinc-700 mb-2.5 mx-auto" />
-          <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">No customizable icons found matching current filters.</p>
+          <p className="text-sm font-normal text-zinc-500 dark:text-zinc-400">No customizable icons found matching current filters.</p>
           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1 font-medium">Try registering a custom key override at the top of the dashboard.</p>
         </div>
       ) : (
@@ -753,27 +753,27 @@ const ManageIcons: React.FC = () => {
                 <div>
                   <div className="flex items-start justify-between gap-3 mb-2">
                     <div>
-                      <h3 className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
+                      <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5 flex-wrap">
                         {icon.name}
                         {hasOverride && (
-                          <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 text-[9px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">
+                          <span className="bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 text-[9px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
                             Active
                           </span>
                         )}
                         {icon.category === "custom" && (
-                          <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 text-[9px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider">
+                          <span className="bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-400 text-[9px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider">
                             User Created
                           </span>
                         )}
                       </h3>
-                      <p className="text-[11px] text-zinc-400 font-bold font-mono">
+                      <p className="text-[11px] text-zinc-400 font-normal font-mono">
                         Key: {icon.key}
                       </p>
                     </div>
 
                     {/* Preview box */}
                     <div className="flex flex-col items-center shrink-0">
-                      <span className="text-[9px] font-bold text-zinc-400 mb-1">Preview</span>
+                      <span className="text-[9px] font-semibold text-zinc-400 mb-1">Preview</span>
                       <div className="w-10 h-10 border border-zinc-200 dark:border-zinc-800 rounded-xl bg-zinc-50 dark:bg-zinc-950 flex items-center justify-center text-zinc-900 dark:text-zinc-50">
                         {icon.category === "loops" ? (
                           <LoopsSvgIcon
@@ -797,7 +797,7 @@ const ManageIcons: React.FC = () => {
                     {icon.description}
                   </p>
 
-                  <label className="block text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-1.5">
+                  <label className="block text-[10px] font-medium text-zinc-400 uppercase tracking-wider mb-1.5">
                     SVG Code / Content
                   </label>
                   <textarea
@@ -813,7 +813,7 @@ const ManageIcons: React.FC = () => {
                   <button
                     onClick={() => handleSaveIcon(icon.key)}
                     disabled={isSavingThis}
-                    className="flex-1 py-2 text-xs font-bold bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95"
+                    className="flex-1 py-2 text-xs font-medium bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-indigo-600 dark:hover:bg-indigo-700 rounded-xl transition-all shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50 active:scale-95"
                   >
                     {isSavingThis ? (
                       <>
@@ -832,7 +832,7 @@ const ManageIcons: React.FC = () => {
                     <button
                       onClick={() => handleResetIcon(icon.key)}
                       disabled={isSavingThis}
-                      className="px-3.5 py-2 text-xs font-bold border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-rose-500 hover:border-rose-200 dark:hover:border-rose-900/50 rounded-xl transition-all disabled:opacity-50 active:scale-95"
+                      className="px-3.5 py-2 text-xs font-medium border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-rose-500 hover:border-rose-200 dark:hover:border-rose-900/50 rounded-xl transition-all disabled:opacity-50 active:scale-95"
                     >
                       Reset
                     </button>

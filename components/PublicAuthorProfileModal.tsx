@@ -134,7 +134,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                     className="w-22 h-22 rounded-full object-cover border-4 border-white dark:border-zinc-950 shadow-xl"
                   />
                 ) : (
-                  <div className="w-22 h-22 rounded-full bg-zinc-200 dark:bg-zinc-800 border-4 border-white dark:border-zinc-950 shadow-xl flex items-center justify-center text-2xl font-extrabold text-zinc-700 dark:text-zinc-200">
+                  <div className="w-22 h-22 rounded-full bg-zinc-200 dark:bg-zinc-800 border-4 border-white dark:border-zinc-950 shadow-xl flex items-center justify-center text-2xl font-semibold text-zinc-700 dark:text-zinc-200">
                     {(displayName || "M").slice(0, 1).toUpperCase()}
                   </div>
                 )}
@@ -146,7 +146,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
 
             {/* Profile Title & Handle */}
             <div className="text-center space-y-1">
-              <h2 className="text-lg font-black text-zinc-900 dark:text-white flex items-center justify-center gap-1.5">
+              <h2 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center justify-center gap-1.5">
                 <span>{displayName}</span>
                 <CheckCircle2 className="w-4 h-4 text-blue-500 fill-blue-500 text-white inline" />
               </h2>
@@ -164,7 +164,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
 
             {/* XP / Stars Level Badge Pill */}
             <div className="flex justify-center">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 shadow-2xs">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50 shadow-2xs">
                 <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
                 <span>Deep Creator • {starsReceived.toLocaleString()} Stars</span>
               </div>
@@ -173,7 +173,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
             {/* Metrics Card with Vertical Dividers (Exact match to IMG_4750.webp) */}
             <div className="grid grid-cols-3 divide-x divide-zinc-200 dark:divide-zinc-800 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 p-3 text-center border border-zinc-200/80 dark:border-zinc-800">
               <div className="px-1">
-                <span className="block text-sm font-black text-zinc-900 dark:text-white">
+                <span className="block text-sm font-semibold text-zinc-900 dark:text-white">
                   {likesReceived >= 1000 ? `${(likesReceived / 1000).toFixed(1)}k` : likesReceived}
                 </span>
                 <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
@@ -181,7 +181,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                 </span>
               </div>
               <div className="px-1">
-                <span className="block text-sm font-black text-zinc-900 dark:text-white">
+                <span className="block text-sm font-semibold text-zinc-900 dark:text-white">
                   {postsCount}
                 </span>
                 <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
@@ -189,7 +189,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                 </span>
               </div>
               <div className="px-1">
-                <span className="block text-sm font-black text-amber-500 font-mono">
+                <span className="block text-sm font-semibold text-amber-500 font-mono">
                   {starsReceived >= 1000 ? `${(starsReceived / 1000).toFixed(1)}k` : starsReceived} ⭐
                 </span>
                 <span className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
@@ -203,7 +203,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
               {["📱 Mobile Tech", "🛡️ Scam Defense", "⚡ News Reporter", "🛒 Smart Devices"].map((tag, i) => (
                 <span
                   key={i}
-                  className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200/70 dark:border-zinc-700/60"
+                  className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200/70 dark:border-zinc-700/60"
                 >
                   {tag}
                 </span>
@@ -219,7 +219,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                   onClose();
                   navigate(`/messages?uid=${encodeURIComponent(userId || "")}`);
                 }}
-                className="min-h-[42px] px-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                className="min-h-[42px] px-2.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-medium text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <MessageSquare className="w-3.5 h-3.5 shrink-0" />
                 <span>Message</span>
@@ -232,7 +232,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                   onClose();
                   navigate(`/sponsor/${encodeURIComponent(userId || "creator")}`);
                 }}
-                className="min-h-[42px] px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                className="min-h-[42px] px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <Handshake className="w-3.5 h-3.5 shrink-0" />
                 <span>Sponsor</span>
@@ -249,7 +249,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                     navigate(`/gift-stars/${encodeURIComponent(userId || "creator")}`);
                   }
                 }}
-                className="min-h-[42px] px-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                className="min-h-[42px] px-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs transition active:scale-95 flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <Star className="w-3.5 h-3.5 fill-white shrink-0" />
                 <span>Gift Star</span>
@@ -258,7 +258,7 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
 
             {/* Author Posts Preview List */}
             <div className="space-y-2 pt-2">
-              <h4 className="text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
+              <h4 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
                 <span>Recent Posts ({postsCount})</span>
                 <span className="text-[10px] text-zinc-400">Verified Activity</span>
               </h4>
@@ -293,12 +293,12 @@ export const PublicAuthorProfileModal: React.FC<PublicAuthorProfileModalProps> =
                         key={p.id}
                         className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 text-xs space-y-1 hover:border-zinc-300 dark:hover:border-zinc-700 transition"
                       >
-                        <h5 className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                        <h5 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                           {p.title || p.description || "Post"}
                         </h5>
                         <p className="text-[10px] text-zinc-500 dark:text-zinc-400 flex items-center justify-between">
                           <span>{p.category ? p.category.replace(/_/g, ' ') : 'Post'}</span>
-                          <span className="font-mono text-rose-500 font-bold">{combinedReactions.toLocaleString()} reactions</span>
+                          <span className="font-mono text-rose-500 font-semibold">{combinedReactions.toLocaleString()} reactions</span>
                         </p>
                       </div>
                     );

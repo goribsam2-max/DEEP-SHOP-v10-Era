@@ -106,7 +106,7 @@ export const ChatTagsModal: React.FC<ChatTagsModalProps> = ({
           </button>
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-blue-500" />
-            <h3 className="font-bold text-base text-zinc-900 dark:text-white">Chat Labels & Tags</h3>
+            <h3 className="font-semibold text-base text-zinc-900 dark:text-white">Chat Labels & Tags</h3>
           </div>
           <div className="w-9" />
         </div>
@@ -186,7 +186,7 @@ export const ChatTagsModal: React.FC<ChatTagsModalProps> = ({
               type="button"
               onClick={handleAddCustomTag}
               disabled={!newTagInput.trim()}
-              className="px-4 py-2 rounded-xl bg-[#5B51D8] hover:bg-[#4E44C4] text-white text-xs font-bold disabled:opacity-40 cursor-pointer shadow-xs"
+              className="px-4 py-2 rounded-xl bg-[#5B51D8] hover:bg-[#4E44C4] text-white text-xs font-medium disabled:opacity-40 cursor-pointer shadow-xs"
             >
               Add
             </button>

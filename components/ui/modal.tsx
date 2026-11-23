@@ -215,7 +215,7 @@ const ModalTitle = ({
 }) => (
   <h2
     className={clsx(
-      "ds-liquid-popup-title mb-2.5 text-[20px] font-bold leading-[1.28] tracking-[-0.02em]",
+      "ds-liquid-popup-title mb-2.5 text-[20px] font-semibold leading-[1.28] tracking-[-0.02em]",
       className
     )}
   >

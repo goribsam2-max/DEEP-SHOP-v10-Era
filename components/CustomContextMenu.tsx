@@ -239,7 +239,7 @@ export const CustomContextMenu: React.FC = () => {
               : "bg-white/70 dark:bg-zinc-950/75 backdrop-blur-xl border border-white/20 dark:border-zinc-800/60 rounded-3xl shadow-2xl shadow-black/10 dark:shadow-black/35"
           }`}
         >
-          <div className="px-3 py-1.5 mb-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-wider">
+          <div className="px-3 py-1.5 mb-1 rounded-xl bg-black/[0.04] dark:bg-white/[0.06] flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 font-medium uppercase tracking-wider">
             <span className="flex items-center gap-1.5">
               <Shield className={`w-3 h-3 ${isAppleShop ? "text-[#0071E3] dark:text-[#0A84FF]" : "text-[#EF8020]"}`} />
               Secure Shield

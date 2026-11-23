@@ -399,7 +399,7 @@ export const NewsLinkPreviewCards: React.FC<{
               </div>
               <div className="p-3.5 flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <span className="inline-block text-[10px] font-bold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                  <span className="inline-block text-[10px] font-medium uppercase tracking-wider text-rose-600 dark:text-rose-400">
                     {meta.platform}
                   </span>
                   <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 truncate mt-0.5">
@@ -431,7 +431,7 @@ export const NewsLinkPreviewCards: React.FC<{
                   <ShoppingBag className="w-5 h-5" />
                 </div>
                 <div className="min-w-0">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-[#1877F2] dark:text-[#58A6FF] block">
+                  <span className="text-[11px] font-medium uppercase tracking-wider text-[#1877F2] dark:text-[#58A6FF] block">
                     {meta.platform}
                   </span>
                   <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 truncate">
@@ -467,7 +467,7 @@ export const NewsLinkPreviewCards: React.FC<{
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                    <span className="text-xs font-medium text-zinc-900 dark:text-white truncate">
                       {meta.platform}
                     </span>
                   </div>

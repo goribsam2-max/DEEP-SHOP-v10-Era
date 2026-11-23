@@ -196,7 +196,7 @@ export const AffiliateOnboardingForm = ({
                 {currentStep === 0 && (
                   <>
                     <CardHeader>
-                      <CardTitle className="text-[20px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <CardTitle className="text-[20px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                         Tell us about yourself
                       </CardTitle>
                       <CardDescription className="text-[13px] text-[#6E6E73] dark:text-[#98989D]">
@@ -244,7 +244,7 @@ export const AffiliateOnboardingForm = ({
                 {currentStep === 1 && (
                   <>
                     <CardHeader>
-                      <CardTitle className="text-[20px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <CardTitle className="text-[20px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                         Your Audience
                       </CardTitle>
                       <CardDescription className="text-[13px] text-[#6E6E73] dark:text-[#98989D]">
@@ -326,7 +326,7 @@ export const AffiliateOnboardingForm = ({
                 {currentStep === 2 && (
                   <>
                     <CardHeader>
-                      <CardTitle className="text-[20px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <CardTitle className="text-[20px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                         Strategy
                       </CardTitle>
                       <CardDescription className="text-[13px] text-[#6E6E73] dark:text-[#98989D]">
@@ -388,7 +388,7 @@ export const AffiliateOnboardingForm = ({
                 {currentStep === 3 && (
                   <>
                     <CardHeader>
-                      <CardTitle className="text-[20px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <CardTitle className="text-[20px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                         Terms & Agreement
                       </CardTitle>
                       <CardDescription className="text-[13px] text-[#6E6E73] dark:text-[#98989D]">

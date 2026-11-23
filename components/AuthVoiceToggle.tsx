@@ -302,7 +302,7 @@ export const AuthVoiceToggle: React.FC<{
         <AnimatedManVoiceEmoji muted={muted} isSpeaking={isSpeaking} />
 
         <div className="flex items-center gap-1.5">
-          <span className="text-[12px] font-bold tracking-tight whitespace-nowrap">
+          <span className="text-[12px] font-semibold tracking-tight whitespace-nowrap">
             {muted ? "Voice Off" : isSpeaking ? "Speaking..." : "Voice On"}
           </span>
 

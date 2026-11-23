@@ -139,7 +139,7 @@ function DialogTitle({
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "ds-liquid-popup-title text-[20px] leading-[1.28] font-bold tracking-[-0.02em]",
+        "ds-liquid-popup-title text-[20px] leading-[1.28] font-semibold tracking-[-0.02em]",
         className
       )}
       {...props}

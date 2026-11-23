@@ -203,7 +203,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
 
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#248A3D] dark:text-[#30D158]">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[#248A3D] dark:text-[#30D158]">
                   {currentAlert.badge}
                 </span>
                 <span className="text-black/20 dark:text-white/20">&bull;</span>
@@ -287,7 +287,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
               </div>
 
               <div className="space-y-2">
-                <h4 className="text-[#1D1D1F] dark:text-[#F5F5F7] text-[19px] font-bold leading-[1.28] tracking-[-0.02em]">
+                <h4 className="text-[#1D1D1F] dark:text-[#F5F5F7] text-[19px] font-semibold leading-[1.28] tracking-[-0.02em]">
                   {selectedAlertModal.title}
                 </h4>
                 <p className="text-[#6E6E73] dark:text-[#A1A1A6] text-[15px] leading-[1.44]">
@@ -342,7 +342,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
               <span>রিসেলার মাস্টারক্লাস ও ব্যবসায়িক নির্দেশিকা</span>
             </div>
 
-            <h2 className="text-xl sm:text-2xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.025em] leading-snug">
+            <h2 className="text-xl sm:text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.025em] leading-snug">
               রিসেলারদের জন্য <span className="text-[#248A3D] dark:text-[#30D158]">০৳ অগ্রিমে ফুল ক্যাশ অন ডেলিভারি</span> কেন সবচেয়ে লাভজনক?
             </h2>
 
@@ -448,7 +448,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.015em]">
+              <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.015em]">
                 ইন্টারেক্টিভ রিসেলার লাইভ সিমুলেটর (Live Click-through)
               </h3>
               <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -504,7 +504,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                     : "bg-[#F5F5F7] dark:bg-[#2C2C2E] border-black/[0.05] dark:border-white/[0.08] text-[#1D1D1F] dark:text-[#F5F5F7]"
                 }`}
               >
-                <div className="text-xs font-bold truncate">{st.title}</div>
+                <div className="text-xs font-medium truncate">{st.title}</div>
                 <div className={`text-[10px] mt-0.5 truncate ${simStep === st.num ? "text-white/85" : "text-[#6E6E73] dark:text-[#98989D]"}`}>
                   {st.desc}
                 </div>
@@ -518,10 +518,10 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
               <div className="space-y-4">
                 <div className="flex items-start justify-between gap-4">
                   <div className="space-y-1 min-w-0">
-                    <span className="text-[10px] font-bold text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
+                    <span className="text-[10px] font-medium text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
                       ধাপ ১ / প্রোডাক্ট সিলেকশন
                     </span>
-                    <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                       উদাহরণ: T900 Ultra Smartwatch (অরিজিনাল)
                     </h4>
                     <p className="text-xs text-[#6E6E73] dark:text-[#98989D]">
@@ -536,15 +536,15 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs tabular-nums">
                   <div className="p-3 rounded-xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08]">
                     <span className="text-[#6E6E73] dark:text-[#98989D] text-[10px] block">ভিআইপি হোলসেল মূল্য</span>
-                    <span className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">৳৯৫০</span>
+                    <span className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">৳৯৫০</span>
                   </div>
                   <div className="p-3 rounded-xl bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08]">
                     <span className="text-[#6E6E73] dark:text-[#98989D] text-[10px] block">কাস্টমার সেলিং প্রাইস</span>
-                    <span className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">৳১,৪৫০</span>
+                    <span className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">৳১,৪৫০</span>
                   </div>
                   <div className="p-3 rounded-xl bg-[#248A3D]/10 dark:bg-[#30D158]/15 border border-[#248A3D]/25 dark:border-[#30D158]/30">
-                    <span className="text-[#248A3D] dark:text-[#30D158] text-[10px] block font-bold">আপনার নেট প্রফিট</span>
-                    <span className="text-sm font-bold text-[#248A3D] dark:text-[#30D158]">+৳৫০০</span>
+                    <span className="text-[#248A3D] dark:text-[#30D158] text-[10px] block font-semibold">আপনার নেট প্রফিট</span>
+                    <span className="text-sm font-semibold text-[#248A3D] dark:text-[#30D158]">+৳৫০০</span>
                   </div>
                 </div>
 
@@ -563,10 +563,10 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
             {simStep === 2 && (
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
+                  <span className="text-[10px] font-medium text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
                     ধাপ ২ / কাস্টমারের ডেলিভারি তথ্য
                   </span>
-                  <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     কাস্টমার থেকে নেওয়া তথ্য পূরণ করুন
                   </h4>
                   <p className="text-xs text-[#6E6E73] dark:text-[#98989D]">
@@ -614,10 +614,10 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
             {simStep === 3 && (
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
+                  <span className="text-[10px] font-medium text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
                     ধাপ ৩ / চেকআউটের পার্থক্য
                   </span>
-                  <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     {simPlanType === "vip"
                       ? "👑 VIP সক্রিয়: কোনো অগ্রিম চার্জ লাগবে না"
                       : "⚠️ ফ্রি একাউন্ট: অগ্রিম চার্জ দিতে হবে"}
@@ -642,7 +642,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                     <span>কুরিয়ার চার্জ (হোম ডেলিভারি):</span>
                     <span>৳১২০</span>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-black/[0.06] dark:border-white/[0.1] font-bold text-sm">
+                  <div className="flex justify-between items-center pt-2 border-t border-black/[0.06] dark:border-white/[0.1] font-semibold text-sm">
                     <span>অর্ডারের সময় আপনাকে পে করতে হবে:</span>
                     <span
                       className={
@@ -681,10 +681,10 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
             {simStep === 4 && (
               <div className="space-y-4">
                 <div className="space-y-1">
-                  <span className="text-[10px] font-bold text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
+                  <span className="text-[10px] font-medium text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider">
                     ধাপ ৪ / প্রফিট কালেকশন ও উত্তোলন
                   </span>
-                  <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     কাস্টমার থেকে টাকা কালেকশন ও আপনার লাভ
                   </h4>
                   <p className="text-xs text-[#6E6E73] dark:text-[#98989D]">
@@ -701,7 +701,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                     <span>কোম্পানি প্রোডাক্ট কস্ট:</span>
                     <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">-৳৯৫০</span>
                   </div>
-                  <div className="flex justify-between items-center pt-2 border-t border-black/[0.06] dark:border-white/[0.08] font-bold text-sm">
+                  <div className="flex justify-between items-center pt-2 border-t border-black/[0.06] dark:border-white/[0.08] font-semibold text-sm">
                     <span>আপনার ওয়ালেটে সরাসরি জমা:</span>
                     <span className="text-[#248A3D] dark:text-[#30D158] text-base">+৳৫০০ (ইনস্ট্যান্ট)</span>
                   </div>
@@ -750,7 +750,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-6 min-w-0 max-w-full overflow-hidden"
         >
           <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
-            <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
               রিসেলারদের জন্য পূর্ণাঙ্গ বাস্তব কর্মপদ্ধতি
             </h3>
             <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -785,10 +785,10 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                 key={item.step}
                 className="p-4 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.05] dark:border-white/[0.08] space-y-2"
               >
-                <span className="text-xs font-bold text-[#0071E3] dark:text-[#0A84FF]">
+                <span className="text-xs font-medium text-[#0071E3] dark:text-[#0A84FF]">
                   {item.step}
                 </span>
-                <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   {item.title}
                 </h4>
                 <p className="text-xs text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
@@ -803,7 +803,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <MessageCircle className="w-4 h-4 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
-                <h4 className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <h4 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   কাস্টমার মেসেজিং স্ক্রিপ্ট (১-ক্লিকে কপি করুন)
                 </h4>
               </div>
@@ -840,7 +840,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-6 min-w-0 max-w-full overflow-hidden"
         >
           <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
-            <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
               রিসেলার মাসিক নিট লাভ ক্যালকুলেটর
             </h3>
             <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -854,7 +854,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
               <div className="space-y-2 tabular-nums">
                 <div className="flex justify-between text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   <span>প্রতিদিন কাস্টমার ডেলিভারি:</span>
-                  <span className="text-[#0071E3] dark:text-[#0A84FF] font-bold">{dailyOrders} টি / দিন</span>
+                  <span className="text-[#0071E3] dark:text-[#0A84FF] font-semibold">{dailyOrders} টি / দিন</span>
                 </div>
                 <input
                   type="range"
@@ -875,7 +875,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
               <div className="space-y-2 tabular-nums">
                 <div className="flex justify-between text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   <span>প্রতি অর্ডারে আপনার লাভ:</span>
-                  <span className="text-[#0071E3] dark:text-[#0A84FF] font-bold">৳{profitMargin}</span>
+                  <span className="text-[#0071E3] dark:text-[#0A84FF] font-semibold">৳{profitMargin}</span>
                 </div>
                 <input
                   type="range"
@@ -897,11 +897,11 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
             {/* Calculations Summary Card */}
             <div className="p-5 rounded-2xl bg-[#1D1D1F] text-white dark:bg-[#000000] border border-black/[0.1] dark:border-white/[0.12] flex flex-col justify-between gap-4 tabular-nums">
               <div className="space-y-3">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-[#30D158]">
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[#30D158]">
                   মাসিক সম্ভাব্য আয় সামারি
                 </span>
 
-                <div className="text-3xl font-bold tracking-tight text-white">
+                <div className="text-3xl font-semibold tracking-tight text-white">
                   ৳{monthlyProfit.toLocaleString("en-BD")}
                   <span className="text-xs text-[#98989D] font-normal ml-1">/ মাস (গ্রস)</span>
                 </div>
@@ -919,7 +919,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                     <span>৩০ দিনের ভিআইপি সাবস্ক্রিপশন ফি:</span>
                     <span className="font-semibold text-[#FF453A]">-৳{subCost.toLocaleString("en-BD")}</span>
                   </div>
-                  <div className="flex justify-between pt-2 border-t border-white/10 text-sm font-bold">
+                  <div className="flex justify-between pt-2 border-t border-white/10 text-sm font-semibold">
                     <span>আপনার নেট প্রফিট:</span>
                     <span className="text-[#30D158] text-base">
                       ৳{(netEarnings > 0 ? netEarnings : monthlyProfit).toLocaleString("en-BD")}
@@ -956,7 +956,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
         >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
             <div className="min-w-0">
-              <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 রেফার অ্যান্ড আর্ন (বিনা পুঁজিতে নিশ্চিত আয়)
               </h3>
               <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -985,10 +985,10 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                 key={step.num}
                 className="p-4 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.05] dark:border-white/[0.08] space-y-1.5"
               >
-                <span className="w-6 h-6 rounded-full bg-[#0071E3]/12 dark:bg-[#0A84FF]/18 text-[#0071E3] dark:text-[#0A84FF] text-xs font-bold flex items-center justify-center">
+                <span className="w-6 h-6 rounded-full bg-[#0071E3]/12 dark:bg-[#0A84FF]/18 text-[#0071E3] dark:text-[#0A84FF] text-xs font-medium flex items-center justify-center">
                   {step.num}
                 </span>
-                <h4 className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">{step.title}</h4>
+                <h4 className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{step.title}</h4>
                 <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
                   {step.desc}
                 </p>
@@ -999,12 +999,12 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           {/* Referral Link & WhatsApp Share */}
           <div className="p-4 sm:p-5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-              <span className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <span className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7]">
                 আপনার রেফারেল লিংক
               </span>
               <div className="flex items-center gap-1.5">
                 <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D]">কোড:</span>
-                <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <span className="text-xs font-mono font-medium px-2.5 py-0.5 rounded-full bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] text-[#1D1D1F] dark:text-[#F5F5F7]">
                   {referralCode}
                 </span>
                 <button
@@ -1061,7 +1061,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
           className="ds-apple-surface rounded-[26px] p-4 sm:p-7 space-y-4 min-w-0 max-w-full overflow-hidden"
         >
           <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-3">
-            <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
               রিসেলারদের জরুরি প্রশ্ন ও উত্তর
             </h3>
           </div>
@@ -1089,7 +1089,7 @@ export const ResellerTeacherGuide: React.FC<ResellerTeacherGuideProps> = ({
                 key={item.q}
                 className="p-3.5 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.05] dark:border-white/[0.08] space-y-1"
               >
-                <h4 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.q}</h4>
+                <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">{item.q}</h4>
                 <p className="text-[#6E6E73] dark:text-[#98989D] leading-relaxed">{item.a}</p>
               </div>
             ))}

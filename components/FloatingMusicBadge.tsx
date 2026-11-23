@@ -16,13 +16,16 @@ export const FloatingMusicBadge: React.FC<FloatingMusicBadgeProps> = ({
   className = '',
   compact = false,
 }) => {
-  if (!music || !music.audioUrl) return null;
-
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const playerRef = useRef<ResilientAudioPlayer | null>(null);
+  const audioUrl = music?.audioUrl || '';
 
   useEffect(() => {
+    if (!audioUrl) {
+      setIsPlaying(false);
+      return;
+    }
     const player = createResilientAudioPlayer({
       loop: true,
       muted: isMuted,
@@ -33,15 +36,17 @@ export const FloatingMusicBadge: React.FC<FloatingMusicBadgeProps> = ({
     });
     playerRef.current = player;
 
-    if (autoPlay && music.audioUrl) {
-      player.play(music.audioUrl);
+    if (autoPlay && audioUrl) {
+      player.play(audioUrl);
     }
 
     return () => {
       player.stop();
       playerRef.current = null;
     };
-  }, [music.audioUrl, autoPlay]);
+  }, [audioUrl, autoPlay]);
+
+  if (!music || !music.audioUrl) return null;
 
   const togglePlay = (e: React.MouseEvent) => {
     e.stopPropagation();

@@ -47,7 +47,7 @@ export const BorderOfferCard: React.FC<BorderOfferCardProps> = ({ product, onBuy
 
           {isSold && (
             <div className="absolute inset-0 bg-black/55 backdrop-blur-[2px] flex items-center justify-center p-2 z-20">
-              <div className="bg-black/80 border border-white/20 text-white font-bold px-4 py-2 rounded-2xl text-center">
+              <div className="bg-black/80 border border-white/20 text-white font-semibold px-4 py-2 rounded-2xl text-center">
                 <span className="text-base sm:text-lg block leading-none tracking-tight">
                   SOLD OUT
                 </span>
@@ -140,7 +140,7 @@ export const BorderOfferCard: React.FC<BorderOfferCardProps> = ({ product, onBuy
               Offer Price
             </span>
             <div className="flex items-baseline gap-1.5 tabular-nums">
-              <span className="text-base sm:text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight whitespace-nowrap">
+              <span className="text-base sm:text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight whitespace-nowrap">
                 {formatPrice(displayPrice)}
               </span>
               {originalPrice && (

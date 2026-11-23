@@ -313,7 +313,7 @@ export const AuthorProfile: React.FC = () => {
             <button
               type="button"
               onClick={handleFollowToggle}
-              className={`px-4 h-10 rounded-full text-xs font-extrabold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm ${
+              className={`px-4 h-10 rounded-full text-xs font-semibold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow-sm ${
                 isFollowing
                   ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-900 dark:text-white"
                   : "bg-[#1877F2] hover:bg-[#1465D8] text-white"
@@ -360,7 +360,7 @@ export const AuthorProfile: React.FC = () => {
               className="w-14 h-14 border-2 border-white dark:border-black shadow-lg"
             />
             <div className="bg-white/95 dark:bg-black/95 backdrop-blur-md px-2.5 py-1 rounded-xl shadow-xs border border-zinc-200 dark:border-zinc-800">
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">
+              <span className="text-[10px] font-medium uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3 fill-blue-500 text-white" /> Verified Creator
               </span>
             </div>
@@ -370,7 +370,7 @@ export const AuthorProfile: React.FC = () => {
         {/* HANDLE & XP / LEVEL BADGE ROW */}
         <div className="flex items-center justify-between gap-3 pt-1">
           <div className="space-y-0.5 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-white truncate">
+            <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white truncate">
               {safeAuthorName}
             </h1>
             <p className="text-xs font-semibold text-zinc-500 dark:text-zinc-400">
@@ -386,7 +386,7 @@ export const AuthorProfile: React.FC = () => {
           </div>
 
           {/* XP Badge Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60 shadow-xs whitespace-nowrap shrink-0">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900/60 shadow-xs whitespace-nowrap shrink-0">
             <Star className="w-3.5 h-3.5 fill-blue-500 text-blue-500" />
             <span>{xp} / {totalXp} XP</span>
           </div>
@@ -399,7 +399,7 @@ export const AuthorProfile: React.FC = () => {
               <button
                 type="button"
                 onClick={handleFollowToggle}
-                className={`flex-1 min-w-[110px] min-h-[44px] px-3.5 rounded-xl font-bold text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
+                className={`flex-1 min-w-[110px] min-h-[44px] px-3.5 rounded-xl font-medium text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer ${
                   isFollowing
                     ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700"
                     : "bg-zinc-950 dark:bg-white text-white dark:text-zinc-950"
@@ -424,7 +424,7 @@ export const AuthorProfile: React.FC = () => {
                   triggerHaptic();
                   navigate(`/messages?uid=${encodeURIComponent(id || "")}`);
                 }}
-                className="flex-1 min-w-[100px] min-h-[44px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 font-bold text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                className="flex-1 min-w-[100px] min-h-[44px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 font-medium text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4 shrink-0" />
                 <span>Message</span>
@@ -436,7 +436,7 @@ export const AuthorProfile: React.FC = () => {
                   triggerHaptic();
                   navigate(`/sponsor/${encodeURIComponent(id || "author_demo")}`);
                 }}
-                className="flex-1 min-w-[105px] min-h-[44px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 font-bold text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
+                className="flex-1 min-w-[105px] min-h-[44px] px-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700 font-medium text-xs active:scale-98 transition flex items-center justify-center gap-1.5 whitespace-nowrap cursor-pointer"
               >
                 <Handshake className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                 <span>Sponsor</span>
@@ -451,7 +451,7 @@ export const AuthorProfile: React.FC = () => {
                 setActiveStoryIndex(0);
                 setShowStoryMode(true);
               }}
-              className="w-full sm:w-auto min-h-[44px] px-4 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs hover:opacity-90 active:scale-98 transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
+              className="w-full sm:w-auto min-h-[44px] px-4 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-medium text-xs hover:opacity-90 active:scale-98 transition flex items-center justify-center gap-2 whitespace-nowrap cursor-pointer"
             >
               <span>View Stories ({authorStories.length})</span>
             </button>
@@ -465,7 +465,7 @@ export const AuthorProfile: React.FC = () => {
               <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Followers
               </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
+              <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
                 {followerCount.toLocaleString()}
               </span>
             </div>
@@ -474,7 +474,7 @@ export const AuthorProfile: React.FC = () => {
               <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Following
               </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
+              <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
                 {followingCount.toLocaleString()}
               </span>
             </div>
@@ -483,7 +483,7 @@ export const AuthorProfile: React.FC = () => {
               <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Likes
               </span>
-              <span className="text-base sm:text-lg font-black text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
+              <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white block mt-0.5 tabular-nums">
                 {likesCount.toLocaleString()}
               </span>
             </div>
@@ -492,7 +492,7 @@ export const AuthorProfile: React.FC = () => {
               <span className="block text-[10px] sm:text-xs font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
                 Gifted
               </span>
-              <span className="text-base sm:text-lg font-black text-amber-500 block mt-0.5 font-mono">
+              <span className="text-base sm:text-lg font-semibold text-amber-500 block mt-0.5 font-mono">
                 {giftedStars.toLocaleString()} ⭐
               </span>
             </div>
@@ -501,7 +501,7 @@ export const AuthorProfile: React.FC = () => {
 
         {/* INTERESTS / TOPICS SECTION */}
         <div className="space-y-2.5 pt-1">
-          <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white tracking-wide">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-wide">
             Online & Tech Topics
           </h3>
 
@@ -521,7 +521,7 @@ export const AuthorProfile: React.FC = () => {
               return displayTopics.map((item, idx) => (
                 <span
                   key={idx}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 shadow-2xs whitespace-nowrap"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 shadow-2xs whitespace-nowrap"
                 >
                   <span>{item.icon}</span>
                   <span>{item.label}</span>
@@ -539,7 +539,7 @@ export const AuthorProfile: React.FC = () => {
               triggerHaptic();
               navigate(`/sponsor/${id || "author_demo"}`);
             }}
-            className="py-3 px-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+            className="py-3 px-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 text-white font-semibold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Handshake className="w-4 h-4" />
             <span>Sponsor Creator</span>
@@ -551,7 +551,7 @@ export const AuthorProfile: React.FC = () => {
               triggerHaptic();
               navigate(`/gift-stars/${id || "author_demo"}`);
             }}
-            className="py-3 px-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-extrabold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+            className="py-3 px-3 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-semibold text-xs shadow-md transition active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
           >
             <Star className="w-4 h-4 fill-white" />
             <span>Gift Stars ⭐</span>
@@ -562,7 +562,7 @@ export const AuthorProfile: React.FC = () => {
         {authorStories.length > 0 && (
         <div className="space-y-3 pt-2">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white tracking-wide">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-wide">
               Featured Stories
             </h3>
             <span className="text-[11px] font-semibold text-zinc-400">
@@ -588,7 +588,7 @@ export const AuthorProfile: React.FC = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
                 </div>
-                <h4 className="font-extrabold text-xs text-zinc-900 dark:text-white truncate">
+                <h4 className="font-semibold text-xs text-zinc-900 dark:text-white truncate">
                   {story.title}
                 </h4>
                 <p className="text-[10px] text-zinc-500 dark:text-zinc-400 line-clamp-1">
@@ -603,7 +603,7 @@ export const AuthorProfile: React.FC = () => {
         {/* VERIFIED INCIDENT REPORTS & POSTS */}
         <div className="space-y-3 pt-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white tracking-wide flex items-center gap-1.5">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white tracking-wide flex items-center gap-1.5">
               <ShieldAlert className="w-4 h-4 text-rose-500" />
               <span>Verified Reports ({posts.length})</span>
             </h3>
@@ -625,7 +625,7 @@ export const AuthorProfile: React.FC = () => {
                   className="p-3.5 rounded-2xl bg-zinc-50/90 dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700 transition cursor-pointer space-y-1 shadow-2xs"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-white line-clamp-1">
+                    <h4 className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-white line-clamp-1">
                       {p.title || "Community Post"}
                     </h4>
                     {canManagePost && (
@@ -676,11 +676,11 @@ export const AuthorProfile: React.FC = () => {
                     </div>
                   )}
                   <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/60">
-                    <span className="uppercase font-bold text-rose-600 dark:text-rose-400">
+                    <span className="uppercase font-medium text-rose-600 dark:text-rose-400">
                       {p.category ? p.category.replace(/_/g, " ") : "Post"}
                     </span>
                     <div className="flex items-center gap-2.5">
-                      <span className="font-mono font-bold text-zinc-600 dark:text-zinc-300">
+                      <span className="font-mono font-semibold text-zinc-600 dark:text-zinc-300">
                         {(p.reactionsCount
                           ? (Object.values(p.reactionsCount) as number[]).reduce(
                               (a, b) => a + (Number(b) || 0),
@@ -696,7 +696,7 @@ export const AuthorProfile: React.FC = () => {
                             p.authorId === currentUser.uid)
                       ) && (
                         <span
-                          className="inline-flex items-center gap-1 font-mono font-bold text-zinc-500 dark:text-zinc-400"
+                          className="inline-flex items-center gap-1 font-mono font-semibold text-zinc-500 dark:text-zinc-400"
                           title="Views (only visible to you)"
                         >
                           <Eye className="w-3 h-3" />
@@ -743,7 +743,7 @@ export const AuthorProfile: React.FC = () => {
                     className="w-8 h-8 rounded-full object-cover border border-white/50"
                   />
                   <div>
-                    <span className="font-bold text-xs block">@{handle}</span>
+                    <span className="font-medium text-xs block">@{handle}</span>
                     <span className="text-[10px] opacity-70 block">
                       {authorStories[activeStoryIndex].createdAt
                         ? new Date(authorStories[activeStoryIndex].createdAt).toLocaleString([], {
@@ -781,7 +781,7 @@ export const AuthorProfile: React.FC = () => {
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-6 text-white space-y-1">
-                <h3 className="text-xl font-black">{authorStories[activeStoryIndex].title}</h3>
+                <h3 className="text-xl font-semibold">{authorStories[activeStoryIndex].title}</h3>
                 <p className="text-xs opacity-90">{authorStories[activeStoryIndex].subtitle}</p>
               </div>
             </div>
@@ -792,7 +792,7 @@ export const AuthorProfile: React.FC = () => {
                 type="button"
                 onClick={() => setActiveStoryIndex((prev) => Math.max(0, prev - 1))}
                 disabled={activeStoryIndex === 0}
-                className="flex-1 py-3 rounded-full bg-white/20 text-white font-bold text-xs disabled:opacity-30 cursor-pointer"
+                className="flex-1 py-3 rounded-full bg-white/20 text-white font-medium text-xs disabled:opacity-30 cursor-pointer"
               >
                 Previous
               </button>
@@ -805,7 +805,7 @@ export const AuthorProfile: React.FC = () => {
                     setShowStoryMode(false);
                   }
                 }}
-                className="flex-1 py-3 rounded-full bg-white text-black font-extrabold text-xs cursor-pointer"
+                className="flex-1 py-3 rounded-full bg-white text-black font-semibold text-xs cursor-pointer"
               >
                 {activeStoryIndex < authorStories.length - 1 ? "Next" : "Done"}
               </button>

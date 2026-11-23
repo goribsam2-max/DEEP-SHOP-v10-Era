@@ -154,7 +154,7 @@ export default function MyCoins() {
     <div className="ds-apple-shop-canvas min-h-screen pb-28">
       <div className="max-w-xl mx-auto px-4 pt-6 space-y-5">
         <div className="px-1">
-          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             My DP Coins
           </h1>
         </div>
@@ -165,7 +165,7 @@ export default function MyCoins() {
               <p className="text-white/65 text-[13px] font-medium mb-1">
                 Available Balance
               </p>
-              <div className="font-bold text-[42px] leading-none tracking-[-0.03em] flex items-baseline gap-2 tabular-nums">
+              <div className="font-semibold text-[42px] leading-none tracking-[-0.03em] flex items-baseline gap-2 tabular-nums">
                 {userData?.coins || 0}
                 <span className="text-[18px] font-semibold text-white/75">DP</span>
               </div>
@@ -222,7 +222,7 @@ export default function MyCoins() {
             className="ds-apple-surface p-4 rounded-[20px] flex flex-col items-center justify-center gap-2 active:scale-[0.97] transition-transform"
           >
             <div className="w-10 h-10 bg-[#FF9500]/12 text-[#FF9500] rounded-full flex items-center justify-center">
-              <span className="font-bold text-[13px]">DP</span>
+              <span className="font-semibold text-[13px]">DP</span>
             </div>
             <span className="font-semibold text-[13px] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Earn More
@@ -330,7 +330,7 @@ export default function MyCoins() {
               <p className="text-[12px] text-[#6E6E73] dark:text-[#98989D] font-medium">
                 Available Coin Balance
               </p>
-              <p className="text-[17px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+              <p className="text-[17px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                 {userData?.coins || 0} DP Coins
               </p>
             </div>

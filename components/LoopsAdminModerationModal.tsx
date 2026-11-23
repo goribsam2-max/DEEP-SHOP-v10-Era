@@ -224,7 +224,7 @@ export function LoopsAdminModerationModal({
         read: false,
       });
 
-      notify(`Copyright strike issued on user account.`, 'warning', undefined, {
+      notify(`Copyright strike issued on user account.`, 'info', undefined, {
         undoLabel: 'Undo',
         onUndo: async () => {
           await firestoreUpdate(targetUserRef, {
@@ -344,7 +344,7 @@ export function LoopsAdminModerationModal({
           <div className="flex items-center justify-between border-b border-white/10 pb-3">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-amber-400" />
-              <h3 className="text-base font-bold text-white">Admin Moderation</h3>
+              <h3 className="text-base font-semibold text-white">Admin Moderation</h3>
             </div>
             <button
               type="button"
@@ -357,7 +357,7 @@ export function LoopsAdminModerationModal({
 
           {/* Target Post Pill */}
           <div className="bg-zinc-800/80 rounded-2xl p-3 border border-white/5 flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold shrink-0">
+            <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-medium shrink-0">
               {post.reporterName?.charAt(0) || 'U'}
             </div>
             <div className="min-w-0 flex-1">
@@ -416,7 +416,7 @@ export function LoopsAdminModerationModal({
 
               {post.copyrightClaim?.active ? (
                 <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-amber-300 text-xs font-bold">
+                  <div className="flex items-center gap-2 text-amber-300 text-xs font-medium">
                     <CopyrightIcon className="w-4 h-4" /> Active Copyright Claim
                   </div>
                   <p className="text-xs text-zinc-300">
@@ -484,7 +484,7 @@ export function LoopsAdminModerationModal({
                     type="button"
                     onClick={handleApplyCopyrightClaim}
                     disabled={loading}
-                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-black font-bold text-xs rounded-xl transition-colors shadow-lg"
+                    className="w-full py-2.5 bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-black font-medium text-xs rounded-xl transition-colors shadow-lg"
                   >
                     {loading ? 'Applying Claim...' : 'Apply Copyright Claim (Disable Income)'}
                   </button>
@@ -497,7 +497,7 @@ export function LoopsAdminModerationModal({
           {mode === 'strike' && (
             <div className="flex flex-col gap-3">
               <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-3 flex flex-col gap-1 text-xs text-red-200">
-                <span className="font-bold flex items-center gap-1.5">
+                <span className="font-semibold flex items-center gap-1.5">
                   <AlertCircle className="w-4 h-4 text-red-400" /> Account Strike Policy
                 </span>
                 <span>
@@ -534,7 +534,7 @@ export function LoopsAdminModerationModal({
                 type="button"
                 onClick={handleApplyCopyrightStrike}
                 disabled={loading}
-                className="w-full py-2.5 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-bold text-xs rounded-xl transition-colors shadow-lg"
+                className="w-full py-2.5 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white font-medium text-xs rounded-xl transition-colors shadow-lg"
               >
                 {loading ? 'Issuing Strike...' : 'Issue Copyright Strike'}
               </button>
@@ -550,7 +550,7 @@ export function LoopsAdminModerationModal({
 
               {post.isRemovedByAdmin ? (
                 <div className="bg-zinc-800 border border-white/10 rounded-2xl p-3 flex flex-col gap-2">
-                  <div className="flex items-center gap-2 text-zinc-200 text-xs font-bold">
+                  <div className="flex items-center gap-2 text-zinc-200 text-xs font-medium">
                     <Trash2 className="w-4 h-4 text-red-400" /> Post currently removed
                   </div>
                   <p className="text-xs text-zinc-400">
@@ -560,7 +560,7 @@ export function LoopsAdminModerationModal({
                     type="button"
                     onClick={handleRestorePost}
                     disabled={loading}
-                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition-colors"
+                    className="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-xl transition-colors"
                   >
                     {loading ? 'Restoring...' : 'Restore Post to Public Feed'}
                   </button>
@@ -596,7 +596,7 @@ export function LoopsAdminModerationModal({
                     type="button"
                     onClick={handleRemovePostWithReason}
                     disabled={loading}
-                    className="w-full py-2.5 bg-zinc-100 hover:bg-white text-black font-bold text-xs rounded-xl transition-colors shadow-lg"
+                    className="w-full py-2.5 bg-zinc-100 hover:bg-white text-black font-medium text-xs rounded-xl transition-colors shadow-lg"
                   >
                     {loading ? 'Removing Post...' : 'Remove Post with Reason'}
                   </button>

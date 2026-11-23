@@ -457,14 +457,14 @@ const ManageAds: React.FC = () => {
     <div className="space-y-6 px-1 sm:px-0">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
         <div>
-          <h2 className="text-2xl font-bold">Promotions & Advertising</h2>
+          <h2 className="text-2xl font-semibold">Promotions & Advertising</h2>
           <p className="text-xs text-zinc-500 mt-1">Configure shoppable video ads, geo-targeted photo campaigns, and trace real-time viewer engagement analytics.</p>
         </div>
         {activeTab === 'campaigns' && (
           <button
             onClick={saveAds}
             disabled={loading}
-            className="w-full md:w-auto bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:opacity-80 disabled:opacity-50 text-sm shadow-sm transition"
+            className="w-full md:w-auto bg-black dark:bg-white text-white dark:text-black px-6 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 hover:opacity-80 disabled:opacity-50 text-sm shadow-sm transition"
           >
             {loading ? "Saving..." : <><Save className="w-4 h-4" /> Save All Configs</>}
           </button>
@@ -473,7 +473,7 @@ const ManageAds: React.FC = () => {
           <button
             onClick={savePlacements}
             disabled={loading}
-            className="w-full md:w-auto bg-[#1877F2] hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 text-sm shadow-sm transition cursor-pointer"
+            className="w-full md:w-auto bg-[#1877F2] hover:bg-blue-600 text-white px-6 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 text-sm shadow-sm transition cursor-pointer"
           >
             {loading ? "Saving..." : <><Save className="w-4 h-4" /> Save Placement Codes</>}
           </button>
@@ -484,14 +484,14 @@ const ManageAds: React.FC = () => {
       <div className="flex border-b border-zinc-200 dark:border-zinc-800 gap-1 overflow-x-auto whitespace-nowrap scrollbar-none pb-px">
         <button
           onClick={() => setActiveTab('placements')}
-          className={"flex-shrink-0 px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'placements' ? 'border-[#1877F2] text-[#1877F2]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
+          className={"flex-shrink-0 px-5 py-3 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'placements' ? 'border-[#1877F2] text-[#1877F2]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
         >
           <Terminal className="w-4 h-4" />
           AdX & Monetag Placement Codes
         </button>
         <button
           onClick={() => setActiveTab('campaigns')}
-          className={"flex-shrink-0 px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'campaigns' ? 'border-[#1cdb5e] text-[#1cdb5e]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
+          className={"flex-shrink-0 px-5 py-3 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'campaigns' ? 'border-[#1cdb5e] text-[#1cdb5e]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
         >
           <Film className="w-4 h-4" />
           Campaign Configurator
@@ -505,7 +505,7 @@ const ManageAds: React.FC = () => {
               .then(data => setAnalyticsData(data))
               .catch(err => console.error(err));
           }}
-          className={"flex-shrink-0 px-5 py-3 font-bold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'analytics' ? 'border-[#1cdb5e] text-[#1cdb5e]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
+          className={"flex-shrink-0 px-5 py-3 font-semibold text-sm border-b-2 transition-all flex items-center gap-2 " + (activeTab === 'analytics' ? 'border-[#1cdb5e] text-[#1cdb5e]' : 'border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200')}
         >
           <BarChart3 className="w-4 h-4" />
           Advanced Analytics Dashboard
@@ -515,7 +515,7 @@ const ManageAds: React.FC = () => {
       {activeTab === 'placements' && (
         <div className="space-y-6">
           <div className="bg-white dark:bg-zinc-900 p-5 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm space-y-2">
-            <h3 className="text-lg font-bold flex items-center gap-2 text-zinc-900 dark:text-white">
+            <h3 className="text-lg font-semibold flex items-center gap-2 text-zinc-900 dark:text-white">
               <Terminal className="w-5 h-5 text-[#1877F2]" /> Ad Network Placement & Script Manager
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -545,7 +545,7 @@ const ManageAds: React.FC = () => {
                       <div className="w-11 h-6 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-zinc-600 peer-checked:bg-[#1877F2]"></div>
                     </label>
                     <div>
-                      <h4 className="text-base font-bold text-zinc-900 dark:text-white">
+                      <h4 className="text-base font-semibold text-zinc-900 dark:text-white">
                         {plc.slotLabel}
                       </h4>
                       <p className="text-xs text-zinc-500">
@@ -555,7 +555,7 @@ const ManageAds: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold px-3 py-1 rounded-full ${plc.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'}`}>
+                    <span className={`text-xs font-medium px-3 py-1 rounded-full ${plc.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' : 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800'}`}>
                       {plc.active ? 'Active' : 'Disabled'}
                     </span>
                   </div>
@@ -563,7 +563,7 @@ const ManageAds: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">
                       Placement Type
                     </label>
                     <select
@@ -573,7 +573,7 @@ const ManageAds: React.FC = () => {
                         next[idx].type = e.target.value as any;
                         setPlacements(next);
                       }}
-                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none cursor-pointer"
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none cursor-pointer"
                     >
                       <option value="script">JS Script / Ad Code Tag (Monetag/AdSense/AdX)</option>
                       <option value="custom">Custom Graphic Banner (Text + Image + Link)</option>
@@ -581,7 +581,7 @@ const ManageAds: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">
                       Target Device
                     </label>
                     <select
@@ -591,7 +591,7 @@ const ManageAds: React.FC = () => {
                         next[idx].deviceTarget = e.target.value as any;
                         setPlacements(next);
                       }}
-                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none cursor-pointer"
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none cursor-pointer"
                     >
                       <option value="all">All Devices (Mobile & Desktop)</option>
                       <option value="mobile">Mobile View Only</option>
@@ -600,7 +600,7 @@ const ManageAds: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">
                       Ad Format
                     </label>
                     <select
@@ -610,7 +610,7 @@ const ManageAds: React.FC = () => {
                         next[idx].format = e.target.value as any;
                         setPlacements(next);
                       }}
-                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none cursor-pointer"
+                      className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none cursor-pointer"
                     >
                       <option value="in_feed">In-Feed Responsive</option>
                       <option value="display">Display Banner</option>
@@ -622,7 +622,7 @@ const ManageAds: React.FC = () => {
 
                 {plc.type === "script" ? (
                   <div>
-                    <label className="block text-xs font-bold text-zinc-500 mb-1">
+                    <label className="block text-xs font-medium text-zinc-500 mb-1">
                       Paste Ad Network Script / HTML Tag Code (Monetag, Google AdSense, AdX, etc.)
                     </label>
                     <textarea
@@ -640,7 +640,7 @@ const ManageAds: React.FC = () => {
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      <label className="block text-xs font-medium text-zinc-500 mb-1">
                         Ad Title
                       </label>
                       <input
@@ -652,12 +652,12 @@ const ManageAds: React.FC = () => {
                           setPlacements(next);
                         }}
                         placeholder="e.g. Special Discount Offer"
-                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      <label className="block text-xs font-medium text-zinc-500 mb-1">
                         Media URL (ImgBB Image or Catbox.moe Video — Exact Aspect Ratio)
                       </label>
                       <div className="flex flex-col sm:flex-row gap-2">
@@ -670,10 +670,10 @@ const ManageAds: React.FC = () => {
                             setPlacements(next);
                           }}
                           placeholder="https://i.ibb.co/... or https://files.catbox.moe/..."
-                          className="w-full sm:flex-1 bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                          className="w-full sm:flex-1 bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none"
                         />
                         <div className="flex items-center gap-2 shrink-0">
-                          <label className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition">
+                          <label className="px-3 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-medium flex items-center gap-1.5 cursor-pointer transition">
                             {uploadingKey === `plc-${idx}-imgbb` ? (
                               <Loader2 className="w-3.5 h-3.5 animate-spin" />
                             ) : (
@@ -691,7 +691,7 @@ const ManageAds: React.FC = () => {
                               }}
                             />
                           </label>
-                          <label className="px-3 py-2 rounded-xl bg-[#5835f2] hover:bg-[#4a28df] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer transition">
+                          <label className="px-3 py-2 rounded-xl bg-[#5835f2] hover:bg-[#4a28df] text-white text-xs font-medium flex items-center gap-1.5 cursor-pointer transition">
                             {uploadingKey === `plc-${idx}-catbox` ? (
                               <>
                                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -719,7 +719,7 @@ const ManageAds: React.FC = () => {
                     </div>
 
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      <label className="block text-xs font-medium text-zinc-500 mb-1">
                         Ad Description Body Text
                       </label>
                       <textarea
@@ -731,12 +731,12 @@ const ManageAds: React.FC = () => {
                         }}
                         rows={2}
                         placeholder="Promotional details..."
-                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      <label className="block text-xs font-medium text-zinc-500 mb-1">
                         Button Text
                       </label>
                       <input
@@ -748,12 +748,12 @@ const ManageAds: React.FC = () => {
                           setPlacements(next);
                         }}
                         placeholder="e.g. Shop Now"
-                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-zinc-500 mb-1">
+                      <label className="block text-xs font-medium text-zinc-500 mb-1">
                         Button Destination Link
                       </label>
                       <input
@@ -765,7 +765,7 @@ const ManageAds: React.FC = () => {
                           setPlacements(next);
                         }}
                         placeholder="e.g. /products or https://..."
-                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold text-zinc-900 dark:text-white outline-none"
+                        className="w-full bg-zinc-50 dark:bg-zinc-800 p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium text-zinc-900 dark:text-white outline-none"
                       />
                     </div>
                   </div>
@@ -781,8 +781,8 @@ const ManageAds: React.FC = () => {
           {/* Video Ads Section */}
           <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
-               <h3 className="text-xl font-bold">Video Ads</h3>
-               <button onClick={addVideoAd} className="w-full sm:w-auto bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-200">
+               <h3 className="text-xl font-semibold">Video Ads</h3>
+               <button onClick={addVideoAd} className="w-full sm:w-auto bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white px-4 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-zinc-200">
                  <Plus className="w-4 h-4" /> Add Video Ad
                </button>
             </div>
@@ -793,20 +793,20 @@ const ManageAds: React.FC = () => {
                    {/* Clean Responsive Header for each Video Campaign - no absolute overlays */}
                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-zinc-200 dark:border-zinc-800/60">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono bg-zinc-200 dark:bg-zinc-800 px-2.5 py-1 rounded-lg text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                        <span className="font-mono bg-zinc-200 dark:bg-zinc-800 px-2.5 py-1 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300">
                           ID: {ad.id}
                         </span>
                         {ad.isSponsored && (
-                          <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800/30 text-[10px] font-bold">
+                          <span className="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800/30 text-[10px] font-semibold">
                             Sponsored
                           </span>
                         )}
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ad.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${ad.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
                           {ad.active ? 'Active' : 'Disabled'}
                         </span>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-zinc-500">
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500">
                         <span className="bg-white dark:bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700">Views: {Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0)}</span>
                         <span className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">Conv: {Math.max(ad.conversions || 0, analyticsData[ad.id]?.conversions || 0)} ({(Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0) ? ((Math.max(ad.conversions || 0, analyticsData[ad.id]?.conversions || 0) / Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0)) * 100).toFixed(1) : 0)}%)</span>
                         {((ad as any).closes > 0 || analyticsData[ad.id]?.closes > 0) && (
@@ -822,7 +822,7 @@ const ManageAds: React.FC = () => {
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="flex flex-wrap items-center gap-4">
-                         <label className="flex items-center gap-2 text-sm font-bold cursor-pointer select-none">
+                         <label className="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
                             <input
                               type="checkbox"
                               checked={ad.active}
@@ -831,7 +831,7 @@ const ManageAds: React.FC = () => {
                             />
                             Active Promotion
                          </label>
-                         <label className="flex items-center gap-2 text-sm font-bold text-amber-600 cursor-pointer select-none">
+                         <label className="flex items-center gap-2 text-sm font-medium text-amber-600 cursor-pointer select-none">
                             <input
                               type="checkbox"
                               checked={ad.isSponsored || false}
@@ -844,7 +844,7 @@ const ManageAds: React.FC = () => {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
-                           <label className="block text-xs font-bold mb-1 text-zinc-500">Target Category (Browsing History)</label>
+                           <label className="block text-xs font-medium mb-1 text-zinc-500">Target Category (Browsing History)</label>
                            <input
                              type="text"
                              value={ad.targetCategory || ''}
@@ -854,7 +854,7 @@ const ManageAds: React.FC = () => {
                            />
                         </div>
                         <div>
-                           <label className="block text-xs font-bold mb-1 text-zinc-500">Target Region / City</label>
+                           <label className="block text-xs font-medium mb-1 text-zinc-500">Target Region / City</label>
                            <input
                              type="text"
                              value={ad.targetRegion || ''}
@@ -866,7 +866,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Required Watch Timer (seconds)</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Required Watch Timer (seconds)</label>
                          <input
                            type="number"
                            value={ad.timerDuration}
@@ -876,7 +876,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Reward Coins (For watch-to-earn ending)</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Reward Coins (For watch-to-earn ending)</label>
                          <input
                            type="number"
                            value={ad.rewardCoins || 0}
@@ -886,7 +886,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Ad Headline / Caption</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Ad Headline / Caption</label>
                          <input
                            type="text"
                            value={ad.title || ''}
@@ -897,7 +897,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">CTA Button Text (Default: See details)</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">CTA Button Text (Default: See details)</label>
                          <input
                            type="text"
                            value={ad.buttonText || ''}
@@ -908,7 +908,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">CTA Destination Link</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">CTA Destination Link</label>
                          <input
                            type="text"
                            value={ad.buttonLink || ''}
@@ -919,7 +919,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Expandable Details Text (Optional)</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Expandable Details Text (Optional)</label>
                          <input
                            type="text"
                            value={ad.text || ''}
@@ -930,7 +930,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div className="md:col-span-2">
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Shoppable Products Inside Video (Slugs, comma-separated)</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Shoppable Products Inside Video (Slugs, comma-separated)</label>
                          <input
                            type="text"
                            placeholder="e.g. apple-watch-s8, airpods-pro-2"
@@ -942,10 +942,10 @@ const ManageAds: React.FC = () => {
 
                       <div className="md:col-span-2 space-y-4">
                         <div className="flex flex-wrap justify-between items-center gap-2">
-                          <label className="text-xs font-bold text-zinc-500">
+                          <label className="text-xs font-medium text-zinc-500">
                             Sponsored Video Media (Upload via Catbox.moe API — Exact Aspect Ratio Preserved)
                           </label>
-                          <button onClick={() => addMediaToVideoAd(adIndex)} className="text-xs font-bold text-[#1cdb5e] hover:underline flex items-center gap-1">
+                          <button onClick={() => addMediaToVideoAd(adIndex)} className="text-xs font-semibold text-[#1cdb5e] hover:underline flex items-center gap-1">
                              <Plus className="w-3 h-3" /> Add Alternative Video
                           </button>
                         </div>
@@ -963,7 +963,7 @@ const ManageAds: React.FC = () => {
                                   placeholder="Catbox.moe Video URL (e.g., https://files.catbox.moe/...mp4)"
                                 />
                                 <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                                  <label className="ds-sponsored-cta px-3.5 py-2 rounded-lg cursor-pointer flex-shrink-0 text-xs font-bold inline-flex items-center justify-center gap-1.5 transition">
+                                  <label className="ds-sponsored-cta px-3.5 py-2 rounded-lg cursor-pointer flex-shrink-0 text-xs font-medium inline-flex items-center justify-center gap-1.5 transition">
                                     {isUploadingThis ? (
                                       <>
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -990,7 +990,7 @@ const ManageAds: React.FC = () => {
                                   <select
                                     value={media.ratio || "auto"}
                                     onChange={(e) => updateVideoMedia(adIndex, mIndex, "ratio", e.target.value)}
-                                    className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-bold outline-none border-none cursor-pointer"
+                                    className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-medium outline-none border-none cursor-pointer"
                                   >
                                     {RATIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                   </select>
@@ -1031,8 +1031,8 @@ const ManageAds: React.FC = () => {
           {/* Photo Banner Ads Section */}
           <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-3xl shadow-sm border border-zinc-200 dark:border-zinc-800">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6">
-               <h3 className="text-xl font-bold">Banner & Image Ads</h3>
-               <button onClick={addPhotoAd} className="w-full sm:w-auto bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white px-4 py-2.5 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-200">
+               <h3 className="text-xl font-semibold">Banner & Image Ads</h3>
+               <button onClick={addPhotoAd} className="w-full sm:w-auto bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white px-4 py-2.5 rounded-xl font-semibold flex items-center justify-center gap-2 hover:bg-zinc-200">
                  <Plus className="w-4 h-4" /> Add Photo Ad
                </button>
             </div>
@@ -1043,15 +1043,15 @@ const ManageAds: React.FC = () => {
                    {/* Clean Responsive Header for each Photo Campaign - no absolute overlays */}
                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-4 border-b border-zinc-200 dark:border-zinc-800/60">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-mono bg-zinc-200 dark:bg-zinc-800 px-2.5 py-1 rounded-lg text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                        <span className="font-mono bg-zinc-200 dark:bg-zinc-800 px-2.5 py-1 rounded-lg text-xs font-medium text-zinc-700 dark:text-zinc-300">
                           ID: {ad.id}
                         </span>
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${ad.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${ad.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500'}`}>
                           {ad.active ? 'Active' : 'Disabled'}
                         </span>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-2 text-xs font-bold text-zinc-500">
+                      <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-zinc-500">
                         <span className="bg-white dark:bg-zinc-900 px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700">Views: {Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0)}</span>
                         <span className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">Conv: {Math.max(ad.conversions || 0, analyticsData[ad.id]?.conversions || 0)} ({(Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0) ? ((Math.max(ad.conversions || 0, analyticsData[ad.id]?.conversions || 0) / Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0)) * 100).toFixed(1) : 0)}%)</span>
                         <button onClick={() => removePhotoAd(adIndex)} className="text-red-500 p-2 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition ml-auto lg:ml-2" title="Remove Campaign">
@@ -1062,7 +1062,7 @@ const ManageAds: React.FC = () => {
 
                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
-                         <label className="flex items-center gap-2 text-sm font-bold cursor-pointer select-none">
+                         <label className="flex items-center gap-2 text-sm font-medium cursor-pointer select-none">
                             <input
                               type="checkbox"
                               checked={ad.active}
@@ -1075,10 +1075,10 @@ const ManageAds: React.FC = () => {
 
                       <div className="md:col-span-2 space-y-4">
                         <div className="flex flex-wrap justify-between items-center gap-2">
-                          <label className="text-xs font-bold text-zinc-500">
+                          <label className="text-xs font-medium text-zinc-500">
                             Sponsored Ad Images (Upload via ImgBB — Exact Aspect Ratio Preserved)
                           </label>
-                          <button onClick={() => addMediaToPhotoAd(adIndex)} className="text-xs font-bold text-[#1cdb5e] hover:underline flex items-center gap-1">
+                          <button onClick={() => addMediaToPhotoAd(adIndex)} className="text-xs font-semibold text-[#1cdb5e] hover:underline flex items-center gap-1">
                              <Plus className="w-3 h-3" /> Add Alternative Image
                           </button>
                         </div>
@@ -1096,7 +1096,7 @@ const ManageAds: React.FC = () => {
                                   placeholder="ImgBB Image URL (e.g., https://i.ibb.co/...)"
                                 />
                                 <div className="flex flex-wrap items-center justify-between sm:justify-start gap-2 mt-2 sm:mt-0 w-full sm:w-auto">
-                                  <label className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-3.5 py-2 rounded-lg cursor-pointer flex-shrink-0 text-xs font-bold inline-flex items-center justify-center gap-1.5 hover:opacity-90 transition">
+                                  <label className="bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 px-3.5 py-2 rounded-lg cursor-pointer flex-shrink-0 text-xs font-medium inline-flex items-center justify-center gap-1.5 hover:opacity-90 transition">
                                     {isUploadingImg ? (
                                       <>
                                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -1123,7 +1123,7 @@ const ManageAds: React.FC = () => {
                                   <select
                                     value={media.ratio || 'auto'}
                                     onChange={(e) => updatePhotoMedia(adIndex, mediaIndex, 'ratio', e.target.value)}
-                                    className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-bold outline-none border-none cursor-pointer"
+                                    className="bg-zinc-100 dark:bg-zinc-800 p-2 rounded-lg text-xs font-medium outline-none border-none cursor-pointer"
                                   >
                                     {RATIO_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                                   </select>
@@ -1148,11 +1148,11 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Ad Format Type</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Ad Format Type</label>
                          <select
                            value={ad.adType || 'in_feed'}
                            onChange={(e) => updatePhotoAd(adIndex, "adType", e.target.value)}
-                           className="w-full bg-white dark:bg-zinc-900 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none font-bold"
+                           className="w-full bg-white dark:bg-zinc-900 p-3 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none font-semibold"
                          >
                            <option value="display">Display Ad (Auto-sizing / Rich Media)</option>
                            <option value="in_feed">In-Feed Ad (Blends in Article Feeds)</option>
@@ -1162,7 +1162,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Title (HTML allowed)</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Title (HTML allowed)</label>
                          <input
                            type="text"
                            value={ad.title}
@@ -1173,7 +1173,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Button Text</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Button Text</label>
                          <input
                            type="text"
                            value={ad.buttonText}
@@ -1184,7 +1184,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div className="md:col-span-2">
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Body Text (HTML allowed for links)</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Body Text (HTML allowed for links)</label>
                          <textarea
                            value={ad.text}
                            onChange={(e) => updatePhotoAd(adIndex, "text", e.target.value)}
@@ -1194,7 +1194,7 @@ const ManageAds: React.FC = () => {
                       </div>
 
                       <div>
-                         <label className="block text-xs font-bold mb-1 text-zinc-500">Button Link</label>
+                         <label className="block text-xs font-medium mb-1 text-zinc-500">Button Link</label>
                          <input
                            type="text"
                            value={ad.buttonLink}
@@ -1206,15 +1206,15 @@ const ManageAds: React.FC = () => {
 
                       <div className="md:col-span-2 flex flex-col sm:flex-row flex-wrap items-center gap-4 mt-2 bg-zinc-100/30 dark:bg-zinc-800/20 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700">
                         <div className="w-full sm:flex-1 min-w-[200px]">
-                          <label className="text-xs font-bold text-zinc-500 mb-1 block">Target Category (Behavioral):</label>
+                          <label className="text-xs font-medium text-zinc-500 mb-1 block">Target Category (Behavioral):</label>
                           <input type="text" placeholder="e.g. Smartwatches" value={ad.targetCategory || ''} onChange={(e) => updatePhotoAd(adIndex, 'targetCategory', e.target.value)} className="w-full bg-white dark:bg-zinc-800 p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none" />
                         </div>
                         <div className="w-full sm:flex-1 min-w-[200px]">
-                          <label className="text-xs font-bold text-zinc-500 mb-1 block">Target Region (Geo):</label>
+                          <label className="text-xs font-medium text-zinc-500 mb-1 block">Target Region (Geo):</label>
                           <input type="text" placeholder="e.g. Dhaka" value={ad.targetRegion || ''} onChange={(e) => updatePhotoAd(adIndex, 'targetRegion', e.target.value)} className="w-full bg-white dark:bg-zinc-800 p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none" />
                         </div>
                         <div className="w-full">
-                          <label className="text-xs font-bold text-zinc-500 mb-1 block">Shoppable Products (Slugs, comma separated):</label>
+                          <label className="text-xs font-medium text-zinc-500 mb-1 block">Shoppable Products (Slugs, comma separated):</label>
                           <input type="text" placeholder="e.g. apple-watch-s8, airpods-pro-2" value={ad.shoppableProducts?.join(', ') || ''} onChange={(e) => updatePhotoAd(adIndex, 'shoppableProducts', e.target.value.split(',').map(s => s.trim()).filter(Boolean))} className="w-full bg-white dark:bg-zinc-800 p-2 rounded-xl border border-zinc-200 dark:border-zinc-700 text-sm outline-none" />
                         </div>
                       </div>
@@ -1241,8 +1241,8 @@ const ManageAds: React.FC = () => {
                 <Users className="w-6 h-6" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-zinc-500 truncate">Total Impressions</p>
-                <h4 className="text-xl font-bold mt-1 truncate">
+                <p className="text-xs font-semibold text-zinc-500 truncate">Total Impressions</p>
+                <h4 className="text-xl font-semibold mt-1 truncate">
                   {videoAds.reduce((acc, ad) => acc + Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0), 0) +
                    photoAds.reduce((acc, ad) => acc + Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0), 0)}
                 </h4>
@@ -1254,8 +1254,8 @@ const ManageAds: React.FC = () => {
                 <TrendingUp className="w-6 h-6" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-zinc-500 truncate">Total Conversions</p>
-                <h4 className="text-xl font-bold mt-1 truncate">
+                <p className="text-xs font-semibold text-zinc-500 truncate">Total Conversions</p>
+                <h4 className="text-xl font-semibold mt-1 truncate">
                   {videoAds.reduce((acc, ad) => acc + Math.max(ad.conversions || 0, analyticsData[ad.id]?.conversions || 0), 0) +
                    photoAds.reduce((acc, ad) => acc + Math.max(ad.conversions || 0, analyticsData[ad.id]?.conversions || 0), 0)}
                 </h4>
@@ -1267,8 +1267,8 @@ const ManageAds: React.FC = () => {
                 <Percent className="w-6 h-6" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-zinc-500 truncate">Avg. Conversion Rate</p>
-                <h4 className="text-xl font-bold mt-1 truncate">
+                <p className="text-xs font-normal text-zinc-500 truncate">Avg. Conversion Rate</p>
+                <h4 className="text-xl font-semibold mt-1 truncate">
                   {(() => {
                     const totalImps = videoAds.reduce((acc, ad) => acc + Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0), 0) +
                                       photoAds.reduce((acc, ad) => acc + Math.max(ad.impressions || 0, analyticsData[ad.id]?.impressions || 0), 0);
@@ -1285,8 +1285,8 @@ const ManageAds: React.FC = () => {
                 <Clock className="w-6 h-6" />
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-zinc-500 truncate">Avg. Watch Time</p>
-                <h4 className="text-xl font-bold mt-1 truncate">
+                <p className="text-xs font-normal text-zinc-500 truncate">Avg. Watch Time</p>
+                <h4 className="text-xl font-semibold mt-1 truncate">
                   {(() => {
                     const totalWatch = videoAds.reduce((acc, ad) => acc + Math.max((ad as any).totalWatchTime || 0, analyticsData[ad.id]?.totalWatchTime || 0), 0);
                     const totalCloses = videoAds.reduce((acc, ad) => acc + Math.max((ad as any).closes || 0, analyticsData[ad.id]?.closes || 0), 0);
@@ -1300,7 +1300,7 @@ const ManageAds: React.FC = () => {
           {/* Ad Selection and Retention drop-off analysis */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 lg:col-span-1 shadow-sm flex flex-col">
-              <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="w-5 h-5 text-[#1cdb5e]" /> Active Video Ads
               </h3>
               <div className="space-y-3 overflow-y-auto max-h-[400px] pr-1">
@@ -1317,8 +1317,8 @@ const ManageAds: React.FC = () => {
                       className={"w-full text-left p-4 rounded-2xl border transition-all flex flex-col justify-between " + (selectedAdId === ad.id ? 'border-[#1cdb5e] bg-[#1cdb5e]/5 dark:bg-[#1cdb5e]/10' : 'border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800/30')}
                     >
                       <div className="flex justify-between items-center w-full mb-2 gap-2">
-                        <span className="font-bold text-sm text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">Ad ID: {ad.id}</span>
-                        <span className={"px-2 py-0.5 rounded text-[10px] font-bold flex-shrink-0 " + (ad.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500')}>
+                        <span className="font-semibold text-sm text-zinc-800 dark:text-zinc-200 truncate max-w-[150px]">Ad ID: {ad.id}</span>
+                        <span className={"px-2 py-0.5 rounded text-[10px] font-semibold flex-shrink-0 " + (ad.active ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500')}>
                           {ad.active ? 'Active' : 'Disabled'}
                         </span>
                       </div>
@@ -1326,15 +1326,15 @@ const ManageAds: React.FC = () => {
                       <div className="grid grid-cols-3 gap-2 text-[11px] font-medium text-zinc-500 mt-1">
                         <div>
                           <p>Views</p>
-                          <p className="font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">{imps}</p>
+                          <p className="font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">{imps}</p>
                         </div>
                         <div>
                           <p>Convs</p>
-                          <p className="font-bold text-zinc-800 dark:text-zinc-200 mt-0.5">{convs}</p>
+                          <p className="font-semibold text-zinc-800 dark:text-zinc-200 mt-0.5">{convs}</p>
                         </div>
                         <div>
                           <p>Conv. %</p>
-                          <p className="font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{rate}%</p>
+                          <p className="font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">{rate}%</p>
                         </div>
                       </div>
 
@@ -1355,7 +1355,7 @@ const ManageAds: React.FC = () => {
 
             <div className="bg-white dark:bg-zinc-900 p-4 sm:p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 lg:col-span-2 shadow-sm flex flex-col justify-between min-h-[400px]">
               <div>
-                <h3 className="text-lg font-bold mb-1">Interactive Drop-off & Retention</h3>
+                <h3 className="text-lg font-semibold mb-1">Interactive Drop-off & Retention</h3>
                 <p className="text-xs text-zinc-500 mb-6">Real-time analysis identifying at exactly which second users drop off and close the video ad.</p>
               </div>
 
@@ -1416,8 +1416,8 @@ const ManageAds: React.FC = () => {
                     <div className="bg-zinc-50 dark:bg-zinc-800/40 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-xs flex flex-col gap-1.5">
                       <div className="flex items-center gap-2 text-zinc-800 dark:text-zinc-200">
                         <TrendingUp className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                        <span className="font-bold">Drop-off Hotspot Identified:</span>
-                        <span>Second <strong className="text-[#1cdb5e] font-bold">{peakSec + 's'}</strong> with {peakVal} user drops.</span>
+                        <span className="font-semibold">Drop-off Hotspot Identified:</span>
+                        <span>Second <strong className="text-[#1cdb5e] font-semibold">{peakSec + 's'}</strong> with {peakVal} user drops.</span>
                       </div>
                       <p className="text-zinc-500 leading-relaxed pl-6">
                         {peakSec <= 5

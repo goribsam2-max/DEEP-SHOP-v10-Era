@@ -358,6 +358,7 @@ export const GlobalCallReceiver: React.FC = () => {
 
   const acceptP2PCall = () => {
     audioHelper.stop();
+    audioHelper.unlock();
     if (incomingP2PCall) {
       const accepted = incomingP2PCall;
       setIncomingP2PCall(null);
@@ -394,6 +395,7 @@ export const GlobalCallReceiver: React.FC = () => {
 
   const acceptCall = async () => {
     audioHelper.stop();
+    audioHelper.unlock();
     if (incomingCall) {
       await updateDoc(doc(db, 'helpline_calls', incomingCall.id), {
         status: 'accepted'
@@ -428,7 +430,7 @@ export const GlobalCallReceiver: React.FC = () => {
                   className="w-28 h-28 rounded-full border-4 border-zinc-800/80 shadow-2xl relative z-10 object-cover"
                 />
               ) : (
-                <div className="w-28 h-28 rounded-full border-4 border-zinc-800/80 bg-zinc-900 shadow-2xl relative z-10 flex items-center justify-center text-2xl font-black text-white">
+                <div className="w-28 h-28 rounded-full border-4 border-zinc-800/80 bg-zinc-900 shadow-2xl relative z-10 flex items-center justify-center text-2xl font-semibold text-white">
                   DS
                 </div>
               )}
@@ -437,12 +439,12 @@ export const GlobalCallReceiver: React.FC = () => {
               </div>
             </div>
 
-            <h2 className="text-3xl font-black tracking-tight text-white mb-2">Deep Shop</h2>
-            <p className="text-emerald-400 font-semibold text-sm uppercase tracking-wider mb-1 flex items-center gap-1.5 justify-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mb-2">Deep Shop</h2>
+            <p className="text-emerald-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-1.5 justify-center">
               <Icon name="volume-2" className="w-4 h-4 animate-bounce" />
               Incoming Support Call
             </p>
-            <p className="text-zinc-400 text-sm font-medium mb-16 capitalize">
+            <p className="text-zinc-400 text-sm font-normal mb-16 capitalize">
               {incomingCall.dept} Department
             </p>
 
@@ -489,7 +491,7 @@ export const GlobalCallReceiver: React.FC = () => {
                   className="w-28 h-28 rounded-full border-4 border-zinc-800/80 shadow-2xl relative z-10 object-cover"
                 />
               ) : (
-                <div className="w-28 h-28 rounded-full border-4 border-zinc-800/80 bg-zinc-900 shadow-2xl relative z-10 flex items-center justify-center text-3xl font-black text-white">
+                <div className="w-28 h-28 rounded-full border-4 border-zinc-800/80 bg-zinc-900 shadow-2xl relative z-10 flex items-center justify-center text-3xl font-semibold text-white">
                   {(incomingP2PCall.callerName || "U").charAt(0).toUpperCase()}
                 </div>
               )}
@@ -498,10 +500,10 @@ export const GlobalCallReceiver: React.FC = () => {
               </div>
             </div>
 
-            <h2 className="text-3xl font-black tracking-tight text-white mb-2">{incomingP2PCall.callerName}</h2>
-            <p className="text-emerald-400 font-semibold text-sm uppercase tracking-wider mb-1 flex items-center gap-1.5 justify-center">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white mb-2">{incomingP2PCall.callerName}</h2>
+            <p className="text-emerald-400 font-medium text-sm uppercase tracking-wider mb-1 flex items-center gap-1.5 justify-center">
               <Icon name="volume-2" className="w-4 h-4 animate-bounce" />
-              Incoming Call
+              Incoming {incomingP2PCall.type === 'video' ? 'Video ' : ''}Call
             </p>
 
             <div className="flex justify-around w-full max-w-xs gap-8 mt-16">

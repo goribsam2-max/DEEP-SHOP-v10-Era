@@ -85,7 +85,7 @@ const ManageCustomSections: React.FC = () => {
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-lg font-semibold">Custom Sections</h1>
-          <p className="text-xs text-zinc-500  font-bold tracking-normal mt-1">
+          <p className="text-xs text-zinc-500  font-normal tracking-normal mt-1">
             Inject dynamic HTML/CSS anywhere
           </p>
         </div>
@@ -99,7 +99,7 @@ const ManageCustomSections: React.FC = () => {
               isActive: true,
             });
           }}
-          className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-white px-5 py-2.5 rounded-full text-[10px] font-bold  tracking-normal shadow-lg hover:shadow-sm hover:-translate-y-0.5 transition-all flex items-center"
+          className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-white px-5 py-2.5 rounded-full text-[10px] font-semibold  tracking-normal shadow-lg hover:shadow-sm hover:-translate-y-0.5 transition-all flex items-center"
         >
           <Icon name="plus" className="mr-2" /> Add New
         </button>
@@ -113,7 +113,7 @@ const ManageCustomSections: React.FC = () => {
       >
         <div className="space-y-4">
           <div>
-            <label className="text-[10px] font-bold tracking-normal text-zinc-500 mb-2 block">
+            <label className="text-[10px] font-medium tracking-normal text-zinc-500 mb-2 block">
               Placement Location
             </label>
             <select
@@ -131,7 +131,7 @@ const ManageCustomSections: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-bold tracking-normal text-zinc-500 mb-2 block">
+            <label className="text-[10px] font-medium tracking-normal text-zinc-500 mb-2 block">
               HTML Content
             </label>
             <textarea
@@ -154,7 +154,7 @@ const ManageCustomSections: React.FC = () => {
                   className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${formData.isActive ? "left-7" : "left-1"}`}
                 ></div>
               </button>
-              <span className="text-[10px] font-bold tracking-normal">
+              <span className="text-[10px] font-semibold tracking-normal">
                 Active
               </span>
           </div>
@@ -162,13 +162,13 @@ const ManageCustomSections: React.FC = () => {
           <div className="flex justify-end gap-3 mt-8">
             <button
               onClick={() => setEditingState(null)}
-              className="px-6 py-3 rounded-full font-bold text-[10px] tracking-normal transition-all active:scale-95 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+              className="px-6 py-3 rounded-full font-semibold text-[10px] tracking-normal transition-all active:scale-95 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="px-6 py-3 rounded-full font-bold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
+              className="px-6 py-3 rounded-full font-semibold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"
             >
               Save Section
             </button>
@@ -181,7 +181,7 @@ const ManageCustomSections: React.FC = () => {
           <Icon name="spinner-third" className="animate-spin text-lg" />
         </div>
       ) : sections.length === 0 ? (
-        <div className="py-32 text-center text-zinc-400 font-bold text-xs  tracking-normal">
+        <div className="py-32 text-center text-zinc-400 font-medium text-xs  tracking-normal">
           No custom sections
         </div>
       ) : (

@@ -25,7 +25,11 @@ import SEO from "../components/SEO";
 
 export const CreatorSubscriptionSetup: React.FC = () => {
   const navigate = useNavigate();
-  const notify = useNotify ? useNotify() : { success: console.log, error: console.error };
+  const notifyFn = useNotify();
+  const notify = {
+    success: (message: string) => notifyFn(message, "success"),
+    error: (message: string) => notifyFn(message, "error"),
+  };
   const [user, setUser] = useState(auth.currentUser);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -163,7 +167,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
               <ArrowLeft className="w-5 h-5" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-xl font-bold tracking-tight text-slate-900 dark:text-white whitespace-nowrap truncate">
+              <h1 className="text-base sm:text-xl font-semibold tracking-tight text-slate-900 dark:text-white whitespace-nowrap truncate">
                 Sponsorship & Subscription Setup
               </h1>
               <p className="text-[11px] sm:text-xs text-slate-500 dark:text-zinc-400 whitespace-nowrap truncate">
@@ -200,11 +204,11 @@ export const CreatorSubscriptionSetup: React.FC = () => {
             <div className="bg-slate-50 dark:bg-zinc-900/70 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-zinc-800 transition-all">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center font-semibold shrink-0">
                     <Layers className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap truncate">
+                    <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white whitespace-nowrap truncate">
                       Per-Post Scam Investigation Sponsorship
                     </h3>
                     <p className="text-[10px] sm:text-xs text-slate-500 dark:text-zinc-400 whitespace-nowrap truncate">
@@ -231,7 +235,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                       Fee per Sponsored Post (৳ BDT)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
                         ৳
                       </span>
                       <input
@@ -241,7 +245,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                         value={perPostPrice}
                         onChange={(e) => setPerPostPrice(e.target.value)}
                         placeholder="500"
-                        className="w-full pl-7 pr-3 py-2 bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 font-bold text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-7 pr-3 py-2 bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 font-medium text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -263,11 +267,11 @@ export const CreatorSubscriptionSetup: React.FC = () => {
             <div className="bg-slate-50 dark:bg-zinc-900/70 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-zinc-800 transition-all">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 flex items-center justify-center font-semibold shrink-0">
                     <Calendar className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap truncate">
+                    <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white whitespace-nowrap truncate">
                       Monthly Membership Subscription
                     </h3>
                     <p className="text-[10px] sm:text-xs text-slate-500 dark:text-zinc-400 whitespace-nowrap truncate">
@@ -294,7 +298,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                       Monthly Fee (৳ BDT / Month)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400">
                         ৳
                       </span>
                       <input
@@ -304,7 +308,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                         value={monthlyPrice}
                         onChange={(e) => setMonthlyPrice(e.target.value)}
                         placeholder="200"
-                        className="w-full pl-7 pr-3 py-2 bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 font-bold text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-7 pr-3 py-2 bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 font-medium text-xs sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -326,15 +330,15 @@ export const CreatorSubscriptionSetup: React.FC = () => {
             <div className="bg-slate-50 dark:bg-zinc-900/70 rounded-2xl p-4 sm:p-5 border border-slate-200/80 dark:border-zinc-800 transition-all">
               <div className="flex items-center justify-between gap-3 mb-3">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 flex items-center justify-center font-bold shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-400 flex items-center justify-center font-semibold shrink-0">
                     <Award className="w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white whitespace-nowrap truncate">
+                      <h3 className="text-xs sm:text-sm font-semibold text-slate-900 dark:text-white whitespace-nowrap truncate">
                         Yearly VIP Patron Pass
                       </h3>
-                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap shrink-0">
+                      <span className="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap shrink-0">
                         BEST VALUE
                       </span>
                     </div>
@@ -362,7 +366,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                       Yearly Fee (৳ BDT / Year)
                     </label>
                     <div className="relative">
-                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-slate-400">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">
                         ৳
                       </span>
                       <input
@@ -372,7 +376,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                         value={yearlyPrice}
                         onChange={(e) => setYearlyPrice(e.target.value)}
                         placeholder="1800"
-                        className="w-full pl-8 pr-4 py-2.5 bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        className="w-full pl-8 pr-4 py-2.5 bg-white dark:bg-zinc-800 rounded-xl border border-slate-200 dark:border-zinc-700 font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                       />
                     </div>
                   </div>
@@ -393,11 +397,11 @@ export const CreatorSubscriptionSetup: React.FC = () => {
             {/* Payout Information */}
             <div className="bg-slate-50 dark:bg-zinc-900/70 rounded-2xl p-5 border border-slate-200/80 dark:border-zinc-800">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold">
+                <div className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-semibold">
                   <Wallet className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  <h3 className="text-base font-semibold text-slate-900 dark:text-white">
                     Creator Payout Wallet
                   </h3>
                   <p className="text-xs text-slate-500 dark:text-zinc-400">
@@ -411,7 +415,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPayoutMethod("bkash")}
-                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-bold border flex items-center justify-center gap-2 transition-all ${
+                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-medium border flex items-center justify-center gap-2 transition-all ${
                       payoutMethod === "bkash"
                         ? "bg-rose-50 dark:bg-rose-950/40 border-rose-500 text-rose-600 dark:text-rose-400 shadow-sm"
                         : "bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400"
@@ -424,7 +428,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setPayoutMethod("nagad")}
-                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-bold border flex items-center justify-center gap-2 transition-all ${
+                    className={`py-3 px-4 rounded-xl text-xs sm:text-sm font-medium border flex items-center justify-center gap-2 transition-all ${
                       payoutMethod === "nagad"
                         ? "bg-orange-50 dark:bg-orange-950/40 border-orange-500 text-orange-600 dark:text-orange-400 shadow-sm"
                         : "bg-white dark:bg-zinc-800 border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-400"
@@ -475,7 +479,7 @@ export const CreatorSubscriptionSetup: React.FC = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full sm:w-auto px-8 py-3 rounded-xl text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 {saving ? (
                   <>

@@ -78,7 +78,7 @@ const BlogList: React.FC = () => {
               </button>
             )}
           </div>
-          <h1 className="ds-apple-display text-[22px] sm:text-[30px] leading-tight font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2.5">
+          <h1 className="ds-apple-display text-[22px] sm:text-[30px] leading-tight font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-2.5">
             Tech Insights &amp; Hacks
           </h1>
           <p className="ds-apple-muted text-[14.5px] sm:text-[15.5px] leading-relaxed max-w-2xl">
@@ -87,7 +87,7 @@ const BlogList: React.FC = () => {
         </div>
 
         <div className="flex items-center justify-between mb-6">
-          <h2 className="ds-apple-display text-xl sm:text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <h2 className="ds-apple-display text-xl sm:text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
             Latest Posts
           </h2>
           {!loading && (

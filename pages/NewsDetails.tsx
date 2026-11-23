@@ -1544,7 +1544,7 @@ export const NewsDetails: React.FC = () => {
           exactTitle
         />
         <div className="rounded-3xl border loops-divider p-8 max-w-md w-full text-center space-y-4">
-          <p className="text-base font-bold text-zinc-900 dark:text-white">
+          <p className="text-base font-semibold text-zinc-900 dark:text-white">
             Loop not found
           </p>
           <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -1553,7 +1553,7 @@ export const NewsDetails: React.FC = () => {
           <button
             type="button"
             onClick={() => navigate("/loops")}
-            className="px-6 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold cursor-pointer"
+            className="px-6 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium cursor-pointer"
           >
             Back to Loops
           </button>
@@ -1796,7 +1796,7 @@ export const NewsDetails: React.FC = () => {
                     className="w-7 h-7 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer"
                     aria-label="Reply options"
                   >
-                    <span className="text-[15px] leading-none tracking-widest font-bold -mt-1">
+                    <span className="text-[15px] leading-none tracking-widest font-medium -mt-1">
                       ···
                     </span>
                   </button>
@@ -2007,14 +2007,14 @@ export const NewsDetails: React.FC = () => {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
         <AlertTriangle className="w-12 h-12 text-red-500 mb-3" />
-        <h2 className="text-lg font-bold">Loop Unavailable</h2>
+        <h2 className="text-lg font-semibold">Loop Unavailable</h2>
         <p className="text-xs text-zinc-500 max-w-xs mt-1">
           This post was removed by moderators for violating Community Guidelines.
         </p>
         <button
           type="button"
           onClick={() => navigate("/loops")}
-          className="mt-5 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black font-bold text-xs rounded-full shadow-lg"
+          className="mt-5 px-5 py-2.5 bg-zinc-900 dark:bg-white text-white dark:text-black font-medium text-xs rounded-full shadow-lg"
         >
           Return to Loops
         </button>
@@ -2719,7 +2719,7 @@ export const NewsDetails: React.FC = () => {
                 triggerHaptic();
                 setShowSortPopover((s) => !s);
               }}
-              className="inline-flex items-center gap-1 text-[15px] font-bold text-zinc-950 dark:text-white cursor-pointer"
+              className="inline-flex items-center gap-1 text-[15px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
             >
               <span>{sortMode === "top" ? "Top" : "Recent"}</span>
               <ChevronDown className="w-4 h-4 text-zinc-400 stroke-[2.2]" />
@@ -2990,7 +2990,7 @@ export const NewsDetails: React.FC = () => {
                     <button
                       type="submit"
                       disabled={isSubmittingComment}
-                      className="px-3 py-1 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[12.5px] font-bold disabled:opacity-50 cursor-pointer"
+                      className="px-3 py-1 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[12.5px] font-semibold disabled:opacity-50 cursor-pointer"
                     >
                       {isSubmittingComment ? "..." : "Post"}
                     </button>
@@ -3113,7 +3113,7 @@ export const NewsDetails: React.FC = () => {
                     isSubmittingComment || (!commentText.trim() && !commentImage)
                   }
                   onClick={() => handleSubmitComment()}
-                  className="px-4 py-1.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[13.5px] font-bold disabled:opacity-40 cursor-pointer"
+                  className="px-4 py-1.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[13.5px] font-semibold disabled:opacity-40 cursor-pointer"
                 >
                   {isSubmittingComment ? "Posting..." : "Post"}
                 </button>

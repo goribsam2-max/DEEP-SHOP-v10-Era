@@ -333,7 +333,7 @@ function runUploadForEntry(entry: InternalJobEntry): Promise<string> {
 
   const promise = uploadFileToCatbox(
     entry.job.file,
-    controller.signal,
+    entry.job.id,
     (pct) => {
       const current = jobsMap.get(entry.job.id);
       if (!current) return;

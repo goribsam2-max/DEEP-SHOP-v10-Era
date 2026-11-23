@@ -260,7 +260,7 @@ function PlanCard({
           <div className="flex flex-wrap items-center gap-2 justify-between min-w-0">
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <Avatar shape="squircle" size="sm" color={pal.avatarColor} />
-              <h3 className="text-base sm:text-lg font-bold tracking-tight text-zinc-900 dark:text-zinc-100 leading-snug break-words min-w-0">
+              <h3 className="text-base sm:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-snug break-words min-w-0">
                 {plan.name}
               </h3>
             </div>
@@ -277,7 +277,7 @@ function PlanCard({
                 </button>
               )}
               {plan.featuredLabel && (
-                <span className="rounded-full bg-black/10 dark:bg-white/15 px-2.5 py-0.5 text-[11px] font-bold text-zinc-800 dark:text-zinc-200 backdrop-blur-sm whitespace-nowrap max-w-full truncate">
+                <span className="rounded-full bg-black/10 dark:bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 backdrop-blur-sm whitespace-nowrap max-w-full truncate">
                   {plan.featuredLabel}
                 </span>
               )}
@@ -290,7 +290,7 @@ function PlanCard({
 
           <div className="space-y-0.5 pt-1 min-w-0">
             <div className="flex flex-wrap items-baseline gap-2">
-              <span className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-900 dark:text-white">
+              <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white">
                 {plan.price}
               </span>
               <span className="text-sm text-zinc-400 line-through">
@@ -307,7 +307,7 @@ function PlanCard({
           <Button
             onClick={() => onSelectPlan && onSelectPlan(plan)}
             className={cn(
-              "w-full min-w-0 max-w-full overflow-hidden rounded-full font-bold text-xs sm:text-sm py-2.5 px-3 transition-all shadow-sm whitespace-normal [&_span]:!whitespace-normal text-center leading-tight",
+              "w-full min-w-0 max-w-full overflow-hidden rounded-full font-medium text-xs sm:text-sm py-2.5 px-3 transition-all shadow-sm whitespace-normal [&_span]:!whitespace-normal text-center leading-tight",
               plan.ctaDark
                 ? "bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-100"
                 : "bg-white/90 text-zinc-900 border border-zinc-200/80 hover:bg-white dark:bg-white/15 dark:text-white dark:border-white/10 dark:hover:bg-white/25",
@@ -338,7 +338,7 @@ function PlanCard({
         {(plan.footerNote || plan.footerDesc) && (
           <div className="space-y-0.5 border-t border-zinc-100 dark:border-zinc-800 pt-3 min-w-0">
             {plan.footerNote && (
-              <p className="text-[11px] font-bold text-zinc-800 dark:text-zinc-200 break-words">
+              <p className="text-[11px] font-semibold text-zinc-800 dark:text-zinc-200 break-words">
                 {plan.footerNote}
               </p>
             )}
@@ -385,7 +385,7 @@ export default function Pricing6({
     <div className="w-full min-w-0 max-w-full overflow-x-clip space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between min-w-0 w-full">
         <div className="space-y-0.5 min-w-0 flex-1">
-          <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white break-words">
+          <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white break-words">
             {title}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 break-words leading-relaxed">
@@ -407,7 +407,7 @@ export default function Pricing6({
                 onTabChange?.(key);
               }}
               className={cn(
-                "rounded-xl sm:rounded-full px-2 sm:px-4 py-2 sm:py-1.5 text-[11px] sm:text-xs font-bold transition-all duration-200 leading-tight text-center sm:whitespace-nowrap cursor-pointer min-w-0 overflow-hidden",
+                "rounded-xl sm:rounded-full px-2 sm:px-4 py-2 sm:py-1.5 text-[11px] sm:text-xs font-medium transition-all duration-200 leading-tight text-center sm:whitespace-nowrap cursor-pointer min-w-0 overflow-hidden",
                 activeTab === key
                   ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
                   : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white",

@@ -49,7 +49,7 @@ const ManageProducts: React.FC = () => {
     imageFiles: [] as File[],
     isOffer: false,
     offerPrice: 0,
-    productType: "normal" as "normal" | "offer" | "bypass" | "custom",
+    productType: "normal" as NonNullable<Product["productType"]>,
     advanceAmount: 0,
     modelUrl: "",
     videoUrl: "",
@@ -200,7 +200,7 @@ const ManageProducts: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5 text-shine">
               Products Inventory
             </h1>
-            <p className="text-zinc-400 text-[10px] md:text-xs font-bold tracking-normal ">
+            <p className="text-zinc-400 text-[10px] md:text-xs font-normal tracking-normal ">
               Catalog Management
             </p>
           </div>
@@ -212,6 +212,7 @@ const ManageProducts: React.FC = () => {
             setFormData({
               name: "",
               price: 0,
+              resellerPrice: 0,
               description: "",
               category: "Mobile",
               customCategory: "",
@@ -219,11 +220,13 @@ const ManageProducts: React.FC = () => {
               imageFiles: [],
               isOffer: false,
               offerPrice: 0,
+              productType: "normal",
+              advanceAmount: 0,
               modelUrl: "",
               videoUrl: "",
             });
           }}
-          className={`px-6 py-3 rounded-full font-bold  text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${isAdding ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:bg-zinc-800" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"}`}
+          className={`px-6 py-3 rounded-full font-semibold  text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${isAdding ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:bg-zinc-800" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900"}`}
         >
           {isAdding ? "Cancel" : "Add Product"}
         </button>
@@ -307,7 +310,7 @@ const ManageProducts: React.FC = () => {
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <Label htmlFor="resellerPrice" className="font-medium text-xs text-amber-600 dark:text-amber-400 block font-bold">
+                        <Label htmlFor="resellerPrice" className="font-medium text-xs text-amber-600 dark:text-amber-400 block font-medium">
                           Reseller Price (৳)
                         </Label>
                         <span className="text-[10px] text-zinc-400">Exclusive</span>
@@ -341,7 +344,7 @@ const ManageProducts: React.FC = () => {
                         Upload Images (Optional)
                       </Label>
                       {formData.name.trim().length > 0 && formData.imageFiles.length === 0 && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
                           <Sparkles className="w-3 h-3" /> Auto Dynamic Artwork Active
                         </span>
                       )}
@@ -373,7 +376,7 @@ const ManageProducts: React.FC = () => {
                           />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[11px] font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
+                          <p className="text-[11px] font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
                             <Sparkles className="w-3 h-3 text-amber-500" />
                             Auto Dynamic Image System:
                           </p>
@@ -414,7 +417,7 @@ const ManageProducts: React.FC = () => {
 
                   {/* Product Type & Advance Policy */}
                   <div className="space-y-3 p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl border border-zinc-200 dark:border-zinc-700">
-                    <Label className="font-bold text-xs text-zinc-700 dark:text-zinc-300 block">
+                    <Label className="font-medium text-xs text-zinc-700 dark:text-zinc-300 block">
                       Product Type &amp; Advance Payment Policy
                     </Label>
                     
@@ -422,7 +425,7 @@ const ManageProducts: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, productType: "normal", isOffer: false })}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                        className={`p-2.5 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                           formData.productType === "normal"
                             ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20"
                             : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -435,7 +438,7 @@ const ManageProducts: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, productType: "offer", isOffer: true })}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                        className={`p-2.5 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                           formData.productType === "offer"
                             ? "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 ring-2 ring-red-500/20"
                             : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -448,7 +451,7 @@ const ManageProducts: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, productType: "bypass", isOffer: false })}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                        className={`p-2.5 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                           formData.productType === "bypass"
                             ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20"
                             : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -461,7 +464,7 @@ const ManageProducts: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, productType: "custom", isOffer: false })}
-                        className={`p-2.5 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                        className={`p-2.5 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                           formData.productType === "custom"
                             ? "border-[#EF8020] bg-[#EF8020]/10 text-[#EF8020] ring-2 ring-[#EF8020]/20"
                             : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -546,7 +549,7 @@ const ManageProducts: React.FC = () => {
                   {p.isOffer && (
                     <>
                        <span>•</span>
-                       <span className="text-red-500 font-bold">Offer</span>
+                       <span className="text-red-500 font-semibold">Offer</span>
                     </>
                   )}
                 </ItemDescription>
@@ -564,7 +567,7 @@ const ManageProducts: React.FC = () => {
           {products.length === 0 && (
             <div className="py-32 text-center flex flex-col items-center bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-800 shadow-sm">
               <Box className="w-8 h-8 text-zinc-300 mb-4" />
-              <p className="text-zinc-400 font-bold tracking-normal text-xs">
+              <p className="text-zinc-400 font-normal tracking-normal text-xs">
                 Inventory is empty
               </p>
             </div>

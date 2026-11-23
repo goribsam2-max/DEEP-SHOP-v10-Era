@@ -35,7 +35,7 @@ export const TopNavTabSwitcher: React.FC<TopNavTabSwitcherProps> = ({
         }}
         className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-tight whitespace-nowrap transition-all duration-200 cursor-pointer ${
           isShop
-            ? "bg-[#1877F2] text-white shadow-[0_4px_12px_rgba(24,119,242,0.3)] font-bold"
+            ? "bg-[#1877F2] text-white shadow-[0_4px_12px_rgba(24,119,242,0.3)] font-semibold"
             : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
         }`}
       >
@@ -52,7 +52,7 @@ export const TopNavTabSwitcher: React.FC<TopNavTabSwitcherProps> = ({
         }}
         className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer relative ${
           isNewsHub
-            ? "bg-zinc-950 dark:bg-white text-white dark:text-black shadow-xs font-extrabold"
+            ? "bg-zinc-950 dark:bg-white text-white dark:text-black shadow-xs font-semibold"
             : "text-zinc-700 hover:text-zinc-950 dark:text-zinc-300 dark:hover:text-white"
         }`}
       >

@@ -217,12 +217,12 @@ export const STORY_COLORS: StoryColorDef[] = [
 ];
 
 export const STORY_FONTS = [
-  { id: "modern", name: "Modern", className: "font-sans font-bold tracking-tight", canvasFont: "bold {px}px sans-serif" },
+  { id: "modern", name: "Modern", className: "font-sans font-semibold tracking-tight", canvasFont: "bold {px}px sans-serif" },
   { id: "classic", name: "Classic", className: "font-serif font-semibold", canvasFont: "600 {px}px Georgia, serif" },
   { id: "signature", name: "Signature", className: "font-serif italic font-medium", canvasFont: "italic 500 {px}px Georgia, serif" },
-  { id: "editorial", name: "Editorial", className: "font-serif uppercase tracking-widest font-bold", canvasFont: "bold {px}px Georgia, serif" },
-  { id: "neon", name: "Neon", className: "font-mono font-bold drop-shadow-[0_0_12px_rgba(24,119,242,0.95)]", canvasFont: "bold {px}px monospace" },
-  { id: "strong", name: "Strong", className: "font-sans font-black uppercase tracking-wide", canvasFont: "900 {px}px sans-serif" },
+  { id: "editorial", name: "Editorial", className: "font-serif uppercase tracking-widest font-medium", canvasFont: "bold {px}px Georgia, serif" },
+  { id: "neon", name: "Neon", className: "font-mono font-semibold drop-shadow-[0_0_12px_rgba(24,119,242,0.95)]", canvasFont: "bold {px}px monospace" },
+  { id: "strong", name: "Strong", className: "font-sans font-medium uppercase tracking-wide", canvasFont: "900 {px}px sans-serif" },
 ] as const;
 
 export const FONT_SIZE_STEPS = [
@@ -2298,21 +2298,21 @@ export default function AddStory() {
     switch (stk.kind) {
       case "location":
         return (
-          <div className="px-3.5 py-2 rounded-xl bg-white/95 text-zinc-900 shadow-lg flex items-center gap-1.5 font-bold text-xs whitespace-nowrap">
+          <div className="px-3.5 py-2 rounded-xl bg-white/95 text-zinc-900 shadow-lg flex items-center gap-1.5 font-medium text-xs whitespace-nowrap">
             <MapPin className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
             <span>{stk.title}</span>
           </div>
         );
       case "mention":
         return (
-          <div className="px-3.5 py-2 rounded-xl bg-white/95 text-[#1877F2] shadow-lg flex items-center gap-1 font-extrabold text-sm whitespace-nowrap">
+          <div className="px-3.5 py-2 rounded-xl bg-white/95 text-[#1877F2] shadow-lg flex items-center gap-1 font-semibold text-sm whitespace-nowrap">
             <AtSign className="w-4 h-4 shrink-0" />
             <span>{stk.title.replace(/^@/, "")}</span>
           </div>
         );
       case "hashtag":
         return (
-          <div className="px-3.5 py-2 rounded-xl bg-zinc-900/85 text-white border border-white/20 backdrop-blur-md shadow-lg flex items-center gap-1 font-bold text-sm whitespace-nowrap">
+          <div className="px-3.5 py-2 rounded-xl bg-zinc-900/85 text-white border border-white/20 backdrop-blur-md shadow-lg flex items-center gap-1 font-semibold text-sm whitespace-nowrap">
             <Hash className="w-4 h-4 text-[#1877F2] shrink-0" />
             <span>{stk.title.replace(/^#/, "")}</span>
           </div>
@@ -2320,8 +2320,8 @@ export default function AddStory() {
       case "add_yours":
         return (
           <div className="w-56 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2.5 text-center">
-            <p className="text-xs font-bold leading-snug text-zinc-900">{stk.title}</p>
-            <div className="py-1.5 px-3 rounded-full bg-[#1877F2] text-white text-[11px] font-bold inline-flex items-center gap-1">
+            <p className="text-xs font-medium leading-snug text-zinc-900">{stk.title}</p>
+            <div className="py-1.5 px-3 rounded-full bg-[#1877F2] text-white text-[11px] font-semibold inline-flex items-center gap-1">
               <Camera className="w-3 h-3" />
               <span>Add yours</span>
             </div>
@@ -2330,7 +2330,7 @@ export default function AddStory() {
       case "questions":
         return (
           <div className="w-60 rounded-2xl bg-white text-zinc-900 p-4 shadow-xl space-y-2.5">
-            <p className="text-xs font-extrabold text-center text-zinc-900">{stk.title}</p>
+            <p className="text-xs font-semibold text-center text-zinc-900">{stk.title}</p>
             <div className="w-full py-2 px-3 rounded-xl bg-zinc-100 text-zinc-400 text-xs text-center font-medium">
               Type something...
             </div>
@@ -2339,11 +2339,11 @@ export default function AddStory() {
       case "poll":
         return (
           <div className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2">
-            <p className="text-xs font-extrabold text-center text-zinc-900 pb-0.5">{stk.title}</p>
-            <div className="py-2 px-3 rounded-xl bg-zinc-100 text-zinc-900 text-xs font-bold text-center">
+            <p className="text-xs font-semibold text-center text-zinc-900 pb-0.5">{stk.title}</p>
+            <div className="py-2 px-3 rounded-xl bg-zinc-100 text-zinc-900 text-xs font-medium text-center">
               {stk.optionA || "Yes"}
             </div>
-            <div className="py-2 px-3 rounded-xl bg-zinc-100 text-zinc-900 text-xs font-bold text-center">
+            <div className="py-2 px-3 rounded-xl bg-zinc-100 text-zinc-900 text-xs font-medium text-center">
               {stk.optionB || "No"}
             </div>
           </div>
@@ -2351,7 +2351,7 @@ export default function AddStory() {
       case "slider":
         return (
           <div className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2.5">
-            <p className="text-xs font-extrabold text-center text-zinc-900">{stk.title}</p>
+            <p className="text-xs font-semibold text-center text-zinc-900">{stk.title}</p>
             <div className="relative h-2.5 rounded-full bg-zinc-200 flex items-center">
               <div className="w-2/3 h-full rounded-full bg-[#1877F2]" />
               <span className="-ml-3 text-xl select-none">{stk.emoji || "🔥"}</span>
@@ -2360,7 +2360,7 @@ export default function AddStory() {
         );
       case "link":
         return (
-          <div className="px-4 py-2 rounded-full bg-white text-[#1877F2] shadow-xl flex items-center gap-1.5 font-bold text-xs whitespace-nowrap">
+          <div className="px-4 py-2 rounded-full bg-white text-[#1877F2] shadow-xl flex items-center gap-1.5 font-medium text-xs whitespace-nowrap">
             <Link2 className="w-3.5 h-3.5 shrink-0" />
             <span>{stk.subtitle || "Visit Link"}</span>
           </div>
@@ -2372,11 +2372,11 @@ export default function AddStory() {
               <Clock className="w-3.5 h-3.5" />
               <span>{stk.subtitle || "Upcoming"}</span>
             </div>
-            <p className="text-sm font-extrabold">{stk.title}</p>
+            <p className="text-sm font-semibold">{stk.title}</p>
             <div className="grid grid-cols-3 gap-1.5 pt-1 tabular-nums">
-              <div className="bg-white/10 rounded-lg py-1 text-xs font-bold">08h</div>
-              <div className="bg-white/10 rounded-lg py-1 text-xs font-bold">45m</div>
-              <div className="bg-white/10 rounded-lg py-1 text-xs font-bold">12s</div>
+              <div className="bg-white/10 rounded-lg py-1 text-xs font-medium">08h</div>
+              <div className="bg-white/10 rounded-lg py-1 text-xs font-medium">45m</div>
+              <div className="bg-white/10 rounded-lg py-1 text-xs font-medium">12s</div>
             </div>
           </div>
         );
@@ -2396,8 +2396,8 @@ export default function AddStory() {
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-extrabold truncate text-zinc-900">{stk.title}</p>
-              <p className="text-[11px] font-bold text-[#1877F2] tabular-nums">
+              <p className="text-xs font-semibold truncate text-zinc-900">{stk.title}</p>
+              <p className="text-[11px] font-semibold text-[#1877F2] tabular-nums">
                 {stk.priceLabel || "Shop on Deep Shop"}
               </p>
             </div>
@@ -2405,7 +2405,7 @@ export default function AddStory() {
         );
       case "notify":
         return (
-          <div className="px-4 py-2.5 rounded-2xl bg-white text-zinc-900 shadow-xl flex items-center gap-2 text-xs font-extrabold whitespace-nowrap">
+          <div className="px-4 py-2.5 rounded-2xl bg-white text-zinc-900 shadow-xl flex items-center gap-2 text-xs font-semibold whitespace-nowrap">
             <Bell className="w-4 h-4 text-[#1877F2] fill-[#1877F2]" />
             <span>{stk.title || "Notify me"}</span>
           </div>
@@ -2442,7 +2442,7 @@ export default function AddStory() {
         );
       case "gif":
         return (
-          <div className="px-4 py-2 rounded-2xl bg-zinc-950/90 border border-white/20 text-white shadow-xl flex items-center gap-2 font-black text-sm tracking-wide animate-bounce">
+          <div className="px-4 py-2 rounded-2xl bg-zinc-950/90 border border-white/20 text-white shadow-xl flex items-center gap-2 font-semibold text-sm tracking-wide animate-bounce">
             <span>{stk.emoji || "⚡"}</span>
             <span>{stk.title}</span>
           </div>
@@ -2456,7 +2456,7 @@ export default function AddStory() {
               referrerPolicy="no-referrer"
               className="w-full aspect-square object-cover rounded-sm"
             />
-            <p className="pt-2 text-[10px] font-serif font-bold text-center text-zinc-700">
+            <p className="pt-2 text-[10px] font-serif font-semibold text-center text-zinc-700">
               {dhakaClock.dateStr} · DEEP SHOP
             </p>
           </div>
@@ -2486,32 +2486,32 @@ export default function AddStory() {
       case "clock":
         return (
           <div className="flex items-center gap-1.5 tabular-nums select-none">
-            <div className="px-3 py-2 rounded-xl bg-zinc-900/85 border border-white/15 backdrop-blur-md text-white font-mono text-2xl font-black shadow-lg">
+            <div className="px-3 py-2 rounded-xl bg-zinc-900/85 border border-white/15 backdrop-blur-md text-white font-mono text-2xl font-semibold shadow-lg">
               {dhakaClock.hh}
             </div>
-            <span className="text-white font-black text-xl">:</span>
-            <div className="px-3 py-2 rounded-xl bg-zinc-900/85 border border-white/15 backdrop-blur-md text-white font-mono text-2xl font-black shadow-lg">
+            <span className="text-white font-semibold text-xl">:</span>
+            <div className="px-3 py-2 rounded-xl bg-zinc-900/85 border border-white/15 backdrop-blur-md text-white font-mono text-2xl font-semibold shadow-lg">
               {dhakaClock.mm}
             </div>
           </div>
         );
       case "heart_count":
         return (
-          <div className="px-3.5 py-1.5 rounded-full bg-rose-500 text-white shadow-lg flex items-center gap-1.5 font-extrabold text-sm tabular-nums">
+          <div className="px-3.5 py-1.5 rounded-full bg-rose-500 text-white shadow-lg flex items-center gap-1.5 font-semibold text-sm tabular-nums">
             <Heart className="w-4 h-4 fill-white" />
             <span>1</span>
           </div>
         );
       case "sound_on":
         return (
-          <div className="px-3.5 py-1.5 rounded-full bg-black/75 border border-white/25 backdrop-blur-md text-white shadow-lg flex items-center gap-1.5 font-extrabold text-xs tracking-wider whitespace-nowrap">
+          <div className="px-3.5 py-1.5 rounded-full bg-black/75 border border-white/25 backdrop-blur-md text-white shadow-lg flex items-center gap-1.5 font-semibold text-xs tracking-wider whitespace-nowrap">
             <Volume2 className="w-3.5 h-3.5 text-[#1877F2]" />
             <span>SOUND ON</span>
           </div>
         );
       case "day_stamp":
         return (
-          <div className="px-4 py-1.5 rounded-lg bg-white/90 text-zinc-950 font-serif font-black tracking-widest text-sm shadow-lg whitespace-nowrap">
+          <div className="px-4 py-1.5 rounded-lg bg-white/90 text-zinc-950 font-serif font-medium tracking-widest text-sm shadow-lg whitespace-nowrap">
             {dhakaClock.dayStr}
           </div>
         );
@@ -2543,14 +2543,14 @@ export default function AddStory() {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center text-white">
         <Shield className="w-16 h-16 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold">Story Creation Restricted</h2>
+        <h2 className="text-xl font-semibold">Story Creation Restricted</h2>
         <p className="text-sm text-zinc-400 max-w-sm mt-2">
           Your account has received 3 copyright strikes or severe guideline violations. Creating new Stories is currently disabled.
         </p>
         <button
           type="button"
           onClick={() => navigate('/loops/account-status')}
-          className="mt-6 px-6 py-3 bg-red-600 text-white font-bold text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
+          className="mt-6 px-6 py-3 bg-red-600 text-white font-medium text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
         >
           Check Account Status
         </button>
@@ -2840,7 +2840,7 @@ export default function AddStory() {
           <div className="w-14 h-14 rounded-2xl story-studio-panel flex items-center justify-center shadow-xl">
             <Loader2 className="w-7 h-7 animate-spin text-[#1877F2]" />
           </div>
-          <p className="text-xs font-bold tracking-tight">Processing studio media...</p>
+          <p className="text-xs font-medium tracking-tight">Processing studio media...</p>
         </div>
       )}
 
@@ -2872,7 +2872,7 @@ export default function AddStory() {
             )}
           </button>
 
-          <h1 className="text-sm sm:text-base font-extrabold tracking-tight truncate whitespace-nowrap">
+          <h1 className="text-sm sm:text-base font-semibold tracking-tight truncate whitespace-nowrap">
             {step === "gallery"
               ? "Create Story"
               : step === "camera"
@@ -2895,7 +2895,7 @@ export default function AddStory() {
               setStep("gallery");
               triggerHaptic();
             }}
-            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+            className={`h-8 px-3.5 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
               step === "gallery"
                 ? "story-cta-blue shadow-sm"
                 : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
@@ -2910,7 +2910,7 @@ export default function AddStory() {
               setStep("camera");
               triggerHaptic();
             }}
-            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+            className={`h-8 px-3.5 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
               step === "camera"
                 ? "story-cta-blue shadow-sm"
                 : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
@@ -2925,7 +2925,7 @@ export default function AddStory() {
               setStep("collage");
               triggerHaptic();
             }}
-            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+            className={`h-8 px-3.5 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
               step === "collage"
                 ? "story-cta-blue shadow-sm"
                 : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
@@ -2942,7 +2942,7 @@ export default function AddStory() {
               setStep("editor");
               triggerHaptic();
             }}
-            className={`h-8 px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+            className={`h-8 px-3.5 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
               step === "editor"
                 ? "story-cta-blue shadow-sm"
                 : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
@@ -2958,7 +2958,7 @@ export default function AddStory() {
             <button
               type="button"
               onClick={() => galleryUploadInputRef.current?.click()}
-              className="hidden sm:inline-flex story-cta-blue h-9 px-3.5 rounded-xl text-xs font-bold items-center gap-1.5 cursor-pointer whitespace-nowrap"
+              className="hidden sm:inline-flex story-cta-blue h-9 px-3.5 rounded-xl text-xs font-medium items-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <Upload className="w-3.5 h-3.5" />
               <span>Upload Media</span>
@@ -3014,11 +3014,11 @@ export default function AddStory() {
                   }}
                   className="story-studio-panel rounded-2xl p-3.5 sm:p-4 flex items-center gap-3 text-left cursor-pointer active:scale-[0.98] transition-transform min-h-[68px]"
                 >
-                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1877F2] to-indigo-600 text-white font-serif font-extrabold text-base flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-[#1877F2] to-indigo-600 text-white font-serif font-semibold text-base flex items-center justify-center shrink-0 shadow-sm">
                     Aa
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                    <p className="text-xs sm:text-sm font-semibold truncate whitespace-nowrap">
                       Text Story
                     </p>
                     <p className="text-[11px] story-studio-muted truncate">
@@ -3039,7 +3039,7 @@ export default function AddStory() {
                     <LoopsSvgIcon name="loops-story-video" className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                    <p className="text-xs sm:text-sm font-semibold truncate whitespace-nowrap">
                       Video Clip
                     </p>
                     <p className="text-[11px] story-studio-muted truncate">
@@ -3062,7 +3062,7 @@ export default function AddStory() {
                     <Music className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                    <p className="text-xs sm:text-sm font-semibold truncate whitespace-nowrap">
                       Music Card
                     </p>
                     <p className="text-[11px] story-studio-muted truncate">
@@ -3084,7 +3084,7 @@ export default function AddStory() {
                     <LayoutGrid className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs sm:text-sm font-extrabold truncate whitespace-nowrap">
+                    <p className="text-xs sm:text-sm font-semibold truncate whitespace-nowrap">
                       Photo Grid
                     </p>
                     <p className="text-[11px] story-studio-muted truncate">
@@ -3113,7 +3113,7 @@ export default function AddStory() {
                         setAlbumMenuOpen(false);
                         triggerHaptic();
                       }}
-                      className={`min-h-[38px] px-3.5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
+                      className={`min-h-[38px] px-3.5 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap shrink-0 transition-colors ${
                         albumFilter === alb.id
                           ? "story-cta-blue shadow-sm"
                           : "story-studio-muted hover:text-zinc-900 dark:hover:text-white"
@@ -3128,7 +3128,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={() => galleryUploadInputRef.current?.click()}
-                    className="flex-1 sm:flex-none min-h-[40px] px-3.5 rounded-xl story-studio-soft text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="flex-1 sm:flex-none min-h-[40px] px-3.5 rounded-xl story-studio-soft text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     <Upload className="w-3.5 h-3.5 text-[#1877F2]" />
                     <span>Upload from Device</span>
@@ -3141,7 +3141,7 @@ export default function AddStory() {
                       setSelectedIds([]);
                       triggerHaptic();
                     }}
-                    className={`min-h-[40px] px-3.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors ${
+                    className={`min-h-[40px] px-3.5 rounded-xl text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap transition-colors ${
                       multiSelectMode ? "story-cta-blue" : "story-studio-soft"
                     }`}
                   >
@@ -3167,7 +3167,7 @@ export default function AddStory() {
                       <Camera className="w-5 h-5 text-[#1877F2]" />
                     </div>
                     <div className="text-center px-2">
-                      <p className="text-xs font-extrabold whitespace-nowrap">Camera</p>
+                      <p className="text-xs font-semibold whitespace-nowrap">Camera</p>
                       <p className="text-[10px] story-studio-muted hidden sm:block">
                         Capture live
                       </p>
@@ -3189,7 +3189,7 @@ export default function AddStory() {
                       <Sparkles className="w-5 h-5" />
                     </div>
                     <div className="text-center px-2">
-                      <p className="text-xs font-extrabold whitespace-nowrap">Add Yours</p>
+                      <p className="text-xs font-semibold whitespace-nowrap">Add Yours</p>
                       <p className="text-[10px] story-studio-muted hidden sm:block">
                         Prompt chain
                       </p>
@@ -3237,7 +3237,7 @@ export default function AddStory() {
                                 className="w-full h-full object-cover pointer-events-none"
                               />
                             ) : null}
-                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/75 via-black/25 to-transparent flex items-center gap-1 text-[10px] font-bold text-white pointer-events-none">
+                            <div className="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/75 via-black/25 to-transparent flex items-center gap-1 text-[10px] font-semibold text-white pointer-events-none">
                               <Play className="w-3 h-3 fill-white text-white shrink-0" />
                               <span>Video</span>
                             </div>
@@ -3271,7 +3271,7 @@ export default function AddStory() {
                         {/* Multi-select Index Indicator */}
                         {multiSelectMode && (
                           <div
-                            className={`absolute top-2 right-2 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-extrabold tabular-nums ${
+                            className={`absolute top-2 right-2 w-7 h-7 rounded-full border-2 flex items-center justify-center text-xs font-semibold tabular-nums ${
                               isSelected
                                 ? "story-cta-blue border-white"
                                 : "bg-black/45 border-white/85 text-transparent"
@@ -3288,7 +3288,7 @@ export default function AddStory() {
                 {/* Empty Gallery State */}
                 {visibleGallery.length === 0 && (
                   <div className="mt-4 story-studio-panel rounded-3xl py-12 px-6 text-center max-w-lg mx-auto space-y-3">
-                    <p className="text-sm font-bold">
+                    <p className="text-sm font-semibold">
                       No media found in {albumLabelMap[albumFilter]}
                     </p>
                     <p className="text-xs story-studio-muted">
@@ -3298,14 +3298,14 @@ export default function AddStory() {
                       <button
                         type="button"
                         onClick={() => galleryUploadInputRef.current?.click()}
-                        className="story-cta-blue h-10 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                        className="story-cta-blue h-10 px-4 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap"
                       >
                         Upload Photo
                       </button>
                       <button
                         type="button"
                         onClick={() => videoUploadInputRef.current?.click()}
-                        className="story-studio-soft h-10 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                        className="story-studio-soft h-10 px-4 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap"
                       >
                         Select Video
                       </button>
@@ -3318,7 +3318,7 @@ export default function AddStory() {
             {/* Floating Multi-Select Collage Dock */}
             {multiSelectMode && selectedIds.length > 0 && (
               <div className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md z-40 story-studio-panel rounded-2xl p-2.5 pl-4 shadow-2xl flex items-center justify-between gap-3">
-                <div className="text-xs font-bold tabular-nums">
+                <div className="text-xs font-semibold tabular-nums">
                   <span>{selectedIds.length} selected</span>
                   <span className="mx-1.5 story-studio-muted">·</span>
                   <button
@@ -3337,7 +3337,7 @@ export default function AddStory() {
                       .filter((u): u is string => Boolean(u));
                     buildCollageToEditor(chosenUrls);
                   }}
-                  className="story-cta-blue h-10 px-4 rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  className="story-cta-blue h-10 px-4 rounded-xl text-xs font-medium flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
                   <span>Build Collage</span>
                   <ArrowRight className="w-4 h-4" />
@@ -3370,13 +3370,13 @@ export default function AddStory() {
                     className={`w-full h-full ${activeCreateGradient.bgClass} flex flex-col items-center justify-center p-8 text-center gap-3`}
                   >
                     <Camera className="w-10 h-10 text-white/85" />
-                    <p className="text-sm font-bold text-white">
+                    <p className="text-sm font-semibold text-white">
                       Camera access is unavailable on this browser
                     </p>
                     <button
                       type="button"
                       onClick={() => galleryUploadInputRef.current?.click()}
-                      className="story-cta-blue h-10 px-5 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                      className="story-cta-blue h-10 px-5 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap"
                     >
                       Select Photo or Video
                     </button>
@@ -3387,7 +3387,7 @@ export default function AddStory() {
               {/* Countdown Overlay */}
               {countdownSec !== null && (
                 <div className="absolute inset-0 z-30 bg-black/40 flex items-center justify-center pointer-events-none">
-                  <span className="text-7xl font-black text-white tabular-nums drop-shadow-2xl animate-ping">
+                  <span className="text-7xl font-semibold text-white tabular-nums drop-shadow-2xl animate-ping">
                     {countdownSec}
                   </span>
                 </div>
@@ -3402,7 +3402,7 @@ export default function AddStory() {
                       setFlashMode((f) => (f === "off" ? "on" : f === "on" ? "auto" : "off"));
                       triggerHaptic();
                     }}
-                    className="h-9 px-3 rounded-xl bg-black/50 backdrop-blur-md border border-white/15 flex items-center gap-1.5 text-xs font-bold text-white cursor-pointer whitespace-nowrap"
+                    className="h-9 px-3 rounded-xl bg-black/50 backdrop-blur-md border border-white/15 flex items-center gap-1.5 text-xs font-medium text-white cursor-pointer whitespace-nowrap"
                   >
                     {flashMode === "off" ? (
                       <ZapOff className="w-3.5 h-3.5 text-zinc-300" />
@@ -3418,7 +3418,7 @@ export default function AddStory() {
                       setBoomerangMode((v) => !v);
                       triggerHaptic();
                     }}
-                    className={`h-9 px-3 rounded-xl backdrop-blur-md border flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap ${
+                    className={`h-9 px-3 rounded-xl backdrop-blur-md border flex items-center gap-1.5 text-xs font-medium cursor-pointer whitespace-nowrap ${
                       boomerangMode
                         ? "story-cta-blue border-[#1877F2]"
                         : "bg-black/50 border-white/15 text-white"
@@ -3434,7 +3434,7 @@ export default function AddStory() {
                       setHandsFreeMode((v) => !v);
                       triggerHaptic();
                     }}
-                    className={`h-9 px-3 rounded-xl backdrop-blur-md border flex items-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap ${
+                    className={`h-9 px-3 rounded-xl backdrop-blur-md border flex items-center gap-1.5 text-xs font-medium cursor-pointer whitespace-nowrap ${
                       handsFreeMode
                         ? "story-cta-blue border-[#1877F2]"
                         : "bg-black/50 border-white/15 text-white"
@@ -3469,7 +3469,7 @@ export default function AddStory() {
                         setEffectId(eff.id);
                         triggerHaptic();
                       }}
-                      className={`h-7 px-3 rounded-full text-[11px] font-bold whitespace-nowrap cursor-pointer border ${
+                      className={`h-7 px-3 rounded-full text-[11px] font-semibold whitespace-nowrap cursor-pointer border ${
                         effectId === eff.id
                           ? "bg-white text-zinc-950 border-white"
                           : "bg-black/45 text-white/85 border-white/20"
@@ -3520,14 +3520,14 @@ export default function AddStory() {
                       setStep("editor");
                       openTextStudioForNew();
                     }}
-                    className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center font-serif font-extrabold text-sm text-white cursor-pointer shrink-0"
+                    className="w-11 h-11 rounded-2xl bg-white/15 backdrop-blur-md border border-white/20 flex items-center justify-center font-serif font-semibold text-sm text-white cursor-pointer shrink-0"
                     aria-label="Text story"
                   >
                     Aa
                   </button>
                 </div>
 
-                <div className="flex items-center justify-center gap-5 text-[11px] font-bold">
+                <div className="flex items-center justify-center gap-5 text-[11px] font-semibold">
                   <button
                     type="button"
                     onClick={() => navigate("/news-hub/create")}
@@ -3569,7 +3569,7 @@ export default function AddStory() {
             {/* Desktop Camera Side Controls */}
             <aside className="hidden lg:flex flex-col gap-4 w-72 story-studio-panel rounded-3xl p-5">
               <div className="space-y-1">
-                <h2 className="text-sm font-bold">Camera Controls</h2>
+                <h2 className="text-sm font-semibold">Camera Controls</h2>
                 <p className="text-xs story-studio-muted">
                   Capture an instant 9:16 frame or switch capture modes
                 </p>
@@ -3579,7 +3579,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => setBoomerangMode((v) => !v)}
-                  className={`w-full h-11 px-3.5 rounded-2xl flex items-center justify-between text-xs font-bold cursor-pointer ${
+                  className={`w-full h-11 px-3.5 rounded-2xl flex items-center justify-between text-xs font-medium cursor-pointer ${
                     boomerangMode ? "story-cta-blue" : "story-studio-soft"
                   }`}
                 >
@@ -3593,7 +3593,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => setHandsFreeMode((v) => !v)}
-                  className={`w-full h-11 px-3.5 rounded-2xl flex items-center justify-between text-xs font-bold cursor-pointer ${
+                  className={`w-full h-11 px-3.5 rounded-2xl flex items-center justify-between text-xs font-medium cursor-pointer ${
                     handsFreeMode ? "story-cta-blue" : "story-studio-soft"
                   }`}
                 >
@@ -3611,7 +3611,7 @@ export default function AddStory() {
                     setStep("collage");
                     triggerHaptic();
                   }}
-                  className="w-full h-11 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
+                  className="w-full h-11 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-medium cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
                     <LayoutGrid className="w-4 h-4 text-[#1877F2]" />
@@ -3624,7 +3624,7 @@ export default function AddStory() {
               <button
                 type="button"
                 onClick={handleShutterTrigger}
-                className="story-cta-blue w-full h-12 rounded-2xl text-xs font-bold cursor-pointer"
+                className="story-cta-blue w-full h-12 rounded-2xl text-xs font-medium cursor-pointer"
               >
                 Capture Photo
               </button>
@@ -3684,7 +3684,7 @@ export default function AddStory() {
             {/* Collage Controls & Quick Gallery Picker */}
             <div className="w-full max-w-md lg:w-84 story-studio-panel rounded-3xl p-4 sm:p-5 space-y-4">
               <div className="space-y-1">
-                <h2 className="text-sm font-bold">Grid Layout</h2>
+                <h2 className="text-sm font-semibold">Grid Layout</h2>
                 <p className="text-xs story-studio-muted">
                   Tap an empty slot to upload or pick from your gallery below
                 </p>
@@ -3699,7 +3699,7 @@ export default function AddStory() {
                       setCollageSlotsCount(cnt);
                       setCollageImages((prev) => prev.slice(0, cnt));
                     }}
-                    className={`h-10 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap ${
+                    className={`h-10 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap ${
                       collageSlotsCount === cnt ? "story-cta-blue" : "story-studio-soft"
                     }`}
                   >
@@ -3712,7 +3712,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => collageSlotInputRef.current?.click()}
-                  className="flex-1 h-10 px-3 rounded-xl story-studio-soft flex items-center justify-center gap-1.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                  className="flex-1 h-10 px-3 rounded-xl story-studio-soft flex items-center justify-center gap-1.5 text-xs font-medium cursor-pointer whitespace-nowrap"
                 >
                   <Upload className="w-3.5 h-3.5 text-[#1877F2]" />
                   <span>Upload Photo</span>
@@ -3721,7 +3721,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={() => setCollageImages([])}
-                    className="h-10 px-3.5 rounded-xl story-studio-soft text-xs font-bold cursor-pointer whitespace-nowrap"
+                    className="h-10 px-3.5 rounded-xl story-studio-soft text-xs font-medium cursor-pointer whitespace-nowrap"
                   >
                     Clear
                   </button>
@@ -3763,7 +3763,7 @@ export default function AddStory() {
                 type="button"
                 disabled={collageImages.length === 0}
                 onClick={() => buildCollageToEditor(collageImages)}
-                className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
+                className="story-cta-blue w-full h-11 rounded-2xl text-xs font-medium disabled:opacity-40 cursor-pointer flex items-center justify-center gap-1.5"
               >
                 <span>Continue to Editor</span>
                 <ArrowRight className="w-4 h-4" />
@@ -3782,14 +3782,14 @@ export default function AddStory() {
              * ------------------------------------------------------------- */}
             <aside className="hidden lg:flex flex-col gap-3.5 overflow-y-auto pr-1">
               <div className="story-studio-panel rounded-3xl p-4 space-y-3">
-                <h2 className="text-xs font-bold story-studio-muted">Creative Tools</h2>
+                <h2 className="text-xs font-semibold story-studio-muted">Creative Tools</h2>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={openTextStudioForNew}
-                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-medium cursor-pointer whitespace-nowrap"
                   >
-                    <span className="w-7 h-7 rounded-xl bg-[#1877F2]/15 text-[#1877F2] font-serif font-extrabold flex items-center justify-center shrink-0">
+                    <span className="w-7 h-7 rounded-xl bg-[#1877F2]/15 text-[#1877F2] font-serif font-semibold flex items-center justify-center shrink-0">
                       Aa
                     </span>
                     <span>Add Text</span>
@@ -3798,7 +3798,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={() => setStickerTrayOpen(true)}
-                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-medium cursor-pointer whitespace-nowrap"
                   >
                     <span className="w-7 h-7 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
                       <Smile className="w-4 h-4" />
@@ -3809,7 +3809,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={() => setMusicSheetOpen(true)}
-                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-medium cursor-pointer whitespace-nowrap"
                   >
                     <span className="w-7 h-7 rounded-xl bg-rose-500/15 text-rose-500 flex items-center justify-center shrink-0">
                       <Music className="w-4 h-4" />
@@ -3823,7 +3823,7 @@ export default function AddStory() {
                       setDrawModeOpen((v) => !v);
                       triggerHaptic();
                     }}
-                    className={`min-h-[46px] px-3 rounded-2xl flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap ${
+                    className={`min-h-[46px] px-3 rounded-2xl flex items-center gap-2.5 text-xs font-medium cursor-pointer whitespace-nowrap ${
                       drawModeOpen ? "story-cta-blue" : "story-studio-soft"
                     }`}
                   >
@@ -3840,7 +3840,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={() => openStickerConfigurator("mention")}
-                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-medium cursor-pointer whitespace-nowrap"
                   >
                     <span className="w-7 h-7 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
                       <AtSign className="w-4 h-4" />
@@ -3851,7 +3851,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={() => openStickerConfigurator("shop_order")}
-                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-bold cursor-pointer whitespace-nowrap"
+                    className="min-h-[46px] px-3 rounded-2xl story-studio-soft flex items-center gap-2.5 text-xs font-medium cursor-pointer whitespace-nowrap"
                   >
                     <span className="w-7 h-7 rounded-xl bg-[#1877F2]/15 text-[#1877F2] flex items-center justify-center shrink-0">
                       <ShoppingBag className="w-4 h-4" />
@@ -3863,7 +3863,7 @@ export default function AddStory() {
 
               {/* Visual Filters */}
               <div className="story-studio-panel rounded-3xl p-4 space-y-2.5">
-                <h2 className="text-xs font-bold story-studio-muted">Color Filters</h2>
+                <h2 className="text-xs font-semibold story-studio-muted">Color Filters</h2>
                 <div className="flex flex-wrap gap-1.5">
                   {STUDIO_EFFECTS.map((eff) => (
                     <button
@@ -3873,7 +3873,7 @@ export default function AddStory() {
                         setEffectId(eff.id);
                         triggerHaptic();
                       }}
-                      className={`h-9 px-3 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap transition-colors ${
+                      className={`h-9 px-3 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap transition-colors ${
                         effectId === eff.id ? "story-cta-blue" : "story-studio-soft"
                       }`}
                     >
@@ -3887,11 +3887,11 @@ export default function AddStory() {
               {(createMode || !selectedMedia) && (
                 <div className="story-studio-panel rounded-3xl p-4 space-y-3">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-xs font-bold story-studio-muted">Canvas Backdrop</h2>
+                    <h2 className="text-xs font-semibold story-studio-muted">Canvas Backdrop</h2>
                     <button
                       type="button"
                       onClick={() => setStep("gallery")}
-                      className="text-[11px] font-bold text-[#1877F2] cursor-pointer"
+                      className="text-[11px] font-semibold text-[#1877F2] cursor-pointer"
                     >
                       Use Media
                     </button>
@@ -3919,7 +3919,7 @@ export default function AddStory() {
 
               {/* Story Preferences & Export */}
               <div className="story-studio-panel rounded-3xl p-4 space-y-2">
-                <h2 className="text-xs font-bold story-studio-muted">Canvas Options</h2>
+                <h2 className="text-xs font-semibold story-studio-muted">Canvas Options</h2>
                 <button
                   type="button"
                   onClick={() => {
@@ -3932,7 +3932,7 @@ export default function AddStory() {
                     <Cpu className="w-4 h-4 text-[#1877F2]" />
                     <span>AI Content Label</span>
                   </span>
-                  <span className="text-[11px] font-bold text-[#1877F2]">
+                  <span className="text-[11px] font-semibold text-[#1877F2]">
                     {aiLabel ? "On" : "Off"}
                   </span>
                 </button>
@@ -3953,7 +3953,7 @@ export default function AddStory() {
                     )}
                     <span>Story Replies</span>
                   </span>
-                  <span className="text-[11px] font-bold text-[#1877F2]">
+                  <span className="text-[11px] font-semibold text-[#1877F2]">
                     {allowCommenting ? "Allowed" : "Muted"}
                   </span>
                 </button>
@@ -4012,7 +4012,7 @@ export default function AddStory() {
                             </div>
                           )}
                           <div className="min-w-0">
-                            <p className="text-sm font-extrabold text-white truncate">
+                            <p className="text-sm font-semibold text-white truncate">
                               {attachedSong.title}
                             </p>
                             <p className="text-xs text-white/75 truncate mt-0.5">
@@ -4172,7 +4172,7 @@ export default function AddStory() {
                             </div>
                           )}
                           <div className="min-w-0 flex-1">
-                            <p className="text-[11px] font-bold text-white truncate">
+                            <p className="text-[11px] font-semibold text-white truncate">
                               {attachedSong.title}
                             </p>
                           </div>
@@ -4220,7 +4220,7 @@ export default function AddStory() {
                           setMediaOffset({ x: 0, y: 0 });
                           triggerHaptic();
                         }}
-                        className="pointer-events-auto h-8 px-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center gap-1 text-[11px] font-bold text-white cursor-pointer whitespace-nowrap shrink-0"
+                        className="pointer-events-auto h-8 px-2.5 rounded-full bg-black/60 backdrop-blur-md border border-white/15 flex items-center gap-1 text-[11px] font-semibold text-white cursor-pointer whitespace-nowrap shrink-0"
                       >
                         <RefreshCw className="w-3 h-3" />
                         <span>1:1</span>
@@ -4250,7 +4250,7 @@ export default function AddStory() {
                             type="button"
                             onClick={() => setDrawBrush(b.id)}
                             aria-label={b.label}
-                            className={`h-8 px-2.5 rounded-xl text-[11px] font-bold shrink-0 whitespace-nowrap cursor-pointer transition-colors ${
+                            className={`h-8 px-2.5 rounded-xl text-[11px] font-semibold shrink-0 whitespace-nowrap cursor-pointer transition-colors ${
                               drawBrush === b.id
                                 ? "story-cta-blue"
                                 : "text-zinc-300 hover:text-white"
@@ -4281,7 +4281,7 @@ export default function AddStory() {
                         <button
                           type="button"
                           onClick={() => setDrawModeOpen(false)}
-                          className="story-cta-blue h-8 px-3 rounded-xl text-xs font-bold shrink-0 whitespace-nowrap cursor-pointer"
+                          className="story-cta-blue h-8 px-3 rounded-xl text-xs font-medium shrink-0 whitespace-nowrap cursor-pointer"
                         >
                           Done
                         </button>
@@ -4297,7 +4297,7 @@ export default function AddStory() {
                               key={w}
                               type="button"
                               onClick={() => setDrawWidth(w)}
-                              className={`h-6 px-2.5 rounded-lg text-[11px] font-bold tabular-nums cursor-pointer ${
+                              className={`h-6 px-2.5 rounded-lg text-[11px] font-semibold tabular-nums cursor-pointer ${
                                 drawWidth === w ? "story-cta-blue" : "bg-white/10 text-zinc-300"
                               }`}
                             >
@@ -4340,7 +4340,7 @@ export default function AddStory() {
                         setEffectId(eff.id);
                         triggerHaptic();
                       }}
-                      className={`h-8 px-3 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer ${
+                      className={`h-8 px-3 rounded-xl text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer ${
                         effectId === eff.id ? "story-cta-blue" : "story-studio-soft"
                       }`}
                     >
@@ -4373,16 +4373,16 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={openTextStudioForNew}
-                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                 >
-                  <span className="font-serif font-extrabold text-sm">Aa</span>
+                  <span className="font-serif font-semibold text-sm">Aa</span>
                   <span>Text</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setStickerTrayOpen(true)}
-                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Smile className="w-3.5 h-3.5" />
                   <span>Stickers</span>
@@ -4391,7 +4391,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => setMusicSheetOpen(true)}
-                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Music className="w-3.5 h-3.5" />
                   <span>Audio</span>
@@ -4400,7 +4400,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => setEffectsBarOpen((v) => !v)}
-                  className={`min-h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer ${
+                  className={`min-h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer ${
                     effectsBarOpen ? "story-cta-blue" : "story-studio-soft"
                   }`}
                 >
@@ -4415,7 +4415,7 @@ export default function AddStory() {
                       setCreateGradientIdx((i) => (i + 1) % CREATE_GRADIENTS.length);
                       triggerHaptic();
                     }}
-                    className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                    className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                   >
                     <span className={`w-3.5 h-3.5 rounded-full ${activeCreateGradient.bgClass}`} />
                     <span>Backdrop</span>
@@ -4428,7 +4428,7 @@ export default function AddStory() {
                     setDrawModeOpen(true);
                     triggerHaptic();
                   }}
-                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                   <span>Draw</span>
@@ -4437,7 +4437,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => openStickerConfigurator("mention")}
-                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <AtSign className="w-3.5 h-3.5" />
                   <span>Mention</span>
@@ -4446,7 +4446,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => openStickerConfigurator("shop_order")}
-                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   <ShoppingBag className="w-3.5 h-3.5" />
                   <span>Shop</span>
@@ -4458,7 +4458,7 @@ export default function AddStory() {
                     setAiLabel((v) => !v);
                     triggerHaptic();
                   }}
-                  className={`min-h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer ${
+                  className={`min-h-[38px] px-3 rounded-xl flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer ${
                     aiLabel ? "story-cta-blue" : "story-studio-soft"
                   }`}
                 >
@@ -4472,7 +4472,7 @@ export default function AddStory() {
                     setAllowCommenting((v) => !v);
                     triggerHaptic();
                   }}
-                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-bold whitespace-nowrap shrink-0 cursor-pointer"
+                  className="min-h-[38px] px-3 rounded-xl story-studio-soft flex items-center gap-1.5 text-xs font-medium whitespace-nowrap shrink-0 cursor-pointer"
                 >
                   {allowCommenting ? (
                     <MessageSquare className="w-3.5 h-3.5" />
@@ -4512,7 +4512,7 @@ export default function AddStory() {
                     }}
                     className="w-6 h-6 rounded-full object-cover shrink-0"
                   />
-                  <span className="text-xs font-bold whitespace-nowrap">
+                  <span className="text-xs font-medium whitespace-nowrap">
                     {publishing ? "Posting..." : "Story"}
                   </span>
                 </button>
@@ -4551,7 +4551,7 @@ export default function AddStory() {
             <aside className="hidden lg:flex flex-col justify-between story-studio-panel rounded-3xl p-5 overflow-y-auto gap-4">
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold story-studio-muted block">
+                  <label className="text-xs font-medium story-studio-muted block">
                     Story Caption
                   </label>
                   <div className="rounded-2xl story-studio-soft p-3">
@@ -4567,7 +4567,7 @@ export default function AddStory() {
 
                 {/* Audio Track Card */}
                 <div className="space-y-1.5">
-                  <span className="text-xs font-bold story-studio-muted block">Soundtrack</span>
+                  <span className="text-xs font-medium story-studio-muted block">Soundtrack</span>
                   {attachedSong ? (
                     <div className="p-2.5 rounded-2xl story-studio-soft flex items-center gap-2.5">
                       {attachedSong.coverUrl ? (
@@ -4583,7 +4583,7 @@ export default function AddStory() {
                         </div>
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold truncate">{attachedSong.title}</p>
+                        <p className="text-xs font-medium truncate">{attachedSong.title}</p>
                         <p className="text-[11px] story-studio-muted truncate">
                           {attachedSong.artist}
                         </p>
@@ -4601,7 +4601,7 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => setMusicSheetOpen(true)}
-                      className="w-full h-11 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
+                      className="w-full h-11 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-medium cursor-pointer"
                     >
                       <span className="flex items-center gap-2">
                         <Music className="w-4 h-4 text-[#1877F2]" />
@@ -4614,7 +4614,7 @@ export default function AddStory() {
 
                 {/* Audience Selection */}
                 <div className="space-y-2">
-                  <span className="text-xs font-bold story-studio-muted block">Audience</span>
+                  <span className="text-xs font-medium story-studio-muted block">Audience</span>
                   <button
                     type="button"
                     onClick={() => setShareTargetAudience("story")}
@@ -4637,7 +4637,7 @@ export default function AddStory() {
                         className="w-9 h-9 rounded-full object-cover shrink-0"
                       />
                       <div className="text-left min-w-0">
-                        <p className="text-xs font-bold truncate">Your Story</p>
+                        <p className="text-xs font-medium truncate">Your Story</p>
                         <p className="text-[11px] story-studio-muted truncate">Public on Loops</p>
                       </div>
                     </div>
@@ -4668,7 +4668,7 @@ export default function AddStory() {
                         <Star className="w-4 h-4 fill-white text-white" />
                       </span>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold truncate">Close Friends</p>
+                        <p className="text-xs font-medium truncate">Close Friends</p>
                         <p className="text-[11px] story-studio-muted tabular-nums truncate">
                           {closeFriendIds.length} members
                         </p>
@@ -4679,7 +4679,7 @@ export default function AddStory() {
                       <button
                         type="button"
                         onClick={() => setCloseFriendsOpen(true)}
-                        className="text-[11px] font-bold text-[#1877F2] cursor-pointer"
+                        className="text-[11px] font-semibold text-[#1877F2] cursor-pointer"
                       >
                         Edit
                       </button>
@@ -4703,7 +4703,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => setShareSheetOpen(true)}
-                  className="w-full h-10 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
+                  className="w-full h-10 px-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-medium cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
                     <Send className="w-3.5 h-3.5 text-[#1877F2]" />
@@ -4722,7 +4722,7 @@ export default function AddStory() {
                   type="button"
                   disabled={publishing}
                   onClick={() => handlePublishStory(shareTargetAudience)}
-                  className="story-cta-blue w-full h-12 rounded-2xl text-sm font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-transform"
+                  className="story-cta-blue w-full h-12 rounded-2xl text-sm font-semibold shadow-lg flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] transition-transform"
                 >
                   {publishing ? (
                     <>
@@ -4774,7 +4774,7 @@ export default function AddStory() {
                         m === "normal" ? "upper" : m === "upper" ? "lower" : "normal"
                       )
                     }
-                    className="min-w-[38px] h-9 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-extrabold text-white flex items-center justify-center cursor-pointer whitespace-nowrap"
+                    className="min-w-[38px] h-9 px-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white flex items-center justify-center cursor-pointer whitespace-nowrap"
                     title="Text case"
                   >
                     Aa
@@ -4796,7 +4796,7 @@ export default function AddStory() {
                         a === "none" ? "pulse" : a === "pulse" ? "bounce" : "none"
                       )
                     }
-                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-extrabold cursor-pointer whitespace-nowrap ${
+                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-semibold cursor-pointer whitespace-nowrap ${
                       draftAnimation !== "none"
                         ? "story-cta-blue"
                         : "bg-white/10 hover:bg-white/20 text-white"
@@ -4809,7 +4809,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={() => setDraftOutline((v) => !v)}
-                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-extrabold border cursor-pointer whitespace-nowrap ${
+                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-semibold border cursor-pointer whitespace-nowrap ${
                       draftOutline
                         ? "bg-white text-zinc-950 border-white"
                         : "bg-transparent text-white border-white/25 hover:bg-white/10"
@@ -4845,7 +4845,7 @@ export default function AddStory() {
                         p === "none" ? "solid" : p === "solid" ? "soft" : "none"
                       )
                     }
-                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-extrabold cursor-pointer whitespace-nowrap ${
+                    className={`min-w-[38px] h-9 px-2.5 rounded-xl text-xs font-semibold cursor-pointer whitespace-nowrap ${
                       draftPillMode !== "none"
                         ? "bg-white text-zinc-950"
                         : "bg-white/10 hover:bg-white/20 text-white"
@@ -4867,7 +4867,7 @@ export default function AddStory() {
                   <button
                     type="button"
                     onClick={commitTextStudio}
-                    className="story-cta-blue h-9 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                    className="story-cta-blue h-9 px-4 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap"
                   >
                     Done
                   </button>
@@ -4988,7 +4988,7 @@ export default function AddStory() {
                           onClick={() => setDraftFontId(f.id)}
                           className={`h-8 px-3.5 rounded-xl text-xs whitespace-nowrap cursor-pointer transition-colors ${
                             draftFontId === f.id
-                              ? "bg-white text-zinc-950 font-bold"
+                              ? "bg-white text-zinc-950 font-semibold"
                               : "bg-white/10 text-white hover:bg-white/20"
                           }`}
                         >
@@ -5027,7 +5027,7 @@ export default function AddStory() {
                         key={tx.id}
                         type="button"
                         onClick={() => setDraftTexture(tx.id)}
-                        className={`h-9 px-4 rounded-xl text-xs font-bold cursor-pointer whitespace-nowrap ${
+                        className={`h-9 px-4 rounded-xl text-xs font-medium cursor-pointer whitespace-nowrap ${
                           draftTexture === tx.id
                             ? "story-cta-blue"
                             : "bg-white/10 text-zinc-200 hover:bg-white/20"
@@ -5068,7 +5068,7 @@ export default function AddStory() {
 
               <header className="flex items-center justify-between gap-3 pb-3 shrink-0">
                 <div>
-                  <h3 className="text-base font-bold">Stickers & Widgets</h3>
+                  <h3 className="text-base font-semibold">Stickers & Widgets</h3>
                   <p className="text-xs story-studio-muted">
                     Add interactive tags, polls, products, or live badges
                   </p>
@@ -5110,7 +5110,7 @@ export default function AddStory() {
                       key={`${s.label}_${idx}`}
                       type="button"
                       onClick={s.onSelect}
-                      className="min-h-[44px] px-3 py-2 rounded-2xl story-studio-soft flex items-center gap-2 text-xs font-bold text-left active:scale-[0.98] transition-transform cursor-pointer"
+                      className="min-h-[44px] px-3 py-2 rounded-2xl story-studio-soft flex items-center gap-2 text-xs font-medium text-left active:scale-[0.98] transition-transform cursor-pointer"
                     >
                       <span className={`shrink-0 ${s.badgeClass}`}>{s.icon}</span>
                       <span className="truncate">{s.label}</span>
@@ -5126,7 +5126,7 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "clock", title: "Dhaka Time" })}
-                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1 font-mono font-bold text-sm tabular-nums cursor-pointer"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1 font-mono font-semibold text-sm tabular-nums cursor-pointer"
                     >
                       <span>{dhakaClock.hh}</span>
                       <span>:</span>
@@ -5136,7 +5136,7 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "day_stamp", title: dhakaClock.dayStr })}
-                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center font-serif font-bold text-xs tracking-wider cursor-pointer truncate"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center font-serif font-medium text-xs tracking-wider cursor-pointer truncate"
                     >
                       {dhakaClock.dayStr}
                     </button>
@@ -5144,7 +5144,7 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "heart_count", title: "1" })}
-                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1.5 text-rose-500 font-bold text-xs cursor-pointer"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1.5 text-rose-500 font-medium text-xs cursor-pointer"
                     >
                       <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
                       <span>Like Meter</span>
@@ -5153,7 +5153,7 @@ export default function AddStory() {
                     <button
                       type="button"
                       onClick={() => addStickerInstant({ kind: "sound_on", title: "SOUND ON" })}
-                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1.5 font-bold text-xs cursor-pointer whitespace-nowrap"
+                      className="min-h-[48px] px-3 rounded-2xl story-studio-soft flex items-center justify-center gap-1.5 font-medium text-xs cursor-pointer whitespace-nowrap"
                     >
                       <Volume2 className="w-4 h-4 text-[#1877F2]" />
                       <span>Sound On</span>
@@ -5187,7 +5187,7 @@ export default function AddStory() {
               className="story-studio-sheet w-full sm:max-w-md max-h-[74dvh] rounded-t-[28px] sm:rounded-[28px] p-5 space-y-4 shadow-2xl overflow-y-auto"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-bold capitalize">
+                <h3 className="text-base font-semibold capitalize">
                   Configure {configuringSticker.replace("_", " ")}
                 </h3>
                 <button
@@ -5236,7 +5236,7 @@ export default function AddStory() {
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold truncate">{p.name}</p>
+                          <p className="text-xs font-medium truncate">{p.name}</p>
                           <p className="text-[11px] font-semibold text-[#1877F2] tabular-nums">
                             ৳{Number(p.price || 0).toLocaleString()}
                           </p>
@@ -5254,7 +5254,7 @@ export default function AddStory() {
                         url: "/products",
                       })
                     }
-                    className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold cursor-pointer"
+                    className="story-cta-blue w-full h-11 rounded-2xl text-xs font-medium cursor-pointer"
                   >
                     Link Storefront Catalog
                   </button>
@@ -5302,7 +5302,7 @@ export default function AddStory() {
                             className="w-9 h-9 rounded-full object-cover shrink-0"
                           />
                           <div className="min-w-0">
-                            <p className="text-xs font-bold truncate">{u.name}</p>
+                            <p className="text-xs font-medium truncate">{u.name}</p>
                             <p className="text-[11px] story-studio-muted truncate">@{u.handle}</p>
                           </div>
                         </button>
@@ -5317,7 +5317,7 @@ export default function AddStory() {
                           title: configSearchUser.trim().replace(/^@/, ""),
                         })
                       }
-                      className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold cursor-pointer"
+                      className="story-cta-blue w-full h-11 rounded-2xl text-xs font-medium cursor-pointer"
                     >
                       Add @{configSearchUser.trim().replace(/^@/, "")}
                     </button>
@@ -5429,7 +5429,7 @@ export default function AddStory() {
                         url: configuringSticker === "link" ? configTitle.trim() : undefined,
                       });
                     }}
-                    className="story-cta-blue w-full h-11 rounded-2xl text-xs font-bold cursor-pointer"
+                    className="story-cta-blue w-full h-11 rounded-2xl text-xs font-medium cursor-pointer"
                   >
                     Add Sticker
                   </button>
@@ -5467,7 +5467,7 @@ export default function AddStory() {
 
               <header className="flex items-center justify-between pb-3 shrink-0">
                 <div>
-                  <h3 className="text-base font-bold">Audio Library</h3>
+                  <h3 className="text-base font-semibold">Audio Library</h3>
                   <p className="text-xs story-studio-muted">
                     Pair background songs or original creator audio
                   </p>
@@ -5532,7 +5532,7 @@ export default function AddStory() {
                         }}
                         className="min-w-0 flex-1 cursor-pointer"
                       >
-                        <p className="text-xs font-bold truncate">{song.title}</p>
+                        <p className="text-xs font-medium truncate">{song.title}</p>
                         <p className="text-[11px] story-studio-muted truncate">{song.artist}</p>
                       </div>
 
@@ -5556,7 +5556,7 @@ export default function AddStory() {
                           setMusicSheetOpen(false);
                           triggerHaptic();
                         }}
-                        className={`h-9 px-3.5 rounded-xl text-xs font-bold cursor-pointer shrink-0 whitespace-nowrap ${
+                        className={`h-9 px-3.5 rounded-xl text-xs font-medium cursor-pointer shrink-0 whitespace-nowrap ${
                           isAttached ? "story-cf-badge" : "story-cta-blue"
                         }`}
                       >
@@ -5599,7 +5599,7 @@ export default function AddStory() {
                     <Star className="w-4 h-4 fill-white text-white" />
                   </span>
                   <div>
-                    <h3 className="text-sm font-bold">Close Friends</h3>
+                    <h3 className="text-sm font-semibold">Close Friends</h3>
                     <p className="text-[11px] story-studio-muted tabular-nums">
                       {closeFriendIds.length} selected · Private list
                     </p>
@@ -5677,7 +5677,7 @@ export default function AddStory() {
                             className="w-10 h-10 rounded-full object-cover shrink-0"
                           />
                           <div className="text-left min-w-0">
-                            <p className="text-xs font-bold truncate">{u.name}</p>
+                            <p className="text-xs font-medium truncate">{u.name}</p>
                             <p className="text-[11px] story-studio-muted truncate">
                               @{u.handle}
                               {u.relationLabel ? ` · ${u.relationLabel}` : ""}
@@ -5704,7 +5704,7 @@ export default function AddStory() {
                 <button
                   type="button"
                   onClick={() => setCloseFriendsOpen(false)}
-                  className="story-pill-btn h-11 px-5 rounded-2xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                  className="story-pill-btn h-11 px-5 rounded-2xl text-xs font-medium cursor-pointer whitespace-nowrap"
                 >
                   Save List
                 </button>
@@ -5712,7 +5712,7 @@ export default function AddStory() {
                   type="button"
                   disabled={publishing}
                   onClick={() => handlePublishStory("close_friends")}
-                  className="story-cta-blue flex-1 h-11 rounded-2xl text-xs font-bold cursor-pointer whitespace-nowrap"
+                  className="story-cta-blue flex-1 h-11 rounded-2xl text-xs font-medium cursor-pointer whitespace-nowrap"
                 >
                   {publishing ? "Sharing..." : "Share to Close Friends"}
                 </button>
@@ -5751,7 +5751,7 @@ export default function AddStory() {
                       <div
                         className={`w-full h-full ${activeCreateGradient.bgClass} flex items-center justify-center p-1 text-center`}
                       >
-                        <span className="text-[7px] font-bold text-white line-clamp-2">
+                        <span className="text-[7px] font-semibold text-white line-clamp-2">
                           {textLayers[0]?.text || caption || "Story"}
                         </span>
                       </div>
@@ -5776,7 +5776,7 @@ export default function AddStory() {
                     ) : null}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-base font-bold">Share Story</h3>
+                    <h3 className="text-base font-semibold">Share Story</h3>
                     <p className="text-xs story-studio-muted truncate">
                       Choose audience or send directly in chat
                     </p>
@@ -5815,7 +5815,7 @@ export default function AddStory() {
                       className="w-9 h-9 rounded-full object-cover shrink-0"
                     />
                     <div className="text-left min-w-0">
-                      <p className="text-xs font-bold truncate">Your Story</p>
+                      <p className="text-xs font-medium truncate">Your Story</p>
                       <p className="text-[11px] story-studio-muted truncate">Public on Loops</p>
                     </div>
                   </div>
@@ -5846,7 +5846,7 @@ export default function AddStory() {
                       <Star className="w-4 h-4 fill-white text-white" />
                     </span>
                     <div className="min-w-0">
-                      <p className="text-xs font-bold truncate">Close Friends</p>
+                      <p className="text-xs font-medium truncate">Close Friends</p>
                       <p className="text-[11px] story-studio-muted tabular-nums truncate">
                         {closeFriendIds.length} members
                       </p>
@@ -5860,7 +5860,7 @@ export default function AddStory() {
                         setShareSheetOpen(false);
                         setCloseFriendsOpen(true);
                       }}
-                      className="text-[11px] font-bold text-[#1877F2] cursor-pointer"
+                      className="text-[11px] font-semibold text-[#1877F2] cursor-pointer"
                     >
                       Edit
                     </button>
@@ -5881,7 +5881,7 @@ export default function AddStory() {
 
               <div className="flex-1 min-h-0 overflow-y-auto py-3 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold flex items-center gap-1.5">
+                  <span className="text-xs font-medium flex items-center gap-1.5">
                     <Send className="w-3.5 h-3.5 text-[#1877F2]" />
                     <span>Also send in Direct Message</span>
                   </span>
@@ -5970,7 +5970,7 @@ export default function AddStory() {
                 type="button"
                 disabled={publishing}
                 onClick={() => handlePublishStory(shareTargetAudience)}
-                className="story-cta-blue w-full h-12 rounded-2xl text-sm font-bold shadow-lg flex items-center justify-center gap-2 cursor-pointer shrink-0"
+                className="story-cta-blue w-full h-12 rounded-2xl text-sm font-semibold shadow-lg flex items-center justify-center gap-2 cursor-pointer shrink-0"
               >
                 {publishing ? (
                   <>
@@ -6013,11 +6013,11 @@ export default function AddStory() {
               <div className="w-10 h-1.5 rounded-full bg-zinc-300 dark:bg-white/20 mx-auto mb-1 sm:hidden shrink-0" />
 
               <header className="flex items-center justify-between">
-                <h3 className="text-base font-bold">Story Controls</h3>
+                <h3 className="text-base font-semibold">Story Controls</h3>
                 <button
                   type="button"
                   onClick={() => setSettingsOpen(false)}
-                  className="story-cta-blue h-9 px-4 rounded-xl text-xs font-bold cursor-pointer"
+                  className="story-cta-blue h-9 px-4 rounded-xl text-xs font-medium cursor-pointer"
                 >
                   Done
                 </button>
@@ -6054,7 +6054,7 @@ export default function AddStory() {
 
               <div className="p-3.5 rounded-2xl story-studio-soft flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold">Save story to archive</p>
+                  <p className="text-xs font-medium">Save story to archive</p>
                   <p className="text-[11px] story-studio-muted">
                     Keep published stories in your private Recents gallery
                   </p>
@@ -6080,7 +6080,7 @@ export default function AddStory() {
                   setSettingsOpen(false);
                   setCloseFriendsOpen(true);
                 }}
-                className="w-full p-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-bold cursor-pointer"
+                className="w-full p-3.5 rounded-2xl story-studio-soft flex items-center justify-between text-xs font-medium cursor-pointer"
               >
                 <span className="flex items-center gap-2">
                   <span className="story-cf-badge w-6 h-6 rounded-full flex items-center justify-center">

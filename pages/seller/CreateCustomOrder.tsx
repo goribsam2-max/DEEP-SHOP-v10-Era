@@ -655,7 +655,7 @@ const CreateCustomOrder: React.FC = () => {
                       className="w-full px-3.5 py-2.5 flex items-center justify-between gap-3 hover:bg-blue-50/60 dark:hover:bg-white/[0.04] text-left transition cursor-pointer"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-9 h-9 rounded-full bg-blue-600/12 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-xs overflow-hidden shrink-0">
+                        <div className="w-9 h-9 rounded-full bg-blue-600/12 text-blue-600 dark:text-blue-400 flex items-center justify-center font-medium text-xs overflow-hidden shrink-0">
                           {avatarUrl ? (
                             <img
                               src={avatarUrl}
@@ -667,7 +667,7 @@ const CreateCustomOrder: React.FC = () => {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-white truncate">
+                          <p className="text-xs sm:text-sm font-medium text-zinc-900 dark:text-white truncate">
                             {display}
                           </p>
                           <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono truncate">
@@ -700,7 +700,7 @@ const CreateCustomOrder: React.FC = () => {
                     <UserCheck className="w-4 h-4" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-emerald-950 dark:text-emerald-200 truncate">
+                    <p className="text-xs font-medium text-emerald-950 dark:text-emerald-200 truncate">
                       Linked Account:{" "}
                       {selectedCustomerUser.displayName ||
                         selectedCustomerUser.shopName ||
@@ -870,7 +870,7 @@ const CreateCustomOrder: React.FC = () => {
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
                         {item.name}
                       </p>
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums mt-0.5">
@@ -1074,7 +1074,7 @@ const CreateCustomOrder: React.FC = () => {
               <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block font-medium">
                 Subtotal
               </span>
-              <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
+              <span className="text-sm font-semibold text-zinc-900 dark:text-white tabular-nums">
                 {formatPrice(subTotal)}
               </span>
             </div>
@@ -1082,7 +1082,7 @@ const CreateCustomOrder: React.FC = () => {
               <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block font-medium">
                 Delivery Fee
               </span>
-              <span className="text-sm font-bold text-zinc-900 dark:text-white tabular-nums">
+              <span className="text-sm font-semibold text-zinc-900 dark:text-white tabular-nums">
                 {formatPrice(numericShippingFee)}
               </span>
             </div>
@@ -1090,7 +1090,7 @@ const CreateCustomOrder: React.FC = () => {
               <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block font-semibold">
                 Advance Paid
               </span>
-              <span className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300 tabular-nums">
+              <span className="text-sm font-semibold text-emerald-700 dark:text-emerald-300 tabular-nums">
                 {formatPrice(numericAdvancePaid)}
               </span>
             </div>
@@ -1098,7 +1098,7 @@ const CreateCustomOrder: React.FC = () => {
               <span className="text-[11px] text-rose-700 dark:text-rose-400 block font-semibold">
                 Due Amount (COD)
               </span>
-              <span className="text-sm font-extrabold text-rose-700 dark:text-rose-300 tabular-nums">
+              <span className="text-sm font-semibold text-rose-700 dark:text-rose-300 tabular-nums">
                 {formatPrice(dueAmount)}
               </span>
             </div>

@@ -516,7 +516,7 @@ const AllProducts: React.FC = () => {
                 <p className="text-[11px] font-medium text-sky-600 dark:text-sky-400">
                   {activeDetails.enSubtitle}
                 </p>
-                <h1 className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-snug mt-0.5">
+                <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white leading-snug mt-0.5">
                   {activeDetails.bnTitle}
                 </h1>
               </div>
@@ -696,7 +696,7 @@ const AllProducts: React.FC = () => {
               <div className="text-xs font-semibold text-sky-600 dark:text-sky-400">
                 {activeDetails.enSubtitle}
               </div>
-              <h1 className="text-3xl xl:text-[34px] font-extrabold tracking-tight text-slate-900 dark:text-white leading-tight">
+              <h1 className="text-3xl xl:text-[34px] font-semibold tracking-tight text-slate-900 dark:text-white leading-tight">
                 {activeDetails.bnTitle}
               </h1>
               <p className="text-sm xl:text-[15px] text-slate-600 dark:text-slate-300/90 leading-relaxed max-w-2xl">
@@ -720,7 +720,7 @@ const AllProducts: React.FC = () => {
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   Total Shown
                 </div>
-                <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+                <div className="text-2xl font-semibold text-slate-900 dark:text-white mt-1">
                   {catalogMetrics.totalCount}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -732,7 +732,7 @@ const AllProducts: React.FC = () => {
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   Ready in Stock
                 </div>
-                <div className="text-2xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">
+                <div className="text-2xl font-semibold text-emerald-600 dark:text-emerald-400 mt-1">
                   {catalogMetrics.inStockCount}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -744,7 +744,7 @@ const AllProducts: React.FC = () => {
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   Special Discounts
                 </div>
-                <div className="text-2xl font-extrabold text-sky-600 dark:text-sky-400 mt-1">
+                <div className="text-2xl font-semibold text-sky-600 dark:text-sky-400 mt-1">
                   {catalogMetrics.offersCount}
                 </div>
                 <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -756,7 +756,7 @@ const AllProducts: React.FC = () => {
                 <div className="text-xs text-slate-500 dark:text-slate-400">
                   Starting Price
                 </div>
-                <div className="text-xl xl:text-2xl font-extrabold text-slate-900 dark:text-white mt-1 truncate">
+                <div className="text-xl xl:text-2xl font-semibold text-slate-900 dark:text-white mt-1 truncate">
                   {catalogMetrics.minPrice > 0
                     ? formatPrice(catalogMetrics.minPrice)
                     : "—"}
@@ -780,7 +780,7 @@ const AllProducts: React.FC = () => {
           <aside className="hidden lg:block lg:col-span-3 sticky top-24 space-y-5">
             <div className="ds-liquid-panel p-5 space-y-5">
               <div className="flex items-center justify-between">
-                <h2 className="text-sm font-extrabold text-slate-900 dark:text-white tracking-tight">
+                <h2 className="text-sm font-semibold text-slate-900 dark:text-white tracking-tight">
                   Categories
                 </h2>
                 {hasActiveFilters && (
@@ -817,7 +817,7 @@ const AllProducts: React.FC = () => {
                       <span
                         className={`tabular-nums shrink-0 text-[11px] ${
                           isActive
-                            ? "font-extrabold text-sky-600 dark:text-sky-400"
+                            ? "font-semibold text-sky-600 dark:text-sky-400"
                             : "text-slate-400"
                         }`}
                       >
@@ -830,7 +830,7 @@ const AllProducts: React.FC = () => {
 
               {/* Availability & Offer Quick Filters */}
               <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08] space-y-2.5">
-                <div className="text-xs font-bold text-slate-900 dark:text-white">
+                <div className="text-xs font-medium text-slate-900 dark:text-white">
                   Quick Filters
                 </div>
 
@@ -857,7 +857,7 @@ const AllProducts: React.FC = () => {
 
               {/* Category Note Box */}
               <div className="pt-4 border-t border-slate-900/[0.07] dark:border-white/[0.08]">
-                <div className="text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
+                <div className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 mb-1">
                   Buying &amp; Warranty Note
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -1021,7 +1021,7 @@ const AllProducts: React.FC = () => {
                 <div className="w-16 h-16 rounded-full ds-liquid-subpanel flex items-center justify-center mb-4 text-slate-500 dark:text-slate-400">
                   <PackageSearch className="w-7 h-7" />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">
                   No Products Match This Filter
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6 leading-relaxed">
@@ -1045,7 +1045,7 @@ const AllProducts: React.FC = () => {
             ==================================================================== */}
         <section className="ds-liquid-panel p-5 sm:p-7 lg:p-8 space-y-5">
           <div className="max-w-2xl">
-            <h2 className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
               Catalog Guide &amp; Order Details
             </h2>
             <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300/85 mt-1 leading-relaxed">
@@ -1055,7 +1055,7 @@ const AllProducts: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="ds-liquid-subpanel p-4 sm:p-5 space-y-2">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 01. Quality Check &amp; Authenticity
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300/90 leading-relaxed">
@@ -1064,7 +1064,7 @@ const AllProducts: React.FC = () => {
             </div>
 
             <div className="ds-liquid-subpanel p-4 sm:p-5 space-y-2">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 02. Payment Methods &amp; Border Cross Booking
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300/90 leading-relaxed">
@@ -1073,7 +1073,7 @@ const AllProducts: React.FC = () => {
             </div>
 
             <div className="ds-liquid-subpanel p-4 sm:p-5 space-y-2">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 03. Courier Delivery &amp; Unboxing Protection
               </h3>
               <p className="text-xs text-slate-600 dark:text-slate-300/90 leading-relaxed">
@@ -1126,7 +1126,7 @@ const AllProducts: React.FC = () => {
                   </div>
 
                   <div className="flex items-center justify-between pb-3 border-b border-black/[0.06] dark:border-white/[0.08]">
-                    <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                    <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                       Sort &amp; Filter
                     </h3>
                     <button
@@ -1143,7 +1143,7 @@ const AllProducts: React.FC = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <div className="text-xs font-bold text-[#6E6E73] dark:text-[#98989D]">
+                    <div className="text-xs font-medium text-[#6E6E73] dark:text-[#98989D]">
                       Sort Order
                     </div>
                     <div className="grid grid-cols-2 gap-2">

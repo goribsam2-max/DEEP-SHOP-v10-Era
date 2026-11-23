@@ -59,7 +59,7 @@ const PaymentMethods: React.FC = () => {
         className="w-full max-w-md mx-auto px-4 pt-5 sm:pt-7 flex-1 flex flex-col"
       >
         <div className="px-1 mb-5">
-          <h1 className="ds-apple-display text-[24px] font-bold tracking-tight">
+          <h1 className="ds-apple-display text-[24px] font-semibold tracking-tight">
             Payment Methods
           </h1>
           <p className="text-xs ds-apple-muted mt-0.5">

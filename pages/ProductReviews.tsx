@@ -120,12 +120,12 @@ const ProductReviews: React.FC = () => {
           className="ds-apple-surface rounded-[22px] p-4 mb-6 shadow-xs flex items-center justify-between gap-4 cursor-pointer active:scale-[0.99] transition-transform"
         >
           <div className="min-w-0">
-            <h1 className="ds-apple-display text-[clamp(1rem,2.4vw,1.15rem)] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+            <h1 className="ds-apple-display text-[clamp(1rem,2.4vw,1.15rem)] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
               {product.name}
             </h1>
             <div className="flex items-center gap-1.5 text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] mt-0.5 font-medium tabular-nums">
               <Star className="w-3.5 h-3.5 text-[#FF9500] dark:text-[#FF9F0A] fill-[#FF9500] dark:fill-[#FF9F0A] shrink-0" />
-              <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {averageRating.toFixed(1)}
               </span>
               <span>·</span>
@@ -151,7 +151,7 @@ const ProductReviews: React.FC = () => {
                 Overall Rating
               </span>
               <div className="flex items-baseline gap-2.5 mt-2">
-                <span className="text-5xl font-extrabold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                <span className="text-5xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {averageRating.toFixed(1)}
                 </span>
                 <span className="text-sm font-medium text-[#6E6E73] dark:text-[#98989D]">

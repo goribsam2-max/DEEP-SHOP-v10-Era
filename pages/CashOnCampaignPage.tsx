@@ -245,7 +245,7 @@ export default function CashOnCampaignPage() {
             <div className="w-14 h-14 rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center mx-auto">
               <Lock className="w-7 h-7" />
             </div>
-            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
               Soon Available
             </h1>
             <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed max-w-sm mx-auto">
@@ -284,7 +284,7 @@ export default function CashOnCampaignPage() {
             <div className="w-16 h-16 rounded-full bg-[#34C759]/12 text-[#34C759] dark:text-[#30D158] flex items-center justify-center mx-auto">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+            <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
               Application Submitted Successfully!
             </h1>
             <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed max-w-md mx-auto">
@@ -327,7 +327,7 @@ export default function CashOnCampaignPage() {
           >
             <div className="border-b border-black/[0.06] dark:border-white/[0.08] pb-4 flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <h1 className="text-[22px] sm:text-[24px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+                <h1 className="text-[22px] sm:text-[24px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
                   Cash on Campaign
                 </h1>
                 <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -641,7 +641,7 @@ export default function CashOnCampaignPage() {
                     <span className="px-3 py-1 rounded-full bg-[#34C759]/12 text-[#34C759] dark:text-[#30D158] text-[12px] font-semibold inline-block">
                       Congratulations
                     </span>
-                    <h3 className="text-[20px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] pt-1">
+                    <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] pt-1">
                       Application Received!
                     </h3>
                   </div>

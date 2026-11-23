@@ -388,7 +388,7 @@ export const DeezerMusicPickerModal: React.FC<DeezerMusicPickerModalProps> = ({
               <Music className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight">
+              <h2 className="text-base font-semibold tracking-tight">
                 Select Sound
               </h2>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">

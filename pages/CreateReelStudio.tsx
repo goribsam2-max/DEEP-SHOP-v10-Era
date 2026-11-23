@@ -437,14 +437,14 @@ export const CreateReelStudio: React.FC = () => {
     return (
       <div className="min-h-screen bg-white dark:bg-zinc-950 flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
         <Shield className="w-16 h-16 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold">Reels Restricted</h2>
+        <h2 className="text-xl font-semibold">Reels Restricted</h2>
         <p className="text-sm text-zinc-500 max-w-sm mt-2">
           Your account has received 3 copyright strikes or severe guideline violations. Creating new Reels is currently disabled.
         </p>
         <button
           type="button"
           onClick={() => navigate('/loops/account-status')}
-          className="mt-6 px-6 py-3 bg-red-600 text-white font-bold text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
+          className="mt-6 px-6 py-3 bg-red-600 text-white font-medium text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
         >
           Check Account Status
         </button>
@@ -525,7 +525,7 @@ export const CreateReelStudio: React.FC = () => {
             <div className="flex items-center justify-between">
               <button
                 type="button"
-                className="inline-flex items-center gap-1 text-sm font-bold text-zinc-900 dark:text-white cursor-pointer"
+                className="inline-flex items-center gap-1 text-sm font-semibold text-zinc-900 dark:text-white cursor-pointer"
               >
                 <span>Uploaded Videos</span>
                 <ChevronRight className="w-4 h-4 rotate-90" />
@@ -564,7 +564,7 @@ export const CreateReelStudio: React.FC = () => {
                   className="w-7 h-7"
                 />
               </span>
-              <span className="text-xs font-bold text-center px-2">
+              <span className="text-xs font-medium text-center px-2">
                 Select Video
               </span>
             </button>
@@ -594,7 +594,7 @@ export const CreateReelStudio: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/20 flex flex-col justify-between p-2.5">
                     <div className="flex justify-end">
                       <span
-                        className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center shadow-md ${
+                        className={`w-6 h-6 rounded-full text-xs font-medium flex items-center justify-center shadow-md ${
                           isSelected
                             ? "bg-[#1877F2] text-white"
                             : "bg-black/50 text-white border border-white/40"
@@ -640,7 +640,7 @@ export const CreateReelStudio: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => videoInputRef.current?.click()}
-                  className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-xs font-bold text-zinc-900 dark:text-white cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+                  className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-900 text-xs font-medium text-zinc-900 dark:text-white cursor-pointer hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
                 >
                   Choose video
                 </button>
@@ -655,7 +655,7 @@ export const CreateReelStudio: React.FC = () => {
                   triggerHaptic();
                   setStep("editor");
                 }}
-                className="px-5 py-2.5 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-bold disabled:opacity-40 transition cursor-pointer flex items-center gap-1 shadow-xs"
+                className="px-5 py-2.5 rounded-xl bg-[#1877F2] hover:bg-blue-600 text-white text-xs font-medium disabled:opacity-40 transition cursor-pointer flex items-center gap-1 shadow-xs"
               >
                 <span>Next</span>
                 <ChevronRight className="w-4 h-4" />
@@ -698,7 +698,7 @@ export const CreateReelStudio: React.FC = () => {
           {/* Overlay Text Preview */}
           {overlayText && (
             <div className="absolute inset-x-6 top-1/3 z-20 text-center pointer-events-none">
-              <span className="inline-block px-4 py-2 rounded-xl bg-black/75 text-white font-extrabold text-lg shadow-2xl backdrop-blur-md">
+              <span className="inline-block px-4 py-2 rounded-xl bg-black/75 text-white font-semibold text-lg shadow-2xl backdrop-blur-md">
                 {overlayText}
               </span>
             </div>
@@ -768,7 +768,7 @@ export const CreateReelStudio: React.FC = () => {
                         </>
                       )}
                     </span>
-                    <span className="tabular-nums font-bold text-[#38BDF8] ml-2 shrink-0">
+                    <span className="tabular-nums font-semibold text-[#38BDF8] ml-2 shrink-0">
                       {activeUploadJob.status === "uploaded"
                         ? "100%"
                         : `${activeUploadJob.progress}%`}
@@ -797,7 +797,7 @@ export const CreateReelStudio: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => retryReelUploadJob(activeUploadJob.id)}
-                    className="px-2.5 py-1 rounded-lg bg-[#1877F2] text-white text-[11px] font-bold shrink-0 cursor-pointer"
+                    className="px-2.5 py-1 rounded-lg bg-[#1877F2] text-white text-[11px] font-semibold shrink-0 cursor-pointer"
                   >
                     Retry
                   </button>
@@ -897,7 +897,7 @@ export const CreateReelStudio: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setStep("picker")}
-                className="px-5 py-2.5 rounded-full bg-zinc-800 text-white text-xs font-bold hover:bg-zinc-700 transition cursor-pointer"
+                className="px-5 py-2.5 rounded-full bg-zinc-800 text-white text-xs font-medium hover:bg-zinc-700 transition cursor-pointer"
               >
                 Edit video
               </button>
@@ -908,7 +908,7 @@ export const CreateReelStudio: React.FC = () => {
                   triggerHaptic();
                   setStep("finalize");
                 }}
-                className="px-6 py-2.5 rounded-full bg-[#0095F6] hover:bg-blue-600 text-white text-xs font-bold shadow-lg transition cursor-pointer flex items-center gap-1"
+                className="px-6 py-2.5 rounded-full bg-[#0095F6] hover:bg-blue-600 text-white text-xs font-medium shadow-lg transition cursor-pointer flex items-center gap-1"
               >
                 <span>Next</span>
                 <ChevronRight className="w-4 h-4" />
@@ -923,7 +923,7 @@ export const CreateReelStudio: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowTextInput(false)}
-                  className="px-4 py-2 rounded-full bg-[#0095F6] text-white font-bold text-xs cursor-pointer"
+                  className="px-4 py-2 rounded-full bg-[#0095F6] text-white font-medium text-xs cursor-pointer"
                 >
                   Done
                 </button>
@@ -934,7 +934,7 @@ export const CreateReelStudio: React.FC = () => {
                 value={overlayText}
                 onChange={(e) => setOverlayText(e.target.value)}
                 placeholder="Type overlay text..."
-                className="w-full bg-transparent text-center text-2xl font-black text-white outline-none"
+                className="w-full bg-transparent text-center text-2xl font-semibold text-white outline-none"
               />
               <div />
             </div>
@@ -944,7 +944,7 @@ export const CreateReelStudio: React.FC = () => {
           {showExitConfirm && (
             <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-6">
               <div className="w-full max-w-xs rounded-3xl bg-[#1C1D22] text-white p-6 space-y-4 text-center border border-white/10 shadow-2xl">
-                <h3 className="text-lg font-bold">Start again?</h3>
+                <h3 className="text-lg font-semibold">Start again?</h3>
                 <p className="text-xs text-zinc-400">
                   If you go back now, you will lose this draft.
                 </p>
@@ -961,7 +961,7 @@ export const CreateReelStudio: React.FC = () => {
                       setSelectedVideoUrl("");
                       setStep("picker");
                     }}
-                    className="w-full py-3 rounded-2xl bg-rose-600/20 text-rose-500 font-bold text-sm hover:bg-rose-600/30 transition cursor-pointer"
+                    className="w-full py-3 rounded-2xl bg-rose-600/20 text-rose-500 font-semibold text-sm hover:bg-rose-600/30 transition cursor-pointer"
                   >
                     Start again
                   </button>
@@ -973,7 +973,7 @@ export const CreateReelStudio: React.FC = () => {
                       notify("Draft saved!", "success");
                       navigate("/loops");
                     }}
-                    className="w-full py-3 rounded-2xl bg-zinc-800 text-white font-bold text-sm hover:bg-zinc-700 transition cursor-pointer"
+                    className="w-full py-3 rounded-2xl bg-zinc-800 text-white font-semibold text-sm hover:bg-zinc-700 transition cursor-pointer"
                   >
                     Save draft
                   </button>
@@ -981,7 +981,7 @@ export const CreateReelStudio: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowExitConfirm(false)}
-                    className="w-full py-3 rounded-2xl bg-transparent text-zinc-400 font-bold text-sm hover:text-white transition cursor-pointer"
+                    className="w-full py-3 rounded-2xl bg-transparent text-zinc-400 font-semibold text-sm hover:text-white transition cursor-pointer"
                   >
                     Continue editing
                   </button>
@@ -1032,7 +1032,7 @@ export const CreateReelStudio: React.FC = () => {
                     ) : (
                       <Loader2 className="w-4 h-4 animate-spin text-[#1877F2] shrink-0" />
                     )}
-                    <span className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                    <span className="text-xs font-medium text-zinc-900 dark:text-white truncate">
                       {activeUploadJob.status === "uploaded"
                         ? "Video uploaded · Ready for instant publish"
                         : activeUploadJob.status === "error"
@@ -1040,7 +1040,7 @@ export const CreateReelStudio: React.FC = () => {
                         : "Uploading in background — tap Share anytime to auto-publish"}
                     </span>
                   </div>
-                  <span className="text-xs font-extrabold tabular-nums text-[#1877F2] shrink-0">
+                  <span className="text-xs font-semibold tabular-nums text-[#1877F2] shrink-0">
                     {activeUploadJob.status === "uploaded"
                       ? "100%"
                       : `${activeUploadJob.progress}%`}
@@ -1090,7 +1090,7 @@ export const CreateReelStudio: React.FC = () => {
                       e.stopPropagation();
                       setStep("editor");
                     }}
-                    className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-bold cursor-pointer"
+                    className="px-2.5 py-1 rounded-md bg-black/60 backdrop-blur-md text-white text-[10px] font-semibold cursor-pointer"
                   >
                     Preview
                   </button>
@@ -1275,7 +1275,7 @@ export const CreateReelStudio: React.FC = () => {
                 notify("Draft saved successfully!", "success");
                 navigate("/loops");
               }}
-              className="flex-1 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 font-bold text-sm text-zinc-900 dark:text-white hover:opacity-80 transition cursor-pointer"
+              className="flex-1 py-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 font-semibold text-sm text-zinc-900 dark:text-white hover:opacity-80 transition cursor-pointer"
             >
               Save draft
             </button>
@@ -1284,7 +1284,7 @@ export const CreateReelStudio: React.FC = () => {
               type="button"
               disabled={isSubmitting}
               onClick={handleShareReel}
-              className="flex-1 py-3 rounded-2xl bg-[#0095F6] hover:bg-blue-600 font-bold text-sm text-white shadow-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex-1 py-3 rounded-2xl bg-[#0095F6] hover:bg-blue-600 font-semibold text-sm text-white shadow-lg transition cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>
@@ -1314,7 +1314,7 @@ export const CreateReelStudio: React.FC = () => {
             >
               <ChevronLeft className="w-6 h-6 text-zinc-900 dark:text-white" />
             </button>
-            <h1 className="text-base font-bold text-zinc-900 dark:text-white">
+            <h1 className="text-base font-semibold text-zinc-900 dark:text-white">
               More options
             </h1>
             <div className="w-9" />
@@ -1335,7 +1335,7 @@ export const CreateReelStudio: React.FC = () => {
 
             {/* Category: Ads and monetisation */}
             <div className="space-y-3 pt-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Ads and monetisation
               </h2>
               <div
@@ -1352,7 +1352,7 @@ export const CreateReelStudio: React.FC = () => {
 
             {/* Category: Sharing preferences */}
             <div className="space-y-4 pt-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 Sharing preferences
               </h2>
 
@@ -1407,7 +1407,7 @@ export const CreateReelStudio: React.FC = () => {
 
             {/* Category: What others can remix and reuse */}
             <div className="space-y-4 pt-2">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 What others can remix and reuse
               </h2>
 
@@ -1443,7 +1443,7 @@ export const CreateReelStudio: React.FC = () => {
 
             {/* Category: How others can interact with your reel */}
             <div className="space-y-4 pt-2 pb-8">
-              <h2 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">
                 How others can interact with your reel
               </h2>
 

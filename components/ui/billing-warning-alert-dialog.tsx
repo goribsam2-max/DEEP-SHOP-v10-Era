@@ -55,7 +55,7 @@ export function BillingWarningAlertDialog({
             </div>
 
             <span
-              className={`px-3 py-1 text-[11px] font-bold rounded-full border ${
+              className={`px-3 py-1 text-[11px] font-semibold rounded-full border ${
                 isExpired
                   ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
                   : "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20"
@@ -81,7 +81,7 @@ export function BillingWarningAlertDialog({
         </AlertDialogHeader>
 
         <div className="mt-2 p-3.5 rounded-2xl bg-[#f5f5f7] dark:bg-[#2c2c2e] border border-black/[0.06] dark:border-white/[0.08] space-y-2 text-xs">
-          <div className="font-bold text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
+          <div className="font-semibold text-[#1d1d1f] dark:text-[#f5f5f7] flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-[#0071E3] dark:text-[#0A84FF]" />
             ভিআইপি সুবিধার সারাংশ:
           </div>

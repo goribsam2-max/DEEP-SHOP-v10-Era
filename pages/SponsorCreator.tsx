@@ -393,7 +393,7 @@ export const SponsorCreator: React.FC = () => {
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <Handshake className="w-4.5 h-4.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-950 dark:text-white truncate">
+                <h1 className="text-base sm:text-lg font-semibold tracking-tight text-zinc-950 dark:text-white truncate">
                   Sponsor Creator
                 </h1>
               </div>
@@ -436,7 +436,7 @@ export const SponsorCreator: React.FC = () => {
                       className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
                     />
                   ) : (
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-xl font-bold">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 flex items-center justify-center text-xl font-semibold">
                       {creatorInitial}
                     </div>
                   )}
@@ -447,7 +447,7 @@ export const SponsorCreator: React.FC = () => {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <h2 className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white truncate">
+                    <h2 className="text-base sm:text-lg font-semibold text-zinc-950 dark:text-white truncate">
                       {creatorName}
                     </h2>
                     <CheckCircle2 className="w-4 h-4 text-[#0095F6] shrink-0" />
@@ -467,7 +467,7 @@ export const SponsorCreator: React.FC = () => {
 
             {/* Sponsorship Summary Breakdown */}
             <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-5 space-y-3.5 shadow-2xs">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                 Sponsorship Summary
               </h3>
 
@@ -503,7 +503,7 @@ export const SponsorCreator: React.FC = () => {
                   <span className="font-semibold text-zinc-900 dark:text-white">
                     Total amount
                   </span>
-                  <span className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  <span className="text-lg sm:text-xl font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                     ৳{activeAmount.toLocaleString()} BDT
                   </span>
                 </div>
@@ -525,7 +525,7 @@ export const SponsorCreator: React.FC = () => {
             {/* STEP 1: CHOOSE PLAN */}
             <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-4 shadow-2xs">
               <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                <h3 className="text-sm sm:text-base font-semibold text-zinc-950 dark:text-white">
                   1. Choose sponsorship plan
                 </h3>
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -571,10 +571,10 @@ export const SponsorCreator: React.FC = () => {
 
                       <div className="space-y-1">
                         <div className="flex items-baseline justify-between gap-2">
-                          <span className="text-sm font-bold text-zinc-950 dark:text-white">
+                          <span className="text-sm font-semibold text-zinc-950 dark:text-white">
                             {plan.title}
                           </span>
-                          <span className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
+                          <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
                             {plan.id === "custom"
                               ? "Custom"
                               : `৳${plan.bdt.toLocaleString()}`}
@@ -598,7 +598,7 @@ export const SponsorCreator: React.FC = () => {
                     Enter custom sponsorship amount (BDT)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-zinc-500">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">
                       ৳
                     </span>
                     <input
@@ -608,7 +608,7 @@ export const SponsorCreator: React.FC = () => {
                       placeholder="1000"
                       value={customAmount}
                       onChange={(e) => setCustomAmount(e.target.value)}
-                      className="w-full h-11 pl-8 pr-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-emerald-600 text-base font-bold tabular-nums outline-none text-zinc-950 dark:text-white"
+                      className="w-full h-11 pl-8 pr-4 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-emerald-600 text-base font-semibold tabular-nums outline-none text-zinc-950 dark:text-white"
                     />
                   </div>
                 </div>
@@ -642,7 +642,7 @@ export const SponsorCreator: React.FC = () => {
             {/* STEP 2 & 3: CREATOR PAYMENT ACCOUNT & VERIFICATION */}
             <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-5 shadow-2xs">
               <div className="flex items-baseline justify-between gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                <h3 className="text-sm sm:text-base font-semibold text-zinc-950 dark:text-white">
                   2. Creator payment & verification
                 </h3>
                 <span className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -655,7 +655,7 @@ export const SponsorCreator: React.FC = () => {
                   <div className="flex items-start gap-2.5 text-amber-900 dark:text-amber-200">
                     <AlertCircle className="w-4.5 h-4.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
                     <div className="space-y-1">
-                      <p className="text-sm font-bold">
+                      <p className="text-sm font-semibold">
                         {creatorName} hasn&apos;t added a payout number yet
                       </p>
                       <p className="text-xs leading-relaxed text-amber-800/90 dark:text-amber-300/85">
@@ -675,7 +675,7 @@ export const SponsorCreator: React.FC = () => {
                           `/messages?uid=${encodeURIComponent(creatorId)}`
                         );
                       }}
-                      className="min-h-[42px] px-4 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold inline-flex items-center gap-2 cursor-pointer"
+                      className="min-h-[42px] px-4 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium inline-flex items-center gap-2 cursor-pointer"
                     >
                       <MessageSquare className="w-4 h-4 shrink-0" />
                       <span>Message {creatorName}</span>
@@ -704,7 +704,7 @@ export const SponsorCreator: React.FC = () => {
                         }`}
                       >
                         <div className="min-w-0">
-                          <span className="text-xs sm:text-sm font-bold text-[#E2125B] block whitespace-nowrap">
+                          <span className="text-xs sm:text-sm font-medium text-[#E2125B] block whitespace-nowrap">
                             bKash · {rotatedBkash.type}
                           </span>
                           <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
@@ -739,7 +739,7 @@ export const SponsorCreator: React.FC = () => {
                         }`}
                       >
                         <div className="min-w-0">
-                          <span className="text-xs sm:text-sm font-bold text-[#F57C20] block whitespace-nowrap">
+                          <span className="text-xs sm:text-sm font-medium text-[#F57C20] block whitespace-nowrap">
                             Nagad · {rotatedNagad.type}
                           </span>
                           <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
@@ -769,13 +769,13 @@ export const SponsorCreator: React.FC = () => {
                           {getMobileActionLabel(activeAccount.type)} to{" "}
                           {activeAccount.provider} ({activeAccount.type})
                         </span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
+                        <span className="font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums whitespace-nowrap">
                           ৳{activeAmount.toLocaleString()} BDT
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                        <span className="text-base sm:text-lg font-bold font-mono tabular-nums tracking-wider text-zinc-950 dark:text-white truncate">
+                        <span className="text-base sm:text-lg font-semibold font-mono tabular-nums tracking-wider text-zinc-950 dark:text-white truncate">
                           {activeAccount.number}
                         </span>
                         <button
@@ -851,7 +851,7 @@ export const SponsorCreator: React.FC = () => {
                     disabled={
                       isSubmitting || activeAmount < 50 || !activeAccount
                     }
-                    className="w-full min-h-[50px] px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-bold text-sm sm:text-base transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap tabular-nums"
+                    className="w-full min-h-[50px] px-5 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold text-sm sm:text-base transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap tabular-nums"
                   >
                     <Handshake className="w-4.5 h-4.5 shrink-0" />
                     <span>

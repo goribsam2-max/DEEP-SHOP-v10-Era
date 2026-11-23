@@ -47,6 +47,8 @@ import { hasImmediateAdminOrStaffRole } from './lib/admin';
 import { ReelUploadProgressOverlay } from './components/ReelUploadProgressOverlay';
 import { MobileAppInstallExperience } from './components/MobileAppInstallExperience';
 import { prefetchLoopsBootstrap } from './lib/loopsCache';
+import { prefetchShopBootstrap } from './lib/offlineStore';
+import { initGlobalImageReveal } from './lib/globalImageReveal';
 import { OfflineIndicator } from './components/OfflineIndicator';
 import { GlobalEdgeSwipeBack } from './components/GlobalEdgeSwipeBack';
 import Messages from './pages/Messages';
@@ -518,7 +520,18 @@ const fetchIPAndLocation = async () => {
 };
 
 const AppContent: React.FC = () => {
-  const [userData, setUserData] = useState<UserProfile | null>(null);
+  const [userData, setUserData] = useState<UserProfile | null>(() => {
+    try {
+      const raw = localStorage.getItem('ds_user_profile_cache');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && parsed.uid) {
+          return parsed as UserProfile;
+        }
+      }
+    } catch {}
+    return null;
+  });
   const [loading, setLoading] = useState(false);
   const { isPageLoading } = usePageLoading();
   const location = useLocation();
@@ -779,6 +792,27 @@ const AppContent: React.FC = () => {
               }
               return data;
             });
+            try {
+              localStorage.setItem('ds_user_profile_cache', JSON.stringify({
+                uid: data.uid || currentUser.uid,
+                email: data.email || currentUser.email || '',
+                displayName: data.displayName || '',
+                username: data.username || '',
+                photoURL: data.photoURL || '',
+                role: data.role || 'user',
+                isAdmin: Boolean(data.isAdmin),
+                isSeller: Boolean(data.isSeller),
+                isReseller: Boolean(data.isReseller),
+                resellerStatus: data.resellerStatus,
+                hasActiveSubscription: Boolean(data.hasActiveSubscription),
+                isVerifiedBadge: Boolean(data.isVerifiedBadge),
+                kycStatus: data.kycStatus || '',
+                stars: data.stars || 0,
+                xp: data.xp || 0,
+                shopName: (data as any).shopName || '',
+                isBanned: Boolean(data.isBanned),
+              }));
+            } catch {}
             syncCurrentUserToSavedAccounts(currentUser, data);
 
             // Instant Real-time Session Revocation Check
@@ -841,6 +875,9 @@ const AppContent: React.FC = () => {
         });
       } else {
         pushSubscribedUid = null;
+        try {
+          localStorage.removeItem('ds_user_profile_cache');
+        } catch {}
         setUserData(null);
         setLoading(false);
       }
@@ -1469,6 +1506,7 @@ const App: React.FC = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [deferredReady, setDeferredReady] = useState(false);
+  const [callReceiverReady, setCallReceiverReady] = useState(false);
 
   // Safety guard so isPageLoading can never get stuck if navigating to the same path
   useEffect(() => {
@@ -1478,20 +1516,26 @@ const App: React.FC = () => {
   }, [isPageLoading]);
 
   useEffect(() => {
+    initGlobalImageReveal();
+    const callTimer = setTimeout(() => {
+      setCallReceiverReady(true);
+    }, 350);
     const timer = setTimeout(() => {
       setDeferredReady(true);
     }, 3200);
     let idleId: number | null = null;
     let fallbackIdleTimer: ReturnType<typeof setTimeout> | null = null;
-    const runLoopsWarmup = () => {
+    const runBootstraps = () => {
       void prefetchLoopsBootstrap();
+      void prefetchShopBootstrap();
     };
     if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = (window as any).requestIdleCallback(runLoopsWarmup, { timeout: 350 });
+      idleId = (window as any).requestIdleCallback(runBootstraps, { timeout: 250 });
     } else {
-      fallbackIdleTimer = setTimeout(runLoopsWarmup, 80);
+      fallbackIdleTimer = setTimeout(runBootstraps, 50);
     }
     return () => {
+      clearTimeout(callTimer);
       clearTimeout(timer);
       if (idleId !== null && typeof window !== 'undefined' && 'cancelIdleCallback' in window) {
         (window as any).cancelIdleCallback(idleId);
@@ -1538,7 +1582,7 @@ const App: React.FC = () => {
               <ReelUploadProgressOverlay />
               <MobileAppInstallExperience />
               <GlobalEdgeSwipeBack />
-              {deferredReady && (
+              {callReceiverReady && (
                 <Suspense fallback={null}>
                   <GlobalCallReceiver />
                 </Suspense>

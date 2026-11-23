@@ -88,7 +88,7 @@ export function LoopsAccountStatusPage() {
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <h1 className="text-base font-bold text-zinc-900 dark:text-white">Account Status</h1>
+        <h1 className="text-base font-semibold text-zinc-900 dark:text-white">Account Status</h1>
         <div className="w-9" />
       </header>
 
@@ -96,10 +96,10 @@ export function LoopsAccountStatusPage() {
         {/* Main Logo Badge with Green Checkmark matching IMG_5427 */}
         <div className="relative">
           <div className="w-24 h-24 rounded-full bg-[#83f52c] dark:bg-[#83f52c] flex items-center justify-center p-3 shadow-lg">
-            <div className="flex flex-col items-center justify-center text-black font-extrabold tracking-tighter leading-none">
-              <span className="text-2xl font-black">DS</span>
-              <span className="text-[9px] font-bold tracking-widest mt-0.5">DEEP</span>
-              <span className="text-[9px] font-bold tracking-widest">SHOP</span>
+            <div className="flex flex-col items-center justify-center text-black font-semibold tracking-tighter leading-none">
+              <span className="text-2xl font-semibold">DS</span>
+              <span className="text-[9px] font-medium tracking-widest mt-0.5">DEEP</span>
+              <span className="text-[9px] font-medium tracking-widest">SHOP</span>
             </div>
           </div>
           <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-950 flex items-center justify-center text-white shadow-md">
@@ -123,7 +123,7 @@ export function LoopsAccountStatusPage() {
         <div className="text-center max-w-md flex flex-col gap-2">
           {inGoodStanding ? (
             <>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-zinc-900 dark:text-white leading-tight">
+              <h2 className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-white leading-tight">
                 Your account meets all of our guidelines
               </h2>
               <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -132,7 +132,7 @@ export function LoopsAccountStatusPage() {
             </>
           ) : isPostingBlocked ? (
             <>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-red-600 dark:text-red-400 leading-tight">
+              <h2 className="text-xl sm:text-2xl font-semibold text-red-600 dark:text-red-400 leading-tight">
                 Your account is restricted from posting
               </h2>
               <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -141,7 +141,7 @@ export function LoopsAccountStatusPage() {
             </>
           ) : (
             <>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-amber-600 dark:text-amber-400 leading-tight">
+              <h2 className="text-xl sm:text-2xl font-semibold text-amber-600 dark:text-amber-400 leading-tight">
                 Your account has warnings or claims
               </h2>
               <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -163,7 +163,7 @@ export function LoopsAccountStatusPage() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Features</span>
             {isPostingBlocked ? (
-              <span className="text-xs text-red-500 font-bold flex items-center gap-1">
+              <span className="text-xs text-red-500 font-medium flex items-center gap-1">
                 <XCircle className="w-4 h-4" /> Restricted (3/3)
               </span>
             ) : (
@@ -174,7 +174,7 @@ export function LoopsAccountStatusPage() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Content and message removals</span>
             {removedPosts.length > 0 ? (
-              <span className="text-xs text-amber-500 font-bold flex items-center gap-1">
+              <span className="text-xs text-amber-500 font-medium flex items-center gap-1">
                 <AlertTriangle className="w-4 h-4" /> {removedPosts.length} Removed
               </span>
             ) : (
@@ -195,7 +195,7 @@ export function LoopsAccountStatusPage() {
           <div className="flex items-center justify-between">
             <span className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Monetisation</span>
             {claimedPosts.length > 0 ? (
-              <span className="text-xs text-amber-500 font-bold flex items-center gap-1">
+              <span className="text-xs text-amber-500 font-medium flex items-center gap-1">
                 <CopyrightIcon className="w-4 h-4" /> {claimedPosts.length} Claimed
               </span>
             ) : (
@@ -207,11 +207,11 @@ export function LoopsAccountStatusPage() {
         {/* Detailed Section 1: Copyright Strikes Meter */}
         <div className="w-full flex flex-col gap-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+            <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-red-500" /> Copyright Strikes ({strikeCount}/3)
             </h3>
             {strikeCount >= 3 && (
-              <span className="text-[11px] font-bold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20">
+              <span className="text-[11px] font-semibold text-red-500 bg-red-500/10 px-2 py-0.5 rounded-md border border-red-500/20">
                 POSTING BLOCKED
               </span>
             )}
@@ -238,7 +238,7 @@ export function LoopsAccountStatusPage() {
                   key={s.id || idx}
                   className="bg-red-500/5 border border-red-500/20 rounded-2xl p-3 flex flex-col gap-1 text-xs"
                 >
-                  <div className="flex items-center justify-between text-red-600 dark:text-red-400 font-bold">
+                  <div className="flex items-center justify-between text-red-600 dark:text-red-400 font-semibold">
                     <span>Strike #{idx + 1}: {s.reason || 'Copyright Violation'}</span>
                     <span>{s.issuedAt ? new Date(s.issuedAt).toLocaleDateString() : 'Active'}</span>
                   </div>
@@ -262,7 +262,7 @@ export function LoopsAccountStatusPage() {
 
         {/* Detailed Section 2: Copyright Claimed Posts */}
         <div className="w-full flex flex-col gap-3">
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
             <CopyrightIcon className="w-4 h-4 text-amber-500" /> Copyright Claims ({claimedPosts.length})
           </h3>
           {claimedPosts.length > 0 ? (
@@ -299,7 +299,7 @@ export function LoopsAccountStatusPage() {
 
         {/* Detailed Section 3: Removed Posts (Owner-Only) */}
         <div className="w-full flex flex-col gap-3">
-          <h3 className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
             <Trash2 className="w-4 h-4 text-zinc-500" /> Removed Content ({removedPosts.length})
           </h3>
           {removedPosts.length > 0 ? (
@@ -310,10 +310,10 @@ export function LoopsAccountStatusPage() {
                   className="bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-3 flex flex-col gap-1.5 text-xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-zinc-800 dark:text-zinc-200 truncate max-w-[200px]">
+                    <span className="font-semibold text-zinc-800 dark:text-zinc-200 truncate max-w-[200px]">
                       {p.title || p.caption || 'Loops Post'}
                     </span>
-                    <span className="text-[10px] text-red-500 font-bold bg-red-500/10 px-2 py-0.5 rounded-full">
+                    <span className="text-[10px] text-red-500 font-semibold bg-red-500/10 px-2 py-0.5 rounded-full">
                       Owner Only Visible
                     </span>
                   </div>
@@ -342,7 +342,7 @@ export function LoopsAccountStatusPage() {
           <button
             type="button"
             onClick={() => navigate('/news-hub/messages')}
-            className="px-5 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white font-bold text-sm rounded-full shadow-2xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-2"
+            className="px-5 py-3 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white font-semibold text-sm rounded-full shadow-2xl border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-2"
           >
             <HelpCircle className="w-4 h-4 text-emerald-500" />
             <span>Get support</span>

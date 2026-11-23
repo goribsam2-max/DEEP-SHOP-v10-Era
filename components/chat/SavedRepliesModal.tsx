@@ -172,7 +172,7 @@ export const SavedRepliesModal: React.FC<SavedRepliesModalProps> = ({
 
             {/* Title & Subtitle */}
             <div className="text-center mt-4">
-              <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">New saved reply</h2>
+              <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white">New saved reply</h2>
               <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
                 Save common responses so that you can use them at any time.
               </p>
@@ -276,7 +276,7 @@ export const SavedRepliesModal: React.FC<SavedRepliesModalProps> = ({
               >
                 <X className="w-4 h-4" />
               </button>
-              <h3 className="font-bold text-base text-zinc-900 dark:text-white">Saved replies</h3>
+              <h3 className="font-semibold text-base text-zinc-900 dark:text-white">Saved replies</h3>
               <button
                 type="button"
                 onClick={() => setIsCreating(true)}
@@ -295,7 +295,7 @@ export const SavedRepliesModal: React.FC<SavedRepliesModalProps> = ({
                   <div className="w-20 h-20 rounded-full border-2 border-zinc-300 dark:border-zinc-600 bg-zinc-50 dark:bg-zinc-800 flex items-center justify-center mb-5">
                     <CornerUpLeft className="w-9 h-9 text-zinc-700 dark:text-zinc-200 stroke-[2.2]" />
                   </div>
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Respond instantly</h3>
+                  <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">Respond instantly</h3>
                   <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-xs leading-relaxed">
                     You can now save responses to the questions that you receive most often.
                   </p>
@@ -322,7 +322,7 @@ export const SavedRepliesModal: React.FC<SavedRepliesModalProps> = ({
                     >
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">
+                          <span className="font-mono text-xs font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 px-2 py-0.5 rounded-md">
                             {reply.shortcut}
                           </span>
                           {reply.label && (

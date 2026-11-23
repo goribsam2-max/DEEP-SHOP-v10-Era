@@ -74,7 +74,7 @@ const Coupon: React.FC = () => {
     <div className="ds-apple-shop-canvas min-h-screen pb-28">
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-5">
         <div className="flex items-center justify-between gap-3 px-1">
-          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             Coupons
           </h1>
           <button
@@ -136,7 +136,7 @@ const Coupon: React.FC = () => {
               >
                 {/* Left Discount */}
                 <div className="w-[104px] md:w-[120px] bg-[#0071E3] dark:bg-[#0A84FF] text-white flex flex-col justify-center items-center p-4 shrink-0">
-                  <span className="text-[22px] md:text-[26px] font-bold tabular-nums leading-tight">
+                  <span className="text-[22px] md:text-[26px] font-semibold tabular-nums leading-tight">
                     {c.type === "percent" ? `${c.discount}%` : formatPrice(c.discount)}
                   </span>
                   <span className="text-[11px] font-semibold tracking-wider uppercase mt-0.5 opacity-90">

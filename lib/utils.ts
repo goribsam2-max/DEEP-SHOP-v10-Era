@@ -5,22 +5,23 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(priceBdt: number | string | undefined | null) {
+export function formatPrice(
+  priceBdt: number | string | undefined | null,
+  targetRegion?: string | null
+) {
   if (!priceBdt) return "৳0";
   const numPrice = typeof priceBdt === 'string' ? parseFloat(priceBdt) : priceBdt;
   
-  if (typeof window !== 'undefined') {
-    const region = localStorage.getItem('user_region');
-    // BDT to INR approx 0.71
-    if (region === 'IN') {
-      const inr = Math.round(numPrice * 0.71);
-      return `₹${inr.toLocaleString()}`;
-    }
-    // BDT to PKR approx 2.40
-    if (region === 'PK') {
-      const pkr = Math.round(numPrice * 2.40);
-      return `Rs ${pkr.toLocaleString()}`;
-    }
+  const region = targetRegion || (typeof window !== 'undefined' ? localStorage.getItem('user_region') : null);
+  // BDT to INR approx 0.71
+  if (region === 'IN') {
+    const inr = Math.round(numPrice * 0.71);
+    return `₹${inr.toLocaleString()}`;
+  }
+  // BDT to PKR approx 2.40
+  if (region === 'PK') {
+    const pkr = Math.round(numPrice * 2.40);
+    return `Rs ${pkr.toLocaleString()}`;
   }
   
   return `৳${numPrice.toLocaleString()}`;
@@ -176,10 +177,10 @@ export function isPhoneLikeUsername(val: string | null | undefined): boolean {
  * Returns a user's public @username ONLY if they explicitly set a valid non-phone username.
  * Never falls back to email prefix, phone number, UID, or displayName.
  */
-export function getSafePublicUsername(userObj: any): string {
-  if (!userObj || typeof userObj !== "object") return "";
+export function getSafePublicUsername(userObj: any, fallback?: string): string {
+  if (!userObj || typeof userObj !== "object") return fallback || "";
   const raw = String(
-    userObj.username || userObj.handle || userObj.customLink || ""
+    userObj.username || userObj.handle || userObj.customLink || fallback || ""
   )
     .trim()
     .replace(/^@+/, "");

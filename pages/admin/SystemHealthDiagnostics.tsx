@@ -374,11 +374,11 @@ const SystemHealthDiagnostics: React.FC = () => {
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-zinc-900 via-zinc-850 to-zinc-950 border border-zinc-800 text-white p-6 md:p-8 shadow-2xl">
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2 max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold tracking-wide">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-medium tracking-wide">
               <Activity className="w-3.5 h-3.5 animate-pulse" />
               <span>Real-Time Health & Error Diagnostics Hub</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white">
+            <h1 className="text-2xl md:text-3xl font-semibold tracking-tight text-white">
               System Diagnostics & Health Monitor
             </h1>
             <p className="text-zinc-400 text-xs md:text-sm leading-relaxed">
@@ -390,14 +390,14 @@ const SystemHealthDiagnostics: React.FC = () => {
             <button
               onClick={runDiagnosticScan}
               disabled={scanning}
-              className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-black font-extrabold px-5 py-3 rounded-2xl flex items-center gap-2 text-xs md:text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer"
+              className="bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-black font-semibold px-5 py-3 rounded-2xl flex items-center gap-2 text-xs md:text-sm transition-all shadow-lg shadow-emerald-500/20 active:scale-95 cursor-pointer"
             >
               <RefreshCw className={`w-4 h-4 ${scanning ? "animate-spin" : ""}`} />
               <span>{scanning ? "Scanning..." : "Run Scan Again"}</span>
             </button>
             <Link
               to="/admin"
-              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-bold px-4 py-3 rounded-2xl text-xs md:text-sm transition flex items-center gap-1.5 border border-zinc-700"
+              className="bg-zinc-800 hover:bg-zinc-700 text-zinc-200 font-medium px-4 py-3 rounded-2xl text-xs md:text-sm transition flex items-center gap-1.5 border border-zinc-700"
             >
               <span>Dashboard</span>
               <ArrowRight className="w-4 h-4" />
@@ -408,41 +408,41 @@ const SystemHealthDiagnostics: React.FC = () => {
         {/* Stats Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6 pt-6 border-t border-zinc-800/80">
           <div className="bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center font-semibold shrink-0">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xl font-black text-white block">{healthyCount}</span>
+              <span className="text-xl font-semibold text-white block">{healthyCount}</span>
               <span className="text-[11px] font-semibold text-zinc-400">Healthy</span>
             </div>
           </div>
 
           <div className="bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center font-semibold shrink-0">
               <XCircle className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xl font-black text-white block">{errorCount}</span>
+              <span className="text-xl font-semibold text-white block">{errorCount}</span>
               <span className="text-[11px] font-semibold text-zinc-400">Errors</span>
             </div>
           </div>
 
           <div className="bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center font-semibold shrink-0">
               <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xl font-black text-white block">{warningCount}</span>
+              <span className="text-xl font-semibold text-white block">{warningCount}</span>
               <span className="text-[11px] font-semibold text-zinc-400">Warnings</span>
             </div>
           </div>
 
           <div className="bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-bold shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center font-semibold shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-xl font-black text-white block">{diagnostics.length}</span>
+              <span className="text-xl font-semibold text-white block">{diagnostics.length}</span>
               <span className="text-[11px] font-semibold text-zinc-400">Total Checks</span>
             </div>
           </div>
@@ -454,7 +454,7 @@ const SystemHealthDiagnostics: React.FC = () => {
         <div className="flex items-center gap-1 overflow-x-auto pb-1 sm:pb-0">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all shrink-0 ${
               activeTab === "all"
                 ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900 shadow-xs"
                 : "text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -464,7 +464,7 @@ const SystemHealthDiagnostics: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab("error")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 ${
               activeTab === "error"
                 ? "bg-rose-600 text-white shadow-xs"
                 : "text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"
@@ -475,7 +475,7 @@ const SystemHealthDiagnostics: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab("warning")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 ${
               activeTab === "warning"
                 ? "bg-amber-600 text-white shadow-xs"
                 : "text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30"
@@ -486,7 +486,7 @@ const SystemHealthDiagnostics: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab("healthy")}
-            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1.5 ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-medium transition-all shrink-0 flex items-center gap-1.5 ${
               activeTab === "healthy"
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30"
@@ -533,7 +533,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                   <div className="space-y-2 flex-1">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <span
-                        className={`inline-flex items-center gap-1 text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                        className={`inline-flex items-center gap-1 text-[11px] font-medium uppercase px-2.5 py-0.5 rounded-full ${
                           isError
                             ? "bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-300"
                             : isWarning
@@ -556,7 +556,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                     </div>
 
                     <div>
-                      <h3 className="text-base font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                      <h3 className="text-base font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
                         <span>{item.titleEn}</span>
                       </h3>
                       <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 mt-1 leading-relaxed">
@@ -573,7 +573,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                         type="button"
                         onClick={() => handleAutoFix(item)}
                         disabled={fixingId === item.id}
-                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-transform active:scale-95 cursor-pointer disabled:opacity-50"
                       >
                         <Sparkles className={`w-3.5 h-3.5 ${fixingId === item.id ? "animate-spin" : ""}`} />
                         <span>{fixingId === item.id ? "Fixing..." : "1-Click Auto Fix"}</span>
@@ -585,7 +585,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigate(item.directLink!.path)}
-                        className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+                        className="bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
                       >
                         <ExternalLink className="w-3.5 h-3.5 text-zinc-500" />
                         <span>{item.directLink.labelEn}</span>
@@ -596,7 +596,7 @@ const SystemHealthDiagnostics: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleCopyPrompt(item.id, item.aiPrompt)}
-                      className={`font-bold text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 border cursor-pointer ${
+                      className={`font-medium text-xs px-3.5 py-2.5 rounded-xl transition flex items-center gap-1.5 border cursor-pointer ${
                         copiedPromptId === item.id
                           ? "bg-blue-600 text-white border-blue-600"
                           : "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900 hover:bg-blue-100"
@@ -623,7 +623,7 @@ const SystemHealthDiagnostics: React.FC = () => {
         ) : (
           <div className="p-12 text-center bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800">
             <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-zinc-900 dark:text-white">No issues found</h3>
+            <h3 className="text-base font-semibold text-zinc-900 dark:text-white">No issues found</h3>
             <p className="text-xs text-zinc-500 mt-1">All items in this filter are operating normally.</p>
           </div>
         )}
@@ -634,7 +634,7 @@ const SystemHealthDiagnostics: React.FC = () => {
         <div className="flex items-center gap-2.5 pb-3 border-b border-zinc-100 dark:border-zinc-800">
           <Terminal className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
           <div>
-            <h2 className="text-base font-bold text-zinc-900 dark:text-white">Live Test Simulator</h2>
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-white">Live Test Simulator</h2>
             <p className="text-xs text-zinc-500">Enter any phone number, address, or message to test how the system validates and filters it.</p>
           </div>
         </div>
@@ -650,7 +650,7 @@ const SystemHealthDiagnostics: React.FC = () => {
           />
           <button
             onClick={runLiveTest}
-            className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-bold px-6 py-2.5 rounded-xl text-xs sm:text-sm transition cursor-pointer"
+            className="bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 font-medium px-6 py-2.5 rounded-xl text-xs sm:text-sm transition cursor-pointer"
           >
             Run Test
           </button>
@@ -660,18 +660,18 @@ const SystemHealthDiagnostics: React.FC = () => {
           <div className="p-4 bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl border border-zinc-200 dark:border-zinc-700 space-y-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 space-y-1">
-                <span className="font-bold text-zinc-500 block uppercase tracking-wider text-[10px]">Bangladeshi Phone Check</span>
+                <span className="font-medium text-zinc-500 block uppercase tracking-wider text-[10px]">Bangladeshi Phone Check</span>
                 <p className="font-semibold">
-                  Status: {testResult.phone.isValid ? <span className="text-emerald-600 font-bold">Valid BD Number</span> : <span className="text-rose-600 font-bold">Invalid</span>}
+                  Status: {testResult.phone.isValid ? <span className="text-emerald-600 font-semibold">Valid BD Number</span> : <span className="text-rose-600 font-semibold">Invalid</span>}
                 </p>
                 {testResult.phone.error && <p className="text-rose-500 text-[11px]">{testResult.phone.error}</p>}
                 {testResult.phone.normalized && <p className="font-mono text-zinc-600 dark:text-zinc-400">Normalized: {testResult.phone.normalized}</p>}
               </div>
 
               <div className="p-3 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-100 dark:border-zinc-800 space-y-1">
-                <span className="font-bold text-zinc-500 block uppercase tracking-wider text-[10px]">Abuse & Curse Check</span>
+                <span className="font-medium text-zinc-500 block uppercase tracking-wider text-[10px]">Abuse & Curse Check</span>
                 <p className="font-semibold">
-                  Result: {testResult.abuse.hasAbuse ? <span className="text-rose-600 font-bold">Abuse Detected!</span> : <span className="text-emerald-600 font-bold">Clean / Safe</span>}
+                  Result: {testResult.abuse.hasAbuse ? <span className="text-rose-600 font-semibold">Abuse Detected!</span> : <span className="text-emerald-600 font-semibold">Clean / Safe</span>}
                 </p>
                 {testResult.abuse.matchedWord && <p className="text-rose-500 text-[11px]">Matched Word: {testResult.abuse.matchedWord}</p>}
               </div>

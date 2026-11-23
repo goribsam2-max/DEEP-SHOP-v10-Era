@@ -138,7 +138,7 @@ export const ChatGifStickerModal: React.FC<ChatGifStickerModalProps> = ({
             >
               <X className="w-4 h-4" />
             </button>
-            <h3 className="font-bold text-base text-zinc-900 dark:text-white capitalize">
+            <h3 className="font-semibold text-base text-zinc-900 dark:text-white capitalize">
               {isGif ? 'Search GIFs' : 'Sticker Collection'}
             </h3>
             <div className="w-9" />

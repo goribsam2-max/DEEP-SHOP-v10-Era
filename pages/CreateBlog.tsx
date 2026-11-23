@@ -235,7 +235,7 @@ const CreateBlog: React.FC = () => {
         <div className="flex items-center justify-between gap-3 mb-5">
           <div className="min-w-0">
             <p className="ds-apple-eyebrow mb-0.5">Editorial</p>
-            <h1 className="ds-apple-display text-[22px] sm:text-[26px] leading-tight font-bold tracking-tight truncate">
+            <h1 className="ds-apple-display text-[22px] sm:text-[26px] leading-tight font-semibold tracking-tight truncate">
               {slug ? "Edit Article" : "New Article"}
             </h1>
           </div>

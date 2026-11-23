@@ -106,7 +106,7 @@ const ManageSEO: React.FC = () => {
             <Icon name="chart-line" className="text-xl" />
          </div>
          <div>
-            <h3 className="text-sm font-bold text-emerald-800 dark:text-emerald-300 mb-1">Why is my site ranking low on Google?</h3>
+            <h3 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-1">Why is my site ranking low on Google?</h3>
             <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium leading-relaxed mb-3">
               If you just submitted your site to Search Console (or Google Publisher), it can take several weeks or months for Google to build trust and rank you higher. E-commerce ranking relies heavily on:
             </p>
@@ -136,7 +136,7 @@ const ManageSEO: React.FC = () => {
                   setPingingSearch(false);
                 }
               }}
-              className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-full transition-colors inline-block cursor-pointer"
+              className="text-[10px] font-semibold bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2 rounded-full transition-colors inline-block cursor-pointer"
             >
               {pingingSearch ? "Pinging Search Engines..." : "Ping Search Engines (Force Recrawl)"}
             </button>
@@ -147,7 +147,7 @@ const ManageSEO: React.FC = () => {
       <div className="bg-white dark:bg-zinc-900 border border-sky-200/80 dark:border-sky-900/50 p-6 md:p-7 rounded-2xl mb-8 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
               Bing IndexNow Instant Indexing
             </h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -179,7 +179,7 @@ const ManageSEO: React.FC = () => {
         </div>
 
         <div>
-          <label className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 mb-1.5">
+          <label className="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 mb-1.5">
             URLs to Submit Instantly (one path or full URL per line)
           </label>
           <textarea
@@ -220,7 +220,7 @@ const ManageSEO: React.FC = () => {
                 setSubmittingIndexNow(false);
               }
             }}
-            className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+            className="px-5 py-2.5 rounded-xl bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
           >
             {submittingIndexNow
               ? "Submitting to Bing..."
@@ -241,7 +241,7 @@ const ManageSEO: React.FC = () => {
               <h2 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">
                 Facebook Pixel & Conversion Tracking
               </h2>
-              <p className="text-[10px] text-zinc-500 font-bold tracking-normal  mt-0.5">
+              <p className="text-[10px] text-zinc-500 font-normal tracking-normal  mt-0.5">
                 Pay only for actual sales
               </p>
             </div>
@@ -258,7 +258,7 @@ const ManageSEO: React.FC = () => {
               </p>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Meta Pixel ID (Required for tracking)
               </label>
               <input
@@ -268,11 +268,11 @@ const ManageSEO: React.FC = () => {
                   setSeoData({ ...seoData, fbPixelId: e.target.value })
                 }
                 placeholder="e.g., 123456789012345"
-                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-blue-500 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-blue-500 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Conversions API Token (Optional for accuracy)
               </label>
               <input
@@ -282,7 +282,7 @@ const ManageSEO: React.FC = () => {
                   setSeoData({ ...seoData, fbConversionToken: e.target.value })
                 }
                 placeholder="Paste your CAPI Token here"
-                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-blue-500 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-blue-500 transition-colors"
               />
             </div>
           </div>
@@ -298,14 +298,14 @@ const ManageSEO: React.FC = () => {
               <h2 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">
                 Branding & PWA
               </h2>
-              <p className="text-[10px] text-zinc-500 font-bold tracking-normal  mt-0.5">
+              <p className="text-[10px] text-zinc-500 font-normal tracking-normal  mt-0.5">
                 Favicon & Add to Home Screen Icons
               </p>
             </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Favicon (Browser Tab Icon)
               </label>
               <div className="flex items-center space-x-4">
@@ -334,14 +334,14 @@ const ManageSEO: React.FC = () => {
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(e, "faviconUrl")}
-                    className="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer"
+                    className="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer"
                   />
                 </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 App Icon (Add to Home Screen)
               </label>
               <div className="flex items-center space-x-4">
@@ -370,7 +370,7 @@ const ManageSEO: React.FC = () => {
                     type="file"
                     accept="image/*"
                     onChange={(e) => handleImageUpload(e, "appIconUrl")}
-                    className="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-bold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer"
+                    className="text-xs w-full file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-medium file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer"
                   />
                   <p className="text-[9px] text-zinc-400 mt-1">
                     Recommended size: 512x512px
@@ -391,7 +391,7 @@ const ManageSEO: React.FC = () => {
               <h2 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">
                 Search Engine Tags
               </h2>
-              <p className="text-[10px] text-zinc-500 font-bold tracking-normal  mt-0.5">
+              <p className="text-[10px] text-zinc-500 font-normal tracking-normal  mt-0.5">
                 Control how Google sees your site
               </p>
             </div>
@@ -399,7 +399,7 @@ const ManageSEO: React.FC = () => {
 
           <div className="space-y-5">
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Global Meta Title (Fallback)
               </label>
               <input
@@ -409,11 +409,11 @@ const ManageSEO: React.FC = () => {
                   setSeoData({ ...seoData, metaTitle: e.target.value })
                 }
                 placeholder="DEEP SHOP - Best Tech Store"
-                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Meta Description
               </label>
               <textarea
@@ -427,7 +427,7 @@ const ManageSEO: React.FC = () => {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Meta Image (Link Preview)
               </label>
               <div className="flex items-center space-x-4">
@@ -451,7 +451,7 @@ const ManageSEO: React.FC = () => {
                     <Icon name="image" className="text-zinc-300" />
                   </div>
                 )}
-                <label className="flex-1 cursor-pointer bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 py-3 rounded-lg text-[10px] font-bold  tracking-normal hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-center block">
+                <label className="flex-1 cursor-pointer bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-400 py-3 rounded-lg text-[10px] font-medium  tracking-normal hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors text-center block">
                   <input
                     type="file"
                     accept="image/*"
@@ -463,7 +463,7 @@ const ManageSEO: React.FC = () => {
               </div>
             </div>
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Keywords (Comma separated)
               </label>
               <input
@@ -473,12 +473,12 @@ const ManageSEO: React.FC = () => {
                   setSeoData({ ...seoData, metaKeywords: e.target.value })
                 }
                 placeholder="gadgets, tech, mobile accessories, buy online"
-                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Search Engine Visibility (Robots)
               </label>
               <select
@@ -486,7 +486,7 @@ const ManageSEO: React.FC = () => {
                 onChange={(e) =>
                   setSeoData({ ...seoData, robots: e.target.value })
                 }
-                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors cursor-pointer"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors cursor-pointer"
               >
                 <option value="index, follow">
                   Allow Google to index completely (Recommended)
@@ -499,7 +499,7 @@ const ManageSEO: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div>
-                <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+                <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                   Site Language
                 </label>
                 <input
@@ -509,11 +509,11 @@ const ManageSEO: React.FC = () => {
                     setSeoData({ ...seoData, siteLanguage: e.target.value })
                   }
                   placeholder="e.g., en, bn"
-                  className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+                <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                   Site Author / Brand
                 </label>
                 <input
@@ -523,13 +523,13 @@ const ManageSEO: React.FC = () => {
                     setSeoData({ ...seoData, siteAuthor: e.target.value })
                   }
                   placeholder="DEEP SHOP Inc."
-                  className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
+                  className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
                 Advanced: JSON-LD Structured Data Schema
               </label>
               <textarea
@@ -541,7 +541,7 @@ const ManageSEO: React.FC = () => {
                 placeholder='{"@context": "https://schema.org", "@type": "WebSite", "name": "DEEP SHOP"}'
                 className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-4 text-xs font-mono text-zinc-800 dark:text-zinc-200 focus:border-zinc-900 dark:border-zinc-100 transition-colors resize-none"
               />
-              <p className="text-[9px] text-zinc-800 dark:text-zinc-200 mt-1  tracking-normal font-bold">
+              <p className="text-[9px] text-zinc-800 dark:text-zinc-200 mt-1  tracking-normal font-semibold">
                 Helps Google understand your e-commerce structure.
               </p>
             </div>
@@ -558,14 +558,14 @@ const ManageSEO: React.FC = () => {
               <h2 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">
                 AEO (Answer Engine Optimization)
               </h2>
-              <p className="text-[10px] text-zinc-500 font-bold tracking-normal mt-0.5">
+              <p className="text-[10px] text-zinc-500 font-normal tracking-normal mt-0.5">
                 Optimize for AI like ChatGPT, Perplexity, and Gemini
               </p>
             </div>
           </div>
           <div className="space-y-5">
             <div>
-              <label className="block text-[10px] font-bold text-zinc-500 tracking-normal mb-2">
+              <label className="block text-[10px] font-medium text-zinc-500 tracking-normal mb-2">
                 Organization / Store Name
               </label>
               <input
@@ -575,7 +575,7 @@ const ManageSEO: React.FC = () => {
                   setSeoData({ ...seoData, organizationName: e.target.value })
                 }
                 placeholder="Deep Shop"
-                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-bold text-zinc-800 dark:text-zinc-200 focus:border-indigo-500 transition-colors"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-3.5 text-sm font-semibold text-zinc-800 dark:text-zinc-200 focus:border-indigo-500 transition-colors"
               />
             </div>
           </div>

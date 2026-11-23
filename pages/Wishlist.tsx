@@ -123,7 +123,7 @@ const SwipeableWishlistCard: React.FC<SwipeableWishlistCardProps> = ({
       className="relative overflow-hidden rounded-[22px]"
     >
       <div
-        className={`absolute inset-y-0 right-0 w-24 flex flex-col items-center justify-center gap-1 rounded-r-[22px] bg-[#FF3B30] text-white text-xs font-bold transition-opacity ${
+        className={`absolute inset-y-0 right-0 w-24 flex flex-col items-center justify-center gap-1 rounded-r-[22px] bg-[#FF3B30] text-white text-xs font-medium transition-opacity ${
           offsetX < -6 ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -222,7 +222,7 @@ const Wishlist: React.FC = () => {
                 className="text-2xl text-[#6E6E73] dark:text-[#98989D]"
               />
             </div>
-            <h2 className="text-xl font-bold mb-2 tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h2 className="text-xl font-semibold mb-2 tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
               {t('Sign In Required') || 'Sign In Required'}
             </h2>
             <p className="text-sm font-medium text-[#6E6E73] dark:text-[#98989D] mb-8 max-w-xs mx-auto leading-relaxed">
@@ -303,10 +303,10 @@ const Wishlist: React.FC = () => {
                     </button>
                   </div>
                   <div className="px-1 pb-1">
-                    <h4 className="font-bold text-xs md:text-sm truncate mb-1 tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <h4 className="font-semibold text-xs md:text-sm truncate mb-1 tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                       {item.name || "Unknown Product"}
                     </h4>
-                    <p className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                    <p className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                       {item.price != null ? formatPrice(item.price) : "Price not available"}
                     </p>
                   </div>

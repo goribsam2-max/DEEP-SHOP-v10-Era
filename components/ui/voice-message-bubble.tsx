@@ -455,7 +455,7 @@ export default function VoiceMessageBubble({
               onClick={cycleSpeed}
               style={{ color: isMe ? "#FFFFFF" : undefined }}
               className={cn(
-                "px-2 py-0.5 rounded-full text-[10px] font-bold font-mono tabular-nums leading-none transition active:scale-95 cursor-pointer",
+                "px-2 py-0.5 rounded-full text-[10px] font-semibold font-mono tabular-nums leading-none transition active:scale-95 cursor-pointer",
                 isMe
                   ? "bg-white/18 hover:bg-white/25"
                   : "bg-zinc-200/80 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-300/80"

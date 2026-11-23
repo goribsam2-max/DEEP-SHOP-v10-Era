@@ -50,7 +50,7 @@ const ItemCard = ({ item, onClick }: { item: CarouselItem, onClick?: () => void 
           className="h-40 w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
         {item.discountPercentage && (
-          <div className="absolute bottom-2 right-2 rounded-full bg-[#ea580c] border border-white/10 px-2.5 py-1 text-xs font-black text-white">
+          <div className="absolute bottom-2 right-2 rounded-full bg-[#ea580c] border border-white/10 px-2.5 py-1 text-xs font-semibold text-white">
             {item.discountPercentage}% OFF
           </div>
         )}
@@ -67,7 +67,7 @@ const ItemCard = ({ item, onClick }: { item: CarouselItem, onClick?: () => void 
         </div>
         <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400 line-clamp-2 flex-1">{item.subtitle}</p>
         <div className="mt-3 flex items-end gap-2">
-          <p className="text-lg font-bold text-zinc-900 dark:text-white">{formatPrice(item.price.toLocaleString('en-IN'))}</p>
+          <p className="text-lg font-semibold text-zinc-900 dark:text-white">{formatPrice(item.price.toLocaleString('en-IN'))}</p>
           {item.originalPrice && item.originalPrice > item.price && (
             <p className="text-sm text-zinc-400 dark:text-zinc-500 line-through">
               {formatPrice(item.originalPrice.toLocaleString('en-IN'))}
@@ -135,7 +135,7 @@ export const OffersCarousel = React.forwardRef<HTMLDivElement, OffersCarouselPro
               {offerIcon || <Gift className="h-6 w-6 text-orange-500" />}
                <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Exclusive Deals!</p>
             </div>
-            <h2 className="mt-4 text-2xl font-bold text-zinc-900 dark:text-white">{offerTitle}</h2>
+            <h2 className="mt-4 text-2xl font-semibold text-zinc-900 dark:text-white">{offerTitle}</h2>
             <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">{offerSubtitle}</p>
             <Button className="mt-6 w-full max-w-xs lg:w-auto bg-orange-500 hover:bg-orange-600 text-white rounded-full" onClick={onCtaClick}>
               {ctaText}

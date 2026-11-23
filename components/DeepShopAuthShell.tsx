@@ -78,7 +78,7 @@ export const DeepShopBottomBrand: React.FC<{ className?: string }> = ({
           className="w-full h-full object-cover"
         />
       </div>
-      <span className="text-[15px] font-bold tracking-tight text-[#1c2b33] dark:text-zinc-200">
+      <span className="text-[15px] font-semibold tracking-tight text-[#1c2b33] dark:text-zinc-200">
         DEEP SHOP
       </span>
     </div>
@@ -370,7 +370,7 @@ export const BirthdaysInfoSheet: React.FC<{
               >
                 <X className="w-4 h-4" />
               </button>
-              <h3 className="text-[16px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h3 className="text-[16px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Birthdays
               </h3>
             </div>
@@ -436,7 +436,7 @@ export const StopCreatingAccountModal: React.FC<{
             transition={prefersReducedMotion ? { duration: 0.16 } : APPLE_SPRING_DEFAULT}
             className="ds-apple-modal relative z-10 w-full max-w-[356px] px-6 pt-7 pb-6 text-left rounded-[24px]"
           >
-            <h3 className="text-[19px] font-bold leading-snug tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h3 className="text-[19px] font-semibold leading-snug tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Do you want to stop creating your account?
             </h3>
             <p className="mt-2 text-[14.5px] leading-relaxed text-[#6E6E73] dark:text-[#98989D]">
@@ -521,7 +521,7 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
               />
             </div>
             <div>
-              <span className="block text-[28px] font-bold tracking-[-0.025em] text-[#0071E3] dark:text-[#0A84FF]">
+              <span className="block text-[28px] font-semibold tracking-[-0.025em] text-[#0071E3] dark:text-[#0A84FF]">
                 DEEP SHOP
               </span>
               <span className="block text-[13px] font-medium text-[#6E6E73] dark:text-[#98989D]">
@@ -538,7 +538,7 @@ export const DeepShopAuthShell: React.FC<DeepShopAuthShellProps> = ({
                 browser
               </p>
             )}
-            <h2 className="text-3xl xl:text-[38px] font-bold tracking-[-0.025em] leading-[1.15] text-[#1D1D1F] dark:text-[#F5F5F7] [text-wrap:balance]">
+            <h2 className="text-3xl xl:text-[38px] font-semibold tracking-[-0.025em] leading-[1.15] text-[#1D1D1F] dark:text-[#F5F5F7] [text-wrap:balance]">
               {desktopHeadline}
             </h2>
             <p className="text-[15.5px] leading-relaxed text-[#6E6E73] dark:text-[#98989D] max-w-lg">

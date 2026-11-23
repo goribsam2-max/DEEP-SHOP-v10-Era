@@ -1071,7 +1071,7 @@ export const CreatorDashboard: React.FC = () => {
                 className="w-full h-full object-cover rounded-full"
               />
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-zinc-950 dark:text-white truncate">
+                <p className="text-sm font-semibold text-zinc-950 dark:text-white truncate">
                   {creatorName}
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
@@ -1131,7 +1131,7 @@ export const CreatorDashboard: React.FC = () => {
                   <span className="font-semibold text-zinc-700 dark:text-zinc-300">
                     Monetization Goal
                   </span>
-                  <span className="font-mono font-bold tabular-nums text-zinc-900 dark:text-white">
+                  <span className="font-mono font-semibold tabular-nums text-zinc-900 dark:text-white">
                     {followerProgressPct}%
                   </span>
                 </div>
@@ -1151,7 +1151,7 @@ export const CreatorDashboard: React.FC = () => {
                   <span className="text-[11px] text-zinc-500 dark:text-zinc-400 block">
                     Content Balance
                   </span>
-                  <span className="text-sm font-bold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
+                  <span className="text-sm font-semibold font-mono tabular-nums text-emerald-600 dark:text-emerald-400">
                     ৳{totalContentRevenueBDT.toFixed(2)}
                   </span>
                 </div>
@@ -1168,7 +1168,7 @@ export const CreatorDashboard: React.FC = () => {
             <button
               type="button"
               onClick={() => navigate("/loops/create")}
-              className="w-full min-h-[42px] px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity cursor-pointer"
+              className="w-full min-h-[42px] px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium flex items-center justify-center gap-1.5 hover:opacity-90 transition-opacity cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Create Loop</span>
@@ -1191,7 +1191,7 @@ export const CreatorDashboard: React.FC = () => {
                   <ArrowLeft className="w-4 h-4" />
                 </button>
                 <div className="min-w-0">
-                  <h1 className="text-[15px] font-bold tracking-tight text-zinc-950 dark:text-white truncate">
+                  <h1 className="text-[15px] font-semibold tracking-tight text-zinc-950 dark:text-white truncate">
                     Creator Studio
                   </h1>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate tabular-nums">
@@ -1204,7 +1204,7 @@ export const CreatorDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/loops/create")}
-                  className="min-h-[36px] px-3.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold inline-flex items-center gap-1 whitespace-nowrap cursor-pointer"
+                  className="min-h-[36px] px-3.5 rounded-full bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium inline-flex items-center gap-1 whitespace-nowrap cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Create</span>
@@ -1244,7 +1244,7 @@ export const CreatorDashboard: React.FC = () => {
           {/* DESKTOP STICKY TOP WORKSPACE BAR */}
           <div className="hidden lg:flex items-center justify-between gap-4 px-8 h-16 border-b border-zinc-200/80 dark:border-zinc-800/80 bg-white/85 dark:bg-zinc-950/85 backdrop-blur-md sticky top-0 z-30">
             <div className="min-w-0">
-              <h1 className="text-lg font-bold tracking-tight text-zinc-950 dark:text-white">
+              <h1 className="text-lg font-semibold tracking-tight text-zinc-950 dark:text-white">
                 {activeTab === "analytics" && "Overview & Insights"}
                 {activeTab === "monetise" && "Monetization & Star Earnings"}
                 {activeTab === "content" && "Published Loops"}
@@ -1355,7 +1355,7 @@ export const CreatorDashboard: React.FC = () => {
                       </span>
                       <ArrowUpRight className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                     </div>
-                    <p className="text-2xl sm:text-[28px] font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums">
+                    <p className="text-2xl sm:text-[28px] font-semibold tracking-tight text-zinc-950 dark:text-white tabular-nums">
                       {formatCompactMetric(scopedTotalViews)}
                     </p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums truncate">
@@ -1369,7 +1369,7 @@ export const CreatorDashboard: React.FC = () => {
                         Followers
                       </span>
                     </div>
-                    <p className="text-2xl sm:text-[28px] font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums">
+                    <p className="text-2xl sm:text-[28px] font-semibold tracking-tight text-zinc-950 dark:text-white tabular-nums">
                       {followerCount.toLocaleString()}
                     </p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums truncate">
@@ -1387,7 +1387,7 @@ export const CreatorDashboard: React.FC = () => {
                         Interactions
                       </span>
                     </div>
-                    <p className="text-2xl sm:text-[28px] font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums">
+                    <p className="text-2xl sm:text-[28px] font-semibold tracking-tight text-zinc-950 dark:text-white tabular-nums">
                       {formatCompactMetric(scopedInteractions)}
                     </p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums truncate">
@@ -1402,7 +1402,7 @@ export const CreatorDashboard: React.FC = () => {
                         Est. Revenue
                       </span>
                     </div>
-                    <p className="text-2xl sm:text-[28px] font-bold tracking-tight text-zinc-950 dark:text-white tabular-nums">
+                    <p className="text-2xl sm:text-[28px] font-semibold tracking-tight text-zinc-950 dark:text-white tabular-nums">
                       ৳{totalContentRevenueBDT.toFixed(2)}
                     </p>
                     <p className="text-[11px] text-zinc-500 dark:text-zinc-400 tabular-nums truncate">
@@ -1418,7 +1418,7 @@ export const CreatorDashboard: React.FC = () => {
                   <div className="lg:col-span-7 p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 flex flex-col justify-between space-y-5">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <h2 className="text-sm font-bold text-zinc-950 dark:text-white">
+                        <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">
                           Reach & Activity Distribution
                         </h2>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
@@ -1508,14 +1508,14 @@ export const CreatorDashboard: React.FC = () => {
                   <div className="lg:col-span-5 p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 flex flex-col justify-between space-y-4">
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <h2 className="text-sm font-bold text-zinc-950 dark:text-white">
+                        <h2 className="text-sm font-semibold text-zinc-950 dark:text-white">
                           Reactions Breakdown
                         </h2>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                           Across {scopedPosts.length} loops in range
                         </p>
                       </div>
-                      <span className="text-xs font-mono font-bold text-zinc-900 dark:text-white tabular-nums">
+                      <span className="text-xs font-mono font-semibold text-zinc-900 dark:text-white tabular-nums">
                         {scopedReactions.toLocaleString()} total
                       </span>
                     </div>
@@ -1596,7 +1596,7 @@ export const CreatorDashboard: React.FC = () => {
                               {formatDhakaDateTime(monetizationEnabledAt)}
                             </span>{" "}
                             · Earned{" "}
-                            <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                            <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                               ৳{totalContentRevenueBDT.toFixed(2)}
                             </span>{" "}
                             across {eligibleMonetizedPosts.length}{" "}
@@ -1616,11 +1616,11 @@ export const CreatorDashboard: React.FC = () => {
                       <div className="space-y-2 pt-0.5">
                         <p className="text-xs text-zinc-600 dark:text-zinc-400">
                           Grow from{" "}
-                          <span className="font-mono font-bold text-zinc-900 dark:text-white tabular-nums">
+                          <span className="font-mono font-semibold text-zinc-900 dark:text-white tabular-nums">
                             {followerCount.toLocaleString()}
                           </span>{" "}
                           to{" "}
-                          <span className="font-mono font-bold text-zinc-900 dark:text-white tabular-nums">
+                          <span className="font-mono font-semibold text-zinc-900 dark:text-white tabular-nums">
                             1,000
                           </span>{" "}
                           followers to unlock feed reach revenue.
@@ -1638,7 +1638,7 @@ export const CreatorDashboard: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => handleSelectTab("monetise")}
-                    className="min-h-[40px] px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hover:opacity-90 transition-opacity cursor-pointer"
+                    className="min-h-[40px] px-4 py-2 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium inline-flex items-center justify-center gap-1.5 whitespace-nowrap shrink-0 hover:opacity-90 transition-opacity cursor-pointer"
                   >
                     <span>
                       {isMonetizationUnlocked
@@ -1652,7 +1652,7 @@ export const CreatorDashboard: React.FC = () => {
                 {/* TOP PERFORMING LOOPS */}
                 <div className="space-y-3.5">
                   <div className="flex items-center justify-between gap-2">
-                    <h2 className="text-base font-bold tracking-tight text-zinc-950 dark:text-white">
+                    <h2 className="text-base font-semibold tracking-tight text-zinc-950 dark:text-white">
                       Top Performing Loops
                     </h2>
                     <button
@@ -1673,7 +1673,7 @@ export const CreatorDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigate("/loops/create")}
-                        className="min-h-[38px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold cursor-pointer"
+                        className="min-h-[38px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium cursor-pointer"
                       >
                         Create Loop
                       </button>
@@ -1747,7 +1747,7 @@ export const CreatorDashboard: React.FC = () => {
                             <div className="flex items-center gap-2 shrink-0">
                               <div className="text-right mr-1">
                                 <span
-                                  className={`text-xs font-mono font-bold block tabular-nums ${
+                                  className={`text-xs font-mono font-semibold block tabular-nums ${
                                     eligibleForEarnings
                                       ? "text-emerald-600 dark:text-emerald-400"
                                       : "text-zinc-400 dark:text-zinc-500"
@@ -1843,7 +1843,7 @@ export const CreatorDashboard: React.FC = () => {
                                 : "Paused"}
                             </span>
                           </div>
-                          <h2 className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white">
+                          <h2 className="text-base sm:text-lg font-semibold text-zinc-950 dark:text-white">
                             Feed & Loop Reach Revenue
                           </h2>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
@@ -1897,7 +1897,7 @@ export const CreatorDashboard: React.FC = () => {
                           <span className="font-semibold text-amber-900 dark:text-amber-300">
                             Unlock Requirement: 1,000 Followers
                           </span>
-                          <span className="font-mono font-bold text-amber-900 dark:text-amber-300 tabular-nums">
+                          <span className="font-mono font-semibold text-amber-900 dark:text-amber-300 tabular-nums">
                             {followerCount.toLocaleString()} / 1,000
                           </span>
                         </div>
@@ -1927,7 +1927,7 @@ export const CreatorDashboard: React.FC = () => {
                         <span className="text-[11px] font-medium text-zinc-500 block">
                           Content Balance
                         </span>
-                        <span className="text-lg font-mono font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5 tabular-nums">
+                        <span className="text-lg font-mono font-semibold text-emerald-600 dark:text-emerald-400 block mt-0.5 tabular-nums">
                           ৳{totalContentRevenueBDT.toFixed(2)}
                         </span>
                       </div>
@@ -1936,7 +1936,7 @@ export const CreatorDashboard: React.FC = () => {
                         <span className="text-[11px] font-medium text-zinc-500 block">
                           Reach (৳50 RPM)
                         </span>
-                        <span className="text-lg font-mono font-bold text-zinc-950 dark:text-white block mt-0.5 tabular-nums">
+                        <span className="text-lg font-mono font-semibold text-zinc-950 dark:text-white block mt-0.5 tabular-nums">
                           ৳{reachRevenueBDT.toFixed(2)}
                         </span>
                       </div>
@@ -1945,7 +1945,7 @@ export const CreatorDashboard: React.FC = () => {
                         <span className="text-[11px] font-medium text-zinc-500 block">
                           Interaction Bonus
                         </span>
-                        <span className="text-lg font-mono font-bold text-zinc-950 dark:text-white block mt-0.5 tabular-nums">
+                        <span className="text-lg font-mono font-semibold text-zinc-950 dark:text-white block mt-0.5 tabular-nums">
                           ৳{engagementBonusBDT.toFixed(2)}
                         </span>
                       </div>
@@ -1957,7 +1957,7 @@ export const CreatorDashboard: React.FC = () => {
                         <span className="text-zinc-500">
                           Minimum payout threshold: ৳500.00 BDT
                         </span>
-                        <span className="font-mono font-bold text-zinc-900 dark:text-white tabular-nums">
+                        <span className="font-mono font-semibold text-zinc-900 dark:text-white tabular-nums">
                           ৳{totalContentRevenueBDT.toFixed(2)} / ৳500
                         </span>
                       </div>
@@ -1967,7 +1967,7 @@ export const CreatorDashboard: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => setShowContentPayoutForm((v) => !v)}
-                          className="w-full min-h-[42px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
+                          className="w-full min-h-[42px] px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
                         >
                           <Wallet className="w-4 h-4" />
                           <span>
@@ -1988,7 +1988,7 @@ export const CreatorDashboard: React.FC = () => {
                           <button
                             type="button"
                             onClick={() => navigate("/loops/create")}
-                            className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold text-[11px] whitespace-nowrap shrink-0 cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-semibold text-[11px] whitespace-nowrap shrink-0 cursor-pointer"
                           >
                             Create Loop
                           </button>
@@ -2006,7 +2006,7 @@ export const CreatorDashboard: React.FC = () => {
                                 key={method}
                                 type="button"
                                 onClick={() => setContentPayoutMethod(method)}
-                                className={`min-h-[34px] px-4 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                                className={`min-h-[34px] px-4 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                                   contentPayoutMethod === method
                                     ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950"
                                     : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"
@@ -2047,7 +2047,7 @@ export const CreatorDashboard: React.FC = () => {
                           <button
                             type="submit"
                             disabled={isSubmittingContentPayout}
-                            className="w-full min-h-[40px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                            className="w-full min-h-[40px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
                           >
                             {isSubmittingContentPayout
                               ? "Submitting Request..."
@@ -2068,7 +2068,7 @@ export const CreatorDashboard: React.FC = () => {
                           <Star className="w-5 h-5 fill-amber-500 text-amber-500" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-base font-bold text-zinc-950 dark:text-white truncate">
+                          <h3 className="text-base font-semibold text-zinc-950 dark:text-white truncate">
                             Gifted Star Earnings
                           </h3>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -2080,7 +2080,7 @@ export const CreatorDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigate("/buy-stars")}
-                        className="min-h-[36px] px-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                        className="min-h-[36px] px-3.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs whitespace-nowrap shrink-0 transition-colors cursor-pointer"
                       >
                         Buy Stars
                       </button>
@@ -2091,7 +2091,7 @@ export const CreatorDashboard: React.FC = () => {
                         <span className="text-[11px] font-medium text-zinc-500 block">
                           Earned (Withdrawable)
                         </span>
-                        <div className="text-lg font-mono font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-0.5 tabular-nums">
+                        <div className="text-lg font-mono font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5 mt-0.5 tabular-nums">
                           <span>{earnedStars.toLocaleString()}</span>
                           <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
                           <span className="text-xs font-normal text-zinc-500">
@@ -2104,7 +2104,7 @@ export const CreatorDashboard: React.FC = () => {
                         <span className="text-[11px] font-medium text-zinc-500 block">
                           Purchased Balance
                         </span>
-                        <div className="text-lg font-mono font-bold text-zinc-950 dark:text-white flex items-center gap-1.5 mt-0.5 tabular-nums">
+                        <div className="text-lg font-mono font-semibold text-zinc-950 dark:text-white flex items-center gap-1.5 mt-0.5 tabular-nums">
                           <span>{purchasedStars.toLocaleString()}</span>
                           <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500 shrink-0" />
                         </div>
@@ -2115,7 +2115,7 @@ export const CreatorDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowStarWithdrawForm((v) => !v)}
-                        className="w-full min-h-[42px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
+                        className="w-full min-h-[42px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors cursor-pointer flex items-center justify-center gap-2"
                       >
                         <Wallet className="w-4 h-4" />
                         <span>
@@ -2127,7 +2127,7 @@ export const CreatorDashboard: React.FC = () => {
                     ) : (
                       <div className="px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/70 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 flex items-center justify-between gap-2">
                         <span>Minimum 1,000 Stars (৳1,000) to withdraw</span>
-                        <span className="font-mono font-bold text-zinc-900 dark:text-white tabular-nums whitespace-nowrap">
+                        <span className="font-mono font-semibold text-zinc-900 dark:text-white tabular-nums whitespace-nowrap">
                           {earnedStars.toLocaleString()} / 1,000
                         </span>
                       </div>
@@ -2144,7 +2144,7 @@ export const CreatorDashboard: React.FC = () => {
                               key={m}
                               type="button"
                               onClick={() => setWithdrawMethod(m)}
-                              className={`min-h-[34px] px-4 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
+                              className={`min-h-[34px] px-4 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                                 withdrawMethod === m
                                   ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950"
                                   : "bg-white dark:bg-zinc-900 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800"
@@ -2182,7 +2182,7 @@ export const CreatorDashboard: React.FC = () => {
                         <button
                           type="submit"
                           disabled={isSubmittingWithdraw}
-                          className="w-full min-h-[40px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors cursor-pointer disabled:opacity-50"
+                          className="w-full min-h-[40px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
                         >
                           {isSubmittingWithdraw
                             ? "Submitting..."
@@ -2203,7 +2203,7 @@ export const CreatorDashboard: React.FC = () => {
                           <Handshake className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
+                          <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
                             Per-Post Investigation Sponsorship
                           </h3>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
@@ -2233,7 +2233,7 @@ export const CreatorDashboard: React.FC = () => {
                           <Award className="w-5 h-5" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
+                          <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
                             Monthly Membership Subscription
                           </h3>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
@@ -2271,7 +2271,7 @@ export const CreatorDashboard: React.FC = () => {
                   {/* Configured Receiving Gateways */}
                   <div className="p-5 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-2.5">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
+                      <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
                         Receiving Gateways
                       </h3>
                       <button
@@ -2358,7 +2358,7 @@ export const CreatorDashboard: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => navigate("/loops/create")}
-                        className="min-h-[38px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold cursor-pointer"
+                        className="min-h-[38px] px-4 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium cursor-pointer"
                       >
                         Create First Loop
                       </button>
@@ -2420,7 +2420,7 @@ export const CreatorDashboard: React.FC = () => {
                                 />
                               ) : null}
                               <div className="min-w-0 flex-1 space-y-1">
-                                <h3 className="text-sm font-bold text-zinc-950 dark:text-white line-clamp-1">
+                                <h3 className="text-sm font-semibold text-zinc-950 dark:text-white line-clamp-1">
                                   {p.title || "Community Loop"}
                                 </h3>
                                 <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
@@ -2458,7 +2458,7 @@ export const CreatorDashboard: React.FC = () => {
                                       <RxIcon
                                         className={`w-3.5 h-3.5 ${rx.iconColor}`}
                                       />
-                                      <span className="text-[11px] font-mono font-bold text-zinc-800 dark:text-zinc-200 tabular-nums">
+                                      <span className="text-[11px] font-mono font-semibold text-zinc-800 dark:text-zinc-200 tabular-nums">
                                         {pBreakdown[rx.key].toLocaleString()}
                                       </span>
                                     </div>
@@ -2507,7 +2507,7 @@ export const CreatorDashboard: React.FC = () => {
                 className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 space-y-6"
               >
                 <div className="space-y-1">
-                  <h2 className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white">
+                  <h2 className="text-base sm:text-lg font-semibold text-zinc-950 dark:text-white">
                     bKash & Nagad Payout Gateways
                   </h2>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
@@ -2521,7 +2521,7 @@ export const CreatorDashboard: React.FC = () => {
                   {/* bKash Column */}
                   <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-pink-600 dark:text-pink-400">
+                      <span className="text-xs font-medium text-pink-600 dark:text-pink-400">
                         bKash Accounts ({bkashAccounts.length})
                       </span>
                     </div>
@@ -2555,7 +2555,7 @@ export const CreatorDashboard: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleAddAccount("bKash")}
-                          className="min-h-[42px] px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                          className="min-h-[42px] px-4 rounded-xl bg-pink-600 hover:bg-pink-700 text-white text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer"
                         >
                           + Add
                         </button>
@@ -2574,7 +2574,7 @@ export const CreatorDashboard: React.FC = () => {
                             className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between gap-2"
                           >
                             <div className="min-w-0">
-                              <span className="font-mono font-bold text-xs text-zinc-950 dark:text-white block truncate tabular-nums">
+                              <span className="font-mono font-semibold text-xs text-zinc-950 dark:text-white block truncate tabular-nums">
                                 {acc.number}
                               </span>
                               <div className="flex items-center gap-1 mt-1.5 flex-wrap">
@@ -2620,7 +2620,7 @@ export const CreatorDashboard: React.FC = () => {
                   {/* Nagad Column */}
                   <div className="space-y-3.5">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-orange-600 dark:text-orange-400">
+                      <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
                         Nagad Accounts ({nagadAccounts.length})
                       </span>
                     </div>
@@ -2654,7 +2654,7 @@ export const CreatorDashboard: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleAddAccount("Nagad")}
-                          className="min-h-[42px] px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold whitespace-nowrap shrink-0 transition-colors cursor-pointer"
+                          className="min-h-[42px] px-4 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-medium whitespace-nowrap shrink-0 transition-colors cursor-pointer"
                         >
                           + Add
                         </button>
@@ -2673,7 +2673,7 @@ export const CreatorDashboard: React.FC = () => {
                             className="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between gap-2"
                           >
                             <div className="min-w-0">
-                              <span className="font-mono font-bold text-xs text-zinc-950 dark:text-white block truncate tabular-nums">
+                              <span className="font-mono font-semibold text-xs text-zinc-950 dark:text-white block truncate tabular-nums">
                                 {acc.number}
                               </span>
                               <div className="flex items-center gap-1 mt-1.5 flex-wrap">
@@ -2721,7 +2721,7 @@ export const CreatorDashboard: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSavingNumbers}
-                    className="w-full sm:w-auto min-h-[42px] px-6 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full sm:w-auto min-h-[42px] px-6 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 font-medium text-xs hover:opacity-90 transition-opacity cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <Save className="w-4 h-4" />
                     <span>

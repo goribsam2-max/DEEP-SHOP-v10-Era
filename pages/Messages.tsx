@@ -1,7 +1,7 @@
 import { uploadToImgbb, generateMicroThumb } from '../services/imgbb';
 import { uploadFileToCatbox } from '../lib/catboxUpload';
 import { VerifiedIcon } from '../components/SellerBadge';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { isScamReview, filterSafeReviews } from '../lib/reviewModeration';
@@ -15,7 +15,10 @@ import { SwipeableInboxRow, SwipeableMessageBubble } from '../components/chat/Ch
 import { useNotify } from '../components/Notifications';
 import { db, auth } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, addDoc, getDoc, query, where, orderBy, serverTimestamp, getDocs, limit, deleteDoc, writeBatch, increment } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, updateDoc, arrayUnion, arrayRemove, collection, addDoc, getDoc, query, where, orderBy, serverTimestamp, getDocs, getDocsFromCache, limit, deleteDoc, writeBatch, increment } from 'firebase/firestore';
+import { readCachedCommunityUsers } from '../lib/loopsCache';
+import { readSellerMetaCache } from '../lib/offlineStore';
+import { preloadImageUrl } from '../components/SmoothImage';
 import { cn, formatDisplayEmail, getPublicShareOrigin } from '../lib/utils';
 import { checkContainsBannedWord } from '../lib/wordFilter';
 import VoiceMessageBubble from '../components/ui/voice-message-bubble';
@@ -200,8 +203,8 @@ const LinkPreviewCard = ({ text }: { text: string }) => {
         <img src={preview.image} alt={preview.title} className="w-full h-32 object-cover border-b border-zinc-200 dark:border-zinc-300 dark:border-zinc-700" referrerPolicy="no-referrer" />
       )}
       <div className="p-3 text-left">
-        <span className="text-[10px] uppercase tracking-wider font-extrabold text-emerald-600 dark:text-emerald-400">{preview.domain || "Preview"}</span>
-        <h5 className="font-bold text-xs text-zinc-900 dark:text-zinc-100 line-clamp-1 mt-0.5">{preview.title}</h5>
+        <span className="text-[10px] uppercase tracking-wider font-medium text-emerald-600 dark:text-emerald-400">{preview.domain || "Preview"}</span>
+        <h5 className="font-semibold text-xs text-zinc-900 dark:text-zinc-100 line-clamp-1 mt-0.5">{preview.title}</h5>
         {preview.description && (
           <p className="text-[11px] text-zinc-500 dark:text-zinc-400 line-clamp-2 mt-1 leading-normal">{preview.description}</p>
         )}
@@ -390,7 +393,7 @@ const CallBubble = ({ msg, isMe, onCallback }: { msg: any; isMe?: boolean; onCal
         )}
       </div>
       <div className="flex flex-col">
-        <p className="font-bold text-[15.5px] sm:text-[16px] text-zinc-900 dark:text-zinc-100 leading-tight tracking-tight">{title}</p>
+        <p className="font-semibold text-[15.5px] sm:text-[16px] text-zinc-900 dark:text-zinc-100 leading-tight tracking-tight">{title}</p>
         <p className="text-[13px] sm:text-[13.5px] text-zinc-500 dark:text-zinc-400 font-normal mt-0.5">{subtext}</p>
       </div>
     </div>
@@ -622,12 +625,67 @@ export default function Messages() {
   const userProfileCacheRef = useRef<Map<string, any>>(new Map());
   const messagesCacheRef = useRef<Map<string, any[]>>(new Map());
 
+  const seedChatProfileCaches = (chatList: any[]) => {
+    try {
+      readCachedCommunityUsers().forEach((u) => {
+        const uid = u?.uid || u?.id;
+        if (uid && !userProfileCacheRef.current.has(uid)) {
+          userProfileCacheRef.current.set(uid, { ...u, id: uid, isGroup: false });
+        }
+      });
+      Object.entries(readSellerMetaCache()).forEach(([sid, meta]) => {
+        if (sid && meta && !userProfileCacheRef.current.has(sid)) {
+          userProfileCacheRef.current.set(sid, {
+            id: sid,
+            uid: sid,
+            displayName: meta.displayName || meta.name,
+            shopName: meta.shopName || meta.name,
+            photoURL: meta.photoURL || '',
+            username: meta.username || '',
+            kycStatus: meta.kycStatus || '',
+            isGroup: false,
+          });
+        }
+      });
+      chatList.forEach((c: any, idx: number) => {
+        if (c?.otherUser?.id && !c.otherUser.isGroup) {
+          userProfileCacheRef.current.set(c.otherUser.id, c.otherUser);
+          if (idx < 14 && c.otherUser.photoURL) {
+            preloadImageUrl(c.otherUser.photoURL);
+          }
+        }
+      });
+    } catch {}
+  };
+
   const [chats, setChats] = useState<any[]>(() => {
     try {
       const uid = auth.currentUser?.uid;
-      if (!uid) return [];
-      const cached = localStorage.getItem(`deep_chats_cache_${uid}`);
-      return cached ? JSON.parse(cached) : [];
+      const cached = uid
+        ? localStorage.getItem(`deep_chats_cache_${uid}`) || localStorage.getItem('deep_chats_cache_last')
+        : localStorage.getItem('deep_chats_cache_last');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          seedChatProfileCaches(parsed);
+          return parsed;
+        }
+      }
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith('deep_chats_cache_')) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              seedChatProfileCaches(parsed);
+              return parsed;
+            }
+          }
+        }
+      }
+      seedChatProfileCaches([]);
+      return [];
     } catch {
       return [];
     }
@@ -641,17 +699,16 @@ export default function Messages() {
   useEffect(() => {
     if (!user?.uid) return;
     setChats((prev) => {
-      if (prev.length > 0) return prev;
+      if (prev.length > 0) {
+        seedChatProfileCaches(prev);
+        return prev;
+      }
       try {
         const cached = localStorage.getItem(`deep_chats_cache_${user.uid}`);
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            parsed.forEach((c: any) => {
-              if (c?.otherUser?.id && !c.otherUser.isGroup) {
-                userProfileCacheRef.current.set(c.otherUser.id, c.otherUser);
-              }
-            });
+            seedChatProfileCaches(parsed);
             return parsed;
           }
         }
@@ -1249,14 +1306,19 @@ export default function Messages() {
   const isTouchActiveRef = useRef<boolean>(false);
 
   const unlockRemoteAudioElement = () => {
+    audioHelper.unlock();
     const audioEl = remoteAudioRef.current;
     if (!audioEl) return;
     try {
       audioEl.muted = false;
       audioEl.volume = 1;
       const playPromise = audioEl.play();
-      if (playPromise && typeof playPromise.catch === 'function') {
-        playPromise.catch(() => {});
+      if (playPromise && typeof playPromise.then === 'function') {
+        playPromise
+          .then(() => {
+            setAudioAutoplayBlocked(false);
+          })
+          .catch(() => {});
       }
     } catch {}
   };
@@ -1607,13 +1669,25 @@ export default function Messages() {
     return () => unsubscribes.forEach(unsub => unsub());
   }, [user?.uid, channels]);
 
-  // Real-time online presence listener for P2P chat users
+  const presenceUserKey = useMemo(() => {
+    const ids = Array.from(
+      new Set(
+        chats
+          .map((c) => c.otherUser?.id || c.otherUser?.uid)
+          .filter((id): id is string => Boolean(id && id !== 'system'))
+      )
+    )
+      .slice(0, 25)
+      .sort();
+    return ids.join('|');
+  }, [chats]);
+
+  // Real-time online presence listener for P2P chat users (keyed on stable IDs to avoid thrashing)
   useEffect(() => {
-    if (chats.length === 0) return;
-    const unsubscribes = chats.map(chat => {
-      const otherId = chat.otherUser?.id || chat.otherUser?.uid;
-      if (!otherId || otherId === 'system') return () => {};
-      return onSnapshot(doc(db, 'users', otherId), (docSnap) => {
+    if (!presenceUserKey) return;
+    const ids = presenceUserKey.split('|').filter(Boolean);
+    const unsubscribes = ids.map((otherId) =>
+      onSnapshot(doc(db, 'users', otherId), (docSnap) => {
         if (docSnap.exists()) {
           const uData = docSnap.data();
           const lastActiveMs = typeof uData.lastActive === 'number'
@@ -1621,10 +1695,11 @@ export default function Messages() {
             : uData.lastActive?.toMillis
               ? uData.lastActive.toMillis()
               : (uData.lastActive?.seconds ? uData.lastActive.seconds * 1000 : (typeof uData.lastActive === 'string' ? new Date(uData.lastActive).getTime() : 0));
-          
+
           const isRecentlyActive = lastActiveMs > 0 && (Date.now() - lastActiveMs < 90000);
           const isUserOnline = Boolean(uData.isOnline && isRecentlyActive);
 
+          userProfileCacheRef.current.set(otherId, { ...uData, id: otherId, isGroup: false });
           setChatUsersData(prev => ({
             ...prev,
             [otherId]: uData
@@ -1637,10 +1712,10 @@ export default function Messages() {
             }
           }));
         }
-      });
-    });
+      })
+    );
     return () => unsubscribes.forEach(unsub => unsub());
-  }, [chats]);
+  }, [presenceUserKey]);
 
   useEffect(() => {
     const id = setInterval(() => setPresenceNowMs(Date.now()), 30000);
@@ -2656,110 +2731,142 @@ const handleCreateChannel = async () => {
       where('participants', 'array-contains', user.uid)
     );
     
-    const unsub = onSnapshot(q1, async (snapshot) => {
+    const persistChatsCache = (list: any[]) => {
       try {
-        const chatsList = await Promise.all(snapshot.docs.map(async d => {
+        const serializable = list.slice(0, 40).map((c: any) => ({
+          id: c.id,
+          participants: c.participants,
+          lastMessage: c.lastMessage || '',
+          lastSenderId: c.lastSenderId || '',
+          lastMessageDeleted: Boolean(c.lastMessageDeleted),
+          deletedLastFor: c.deletedLastFor || {},
+          seenBy: c.seenBy || [],
+          type: c.type,
+          isGroup: c.isGroup,
+          name: c.name,
+          groupName: c.groupName,
+          photoURL: c.photoURL,
+          updatedAt: c.updatedAt?.toMillis ? c.updatedAt.toMillis() : (c.updatedAt?.seconds ? c.updatedAt.seconds * 1000 : (c.updatedAt || 0)),
+          otherUser: c.otherUser ? {
+            id: c.otherUser.id,
+            uid: c.otherUser.uid,
+            displayName: c.otherUser.displayName,
+            shopName: c.otherUser.shopName,
+            username: c.otherUser.username,
+            photoURL: c.otherUser.photoURL,
+            verified: c.otherUser.verified,
+            kycStatus: c.otherUser.kycStatus,
+            isGroup: c.otherUser.isGroup,
+          } : null,
+        }));
+        localStorage.setItem(`deep_chats_cache_${user.uid}`, JSON.stringify(serializable));
+        localStorage.setItem('deep_chats_cache_last', JSON.stringify(serializable));
+      } catch {}
+    };
+
+    let alive = true;
+    const unsub = onSnapshot(q1, (snapshot) => {
+      try {
+        const missingUids = new Set<string>();
+        const chatsList = snapshot.docs.map((d) => {
           try {
             const data = d.data();
             const isGroup = data.type === 'group' || data.isGroup;
-            let otherUser: any = { displayName: 'Unknown', photoURL: '', id: d.id, isGroup: false };
-            
+            let otherUser: any = { displayName: 'User', photoURL: '', id: d.id, isGroup: false };
+
             if (isGroup) {
-                otherUser = {
-                    id: d.id,
-                    displayName: data.name || data.groupName || 'Group Chat',
-                    shopName: data.name || data.groupName || 'Group Chat',
-                    photoURL: data.photoURL || '',
-                    isGroup: true
-                };
-            } else {
-                const otherUid = Array.isArray(data.participants) ? data.participants.find((p: string) => p !== user.uid) : null;
-                otherUser = { displayName: 'Unknown', photoURL: '', id: otherUid, isGroup: false };
-                if (otherUid) {
-                    if (otherUid === 'system') {
-                        otherUser = {
-                            id: 'system',
-                            displayName: 'Deep Shop HQ',
-                            photoURL: '',
-                            isGroup: false
-                        };
-                    } else if (userProfileCacheRef.current.has(otherUid)) {
-                        otherUser = userProfileCacheRef.current.get(otherUid);
-                    } else {
-                        try {
-                          const uDoc = await getDoc(doc(db, 'users', otherUid));
-                          if (uDoc.exists()) {
-                              otherUser = { ...uDoc.data(), id: uDoc.id, isGroup: false } as any;
-                          } else {
-                              otherUser = {
-                                  id: otherUid,
-                                  displayName: 'Verified Seller',
-                                  photoURL: '',
-                                  isGroup: false
-                              };
-                          }
-                          userProfileCacheRef.current.set(otherUid, otherUser);
-                        } catch (uErr) {
-                          otherUser = { id: otherUid, displayName: 'User', photoURL: '', isGroup: false };
-                        }
-                    }
-                }
-            }
-            
-            return {
+              otherUser = {
                 id: d.id,
-                ...data,
-                otherUser
+                displayName: data.name || data.groupName || 'Group Chat',
+                shopName: data.name || data.groupName || 'Group Chat',
+                photoURL: data.photoURL || '',
+                isGroup: true,
+              };
+            } else {
+              const otherUid = Array.isArray(data.participants)
+                ? data.participants.find((p: string) => p !== user.uid)
+                : null;
+              otherUser = { displayName: 'User', photoURL: '', id: otherUid, isGroup: false };
+              if (otherUid) {
+                if (otherUid === 'system') {
+                  otherUser = {
+                    id: 'system',
+                    displayName: 'Deep Shop HQ',
+                    photoURL: '',
+                    isGroup: false,
+                  };
+                } else if (userProfileCacheRef.current.has(otherUid)) {
+                  otherUser = userProfileCacheRef.current.get(otherUid);
+                } else {
+                  missingUids.add(otherUid);
+                }
+              }
+            }
+
+            return {
+              id: d.id,
+              ...data,
+              otherUser,
             };
-          } catch (itemErr) {
+          } catch {
             return { id: d.id, ...d.data(), otherUser: { id: d.id, displayName: 'Chat' } };
           }
-        }));
+        });
 
-        // Sort in memory by updatedAt descending safely
         chatsList.sort((a: any, b: any) => {
           const tA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt?.seconds ? a.updatedAt.seconds * 1000 : (a.updatedAt || 0));
           const tB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt?.seconds ? b.updatedAt.seconds * 1000 : (b.updatedAt || 0));
           return tB - tA;
         });
-        
-        setChats(chatsList);
 
-        try {
-          const serializable = chatsList.slice(0, 40).map((c: any) => ({
-            id: c.id,
-            participants: c.participants,
-            lastMessage: c.lastMessage || '',
-            lastSenderId: c.lastSenderId || '',
-            lastMessageDeleted: Boolean(c.lastMessageDeleted),
-            deletedLastFor: c.deletedLastFor || {},
-            seenBy: c.seenBy || [],
-            type: c.type,
-            isGroup: c.isGroup,
-            name: c.name,
-            groupName: c.groupName,
-            photoURL: c.photoURL,
-            updatedAt: c.updatedAt?.toMillis ? c.updatedAt.toMillis() : (c.updatedAt?.seconds ? c.updatedAt.seconds * 1000 : (c.updatedAt || 0)),
-            otherUser: c.otherUser ? {
-              id: c.otherUser.id,
-              uid: c.otherUser.uid,
-              displayName: c.otherUser.displayName,
-              shopName: c.otherUser.shopName,
-              username: c.otherUser.username,
-              photoURL: c.otherUser.photoURL,
-              verified: c.otherUser.verified,
-              kycStatus: c.otherUser.kycStatus,
-              isGroup: c.otherUser.isGroup,
-            } : null,
-          }));
-          localStorage.setItem(`deep_chats_cache_${user.uid}`, JSON.stringify(serializable));
-        } catch {}
+        // Emit synchronously with 0ms await blocking
+        setChats(chatsList);
+        persistChatsCache(chatsList);
+
+        // Background-hydrate any uncached user profiles without blocking list display
+        if (missingUids.size > 0) {
+          void Promise.all(
+            Array.from(missingUids).map(async (uid) => {
+              try {
+                const uDoc = await getDoc(doc(db, 'users', uid));
+                const resolved = uDoc.exists()
+                  ? ({ ...uDoc.data(), id: uDoc.id, isGroup: false } as any)
+                  : { id: uid, displayName: 'Verified Seller', photoURL: '', isGroup: false };
+                userProfileCacheRef.current.set(uid, resolved);
+                return [uid, resolved] as const;
+              } catch {
+                return null;
+              }
+            })
+          ).then((results) => {
+            if (!alive) return;
+            const resolvedMap = new Map<string, any>();
+            results.forEach((entry) => {
+              if (entry) resolvedMap.set(entry[0], entry[1]);
+            });
+            if (resolvedMap.size === 0) return;
+            setChats((prev) => {
+              const patched = prev.map((c) => {
+                const oid = c.otherUser?.id;
+                if (oid && resolvedMap.has(oid)) {
+                  return { ...c, otherUser: resolvedMap.get(oid) };
+                }
+                return c;
+              });
+              persistChatsCache(patched);
+              return patched;
+            });
+          });
+        }
       } catch (err) {
         console.error("Error in chats onSnapshot:", err);
       }
     });
-    
-    return () => unsub();
+
+    return () => {
+      alive = false;
+      unsub();
+    };
   }, [user]);
 
   // Effect 2: Load new user for active chat if they're not in existing chats
@@ -2890,6 +2997,29 @@ const handleCreateChannel = async () => {
     }
 
     const colRef = collection(db, 'p2p_chats', activeId, 'messages');
+
+    if (!initialMsgs || initialMsgs.length === 0) {
+      getDocsFromCache(colRef)
+        .then((cachedSnap) => {
+          if (!cachedSnap.empty) {
+            const getTs = (m: any) => {
+              if (!m.timestamp) return m.createdAt || 0;
+              if (m.timestamp.toMillis) return m.timestamp.toMillis();
+              if (m.timestamp.seconds) return m.timestamp.seconds * 1000;
+              if (typeof m.timestamp === 'number') return m.timestamp;
+              return m.createdAt || 0;
+            };
+            const cachedMsgs = cachedSnap.docs
+              .map((d) => ({ id: d.id, ...(d.data() as any) }))
+              .sort((a, b) => getTs(a) - getTs(b));
+            if (cachedMsgs.length > 0) {
+              messagesCacheRef.current.set(activeId, cachedMsgs);
+              setMessages((prev) => (prev.length > 0 ? prev : cachedMsgs));
+            }
+          }
+        })
+        .catch(() => {});
+    }
 
     const unsub = onSnapshot(colRef, (snapshot) => {
       const getTs = (m: any) => {
@@ -3705,6 +3835,8 @@ const handleCreateChannel = async () => {
   // --- Calling Logic (Real-time P2P) ---
   const [currentCallId, setCurrentCallId] = useState<string | null>(null);
   const [webRTCError, setWebRTCError] = useState<string | null>(null);
+  const [audioAutoplayBlocked, setAudioAutoplayBlocked] = useState(false);
+  const [iceConnectionState, setIceConnectionState] = useState<RTCIceConnectionState>('new');
   const activeCallMetaRef = useRef<{
     callId: string;
     chatId: string;
@@ -4288,24 +4420,42 @@ const handleCreateChannel = async () => {
 
   useEffect(() => {
     if (remoteStream) {
+      const videoTracks = remoteStream.getVideoTracks();
+      const audioTracks = remoteStream.getAudioTracks();
+
       if (callType === 'video' && remoteVideoRef.current) {
         if (remoteVideoRef.current.srcObject !== remoteStream) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
-        // Audio plays cleanly through remoteAudioRef; muting <video> avoids autoplay blocking and echo
+        // Audio plays cleanly through dedicated audio-only remoteAudioRef; muting <video> avoids autoplay blocking & echo
         remoteVideoRef.current.muted = true;
         remoteVideoRef.current.playsInline = true;
         remoteVideoRef.current.play().catch(() => {});
       }
-      if (remoteAudioRef.current) {
-        if (remoteAudioRef.current.srcObject !== remoteStream) {
-          remoteAudioRef.current.srcObject = remoteStream;
+
+      if (remoteAudioRef.current && audioTracks.length > 0) {
+        const currentAudioStream = remoteAudioRef.current.srcObject as MediaStream | null;
+        const currentIds = currentAudioStream?.getAudioTracks().map((t) => t.id).join(',') || '';
+        const nextIds = audioTracks.map((t) => t.id).join(',');
+        if (currentIds !== nextIds) {
+          remoteAudioRef.current.srcObject = new MediaStream(audioTracks);
         }
         remoteAudioRef.current.muted = false;
         remoteAudioRef.current.volume = 1;
-        remoteAudioRef.current.play().catch((e) => {
-          console.warn("Remote audio play warning:", e);
-        });
+        const playPromise = remoteAudioRef.current.play();
+        if (playPromise && typeof playPromise.then === 'function') {
+          playPromise
+            .then(() => setAudioAutoplayBlocked(false))
+            .catch((e) => {
+              console.warn("Remote audio play warning:", e);
+              if (e?.name === 'NotAllowedError') {
+                setAudioAutoplayBlocked(true);
+              }
+            });
+        }
+      }
+      if (videoTracks.some((t) => t.readyState === 'live') && callType !== 'video') {
+        setCallType('video');
       }
     }
   }, [remoteStream, callType, isCalling, swapCallVideos, callStatus]);
@@ -4314,12 +4464,16 @@ const handleCreateChannel = async () => {
   // Only re-runs if currentCallId itself changes!
   useEffect(() => {
     if (!currentCallId) {
+      setAudioAutoplayBlocked(false);
+      setIceConnectionState('new');
       return;
     }
 
     let isSubscribed = true;
     let unsubCandidates1: any = null;
     let unsubCallDoc: any = null;
+    let sdpSyncTimer: any = null;
+    let iceRestartAttempted = false;
 
     const getDynamicIceServers = async (): Promise<RTCIceServer[]> => {
       const fallbackServers: RTCIceServer[] = [
@@ -4357,6 +4511,37 @@ const handleCreateChannel = async () => {
       return fallbackServers;
     };
 
+    const acquireMediaWithFallbacks = async (needVideo: boolean): Promise<MediaStream | null> => {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return null;
+      const attempts: MediaStreamConstraints[] = needVideo
+        ? [
+            {
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+              video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+            },
+            { audio: true, video: true },
+            {
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+              video: false,
+            },
+            { audio: true, video: false },
+          ]
+        : [
+            {
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+              video: false,
+            },
+            { audio: true, video: false },
+          ];
+
+      for (const constraints of attempts) {
+        try {
+          return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch {}
+      }
+      return null;
+    };
+
     const setupWebRTC = async () => {
       try {
         const callDocRef = doc(db, 'p2p_calls', currentCallId);
@@ -4367,8 +4552,12 @@ const handleCreateChannel = async () => {
 
         if (!isSubscribed || !callSnap.exists()) return;
         const callData = callSnap.data();
-        const isCaller = callData.callerId === user?.uid;
+        const myUid = user?.uid || auth.currentUser?.uid || '';
+        const isCaller = callData.callerId === myUid;
         const resolvedNeedVideo = callData.type === 'video' || callType === 'video';
+        if (callData.type === 'video') {
+          setCallType('video');
+        }
 
         // Reuse existing live stream from startCall if already acquired to avoid double getUserMedia hardware lock
         let stream: MediaStream | null = null;
@@ -4388,36 +4577,8 @@ const handleCreateChannel = async () => {
           !stream.getAudioTracks().some((t) => t.readyState === 'live') ||
           (resolvedNeedVideo && !stream.getVideoTracks().some((t) => t.readyState === 'live'))
         ) {
-          try {
-            stream = await navigator.mediaDevices.getUserMedia({
-              audio: {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-              },
-              video: resolvedNeedVideo
-                ? {
-                    facingMode: 'user',
-                    width: { ideal: 640 },
-                    height: { ideal: 480 },
-                  }
-                : false,
-            });
-          } catch (mediaErr) {
-            if (resolvedNeedVideo) {
-              // Fallback to audio-only if camera fails on receiver/caller
-              stream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                  echoCancellation: true,
-                  noiseSuppression: true,
-                  autoGainControl: true,
-                },
-                video: false,
-              });
-            } else {
-              throw mediaErr;
-            }
-          }
+          const captured = await acquireMediaWithFallbacks(resolvedNeedVideo);
+          if (captured) stream = captured;
         }
 
         if (!isSubscribed) {
@@ -4436,6 +4597,8 @@ const handleCreateChannel = async () => {
           });
           localStreamRef.current = stream;
           setLocalStream(stream);
+        } else {
+          notify("Microphone unavailable — receive-only audio connected", "info");
         }
 
         const pc = new RTCPeerConnection({
@@ -4443,10 +4606,29 @@ const handleCreateChannel = async () => {
           iceCandidatePoolSize: 10,
         });
         peerConnectionRef.current = pc;
+        setIceConnectionState(pc.iceConnectionState);
 
-        stream?.getTracks().forEach((track) => {
-          pc.addTrack(track, stream!);
-        });
+        if (stream) {
+          stream.getTracks().forEach((track) => {
+            pc.addTrack(track, stream!);
+          });
+        }
+
+        // Guarantee receive transceivers exist even if mic/camera capture fell back
+        const hasAudioTransceiver = pc.getTransceivers().some((t) => t.receiver.track?.kind === 'audio' || t.sender.track?.kind === 'audio');
+        if (!hasAudioTransceiver) {
+          try {
+            pc.addTransceiver('audio', { direction: 'recvonly' });
+          } catch {}
+        }
+        if (resolvedNeedVideo) {
+          const hasVideoTransceiver = pc.getTransceivers().some((t) => t.receiver.track?.kind === 'video' || t.sender.track?.kind === 'video');
+          if (!hasVideoTransceiver) {
+            try {
+              pc.addTransceiver('video', { direction: 'recvonly' });
+            } catch {}
+          }
+        }
 
         // Accumulate all remote audio & video tracks in one persistent MediaStream and clone reference for React updates
         remoteMediaStreamRef.current = new MediaStream();
@@ -4457,17 +4639,35 @@ const handleCreateChannel = async () => {
           if (!alreadyExists) {
             master.addTrack(track);
           }
+          if (track.kind === 'video') {
+            setCallType('video');
+          }
           const cloned = new MediaStream(master.getTracks());
           setRemoteStream(cloned);
 
+          if (track.kind === 'audio' && remoteAudioRef.current) {
+            remoteAudioRef.current.srcObject = new MediaStream(master.getAudioTracks());
+            remoteAudioRef.current.muted = false;
+            remoteAudioRef.current.volume = 1;
+            remoteAudioRef.current.play().then(() => setAudioAutoplayBlocked(false)).catch((err) => {
+              if (err?.name === 'NotAllowedError') setAudioAutoplayBlocked(true);
+            });
+          }
+
           track.onunmute = () => {
             if (!isSubscribed) return;
+            if (track.kind === 'video') {
+              setCallType('video');
+            }
             const refreshed = new MediaStream(master.getTracks());
             setRemoteStream(refreshed);
             if (track.kind === 'audio' && remoteAudioRef.current) {
+              remoteAudioRef.current.srcObject = new MediaStream(master.getAudioTracks());
               remoteAudioRef.current.muted = false;
               remoteAudioRef.current.volume = 1;
-              remoteAudioRef.current.play().catch(() => {});
+              remoteAudioRef.current.play().then(() => setAudioAutoplayBlocked(false)).catch((err) => {
+                if (err?.name === 'NotAllowedError') setAudioAutoplayBlocked(true);
+              });
             }
           };
         };
@@ -4481,18 +4681,70 @@ const handleCreateChannel = async () => {
           }
         };
 
+        pc.oniceconnectionstatechange = () => {
+          if (!isSubscribed) return;
+          setIceConnectionState(pc.iceConnectionState);
+          if (pc.iceConnectionState === 'failed' && !iceRestartAttempted) {
+            iceRestartAttempted = true;
+            try {
+              pc.restartIce();
+              if (isCaller && pc.signalingState === 'stable') {
+                pc.createOffer({ iceRestart: true, offerToReceiveAudio: true, offerToReceiveVideo: true })
+                  .then((offer) => pc.setLocalDescription(offer).then(() => offer))
+                  .then((offer) =>
+                    updateDoc(callDocRef, {
+                      renegotiatedBy: 'caller',
+                      offer: { type: offer.type, sdp: offer.sdp },
+                    })
+                  )
+                  .catch(() => {});
+              }
+            } catch {}
+          }
+        };
+
+        // Write ICE candidates directly to parent call document array (immune to subcollection rules) + subcollection fallback
+        const localCandidatesField = isCaller ? 'callerIceCandidates' : 'receiverIceCandidates';
+        const remoteCandidatesField = isCaller ? 'receiverIceCandidates' : 'callerIceCandidates';
+
         pc.onicecandidate = (event) => {
           if (event.candidate) {
-            const candidateData = event.candidate.toJSON();
+            const candidateData = JSON.parse(JSON.stringify(event.candidate.toJSON()));
+            updateDoc(callDocRef, {
+              [localCandidatesField]: arrayUnion(candidateData),
+            }).catch(() => {});
             const collectionName = isCaller ? 'callerCandidates' : 'receiverCandidates';
             addDoc(collection(db, 'p2p_calls', currentCallId, collectionName), candidateData)
-              .catch(e => console.error("Error adding ice candidate to DB:", e));
+              .catch(() => {});
+          } else if (pc.localDescription) {
+            // Gathering finished: re-sync full localDescription SDP containing gathered candidates
+            const fieldName = isCaller ? 'offer' : 'answer';
+            updateDoc(callDocRef, {
+              [fieldName]: {
+                type: pc.localDescription.type,
+                sdp: pc.localDescription.sdp,
+              },
+            }).catch(() => {});
           }
         };
 
         const iceCandidatesBuffer: RTCIceCandidateInit[] = [];
+        const seenCandidateKeys = new Set<string>();
         let answerApplied = false;
         let offerApplied = false;
+
+        const queueOrAddIceCandidate = (candidateInit: RTCIceCandidateInit) => {
+          if (!candidateInit || !candidateInit.candidate) return;
+          const key = `${candidateInit.candidate}::${candidateInit.sdpMid ?? ''}::${candidateInit.sdpMLineIndex ?? ''}`;
+          if (seenCandidateKeys.has(key)) return;
+          seenCandidateKeys.add(key);
+
+          if (pc.remoteDescription && pc.remoteDescription.type) {
+            pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(() => {});
+          } else {
+            iceCandidatesBuffer.push(candidateInit);
+          }
+        };
 
         const processIceBuffer = () => {
           while (iceCandidatesBuffer.length > 0) {
@@ -4509,18 +4761,17 @@ const handleCreateChannel = async () => {
           currentCallId,
           isCaller ? 'receiverCandidates' : 'callerCandidates'
         );
-        unsubCandidates1 = onSnapshot(remoteCandidateCol, (snapshot) => {
-          snapshot.docChanges().forEach((change) => {
-            if (change.type === 'added') {
-              const candidateInit = change.doc.data() as RTCIceCandidateInit;
-              if (pc.remoteDescription && pc.remoteDescription.type) {
-                pc.addIceCandidate(new RTCIceCandidate(candidateInit)).catch(() => {});
-              } else {
-                iceCandidatesBuffer.push(candidateInit);
+        unsubCandidates1 = onSnapshot(
+          remoteCandidateCol,
+          (snapshot) => {
+            snapshot.docChanges().forEach((change) => {
+              if (change.type === 'added') {
+                queueOrAddIceCandidate(change.doc.data() as RTCIceCandidateInit);
               }
-            }
-          });
-        });
+            });
+          },
+          () => {}
+        );
 
         if (isCaller) {
           const offerDescription = await pc.createOffer({
@@ -4537,17 +4788,36 @@ const handleCreateChannel = async () => {
             },
           });
 
+          // Sync gathered candidates inside SDP after 750ms even if onicecandidate(null) is slow
+          sdpSyncTimer = setTimeout(() => {
+            if (!isSubscribed || !pc.localDescription || pc.localDescription.type !== 'offer') return;
+            updateDoc(callDocRef, {
+              offer: {
+                type: pc.localDescription.type,
+                sdp: pc.localDescription.sdp,
+              },
+            }).catch(() => {});
+          }, 750);
+
           unsubCallDoc = onSnapshot(callDocRef, (snap) => {
             const data = snap.data();
             if (!isSubscribed || !data) return;
+
+            if (Array.isArray(data[remoteCandidatesField])) {
+              data[remoteCandidatesField].forEach((c: RTCIceCandidateInit) => queueOrAddIceCandidate(c));
+            }
+
             if (data.answer && !answerApplied && !pc.currentRemoteDescription) {
               answerApplied = true;
               pc.setRemoteDescription(new RTCSessionDescription(data.answer))
                 .then(processIceBuffer)
                 .catch(e => console.error("Error setting remote description on caller:", e));
-            } else if (data.offer && data.renegotiatedBy === 'receiver' && data.offer.sdp !== pc.localDescription?.sdp) {
+            } else if (data.offer && data.renegotiatedBy === 'receiver' && data.offer.sdp !== pc.localDescription?.sdp && data.offer.sdp !== pc.currentRemoteDescription?.sdp) {
               pc.setRemoteDescription(new RTCSessionDescription(data.offer))
-                .then(() => pc.createAnswer())
+                .then(() => {
+                  processIceBuffer();
+                  return pc.createAnswer();
+                })
                 .then((ans) => pc.setLocalDescription(ans).then(() => ans))
                 .then((ans) =>
                   updateDoc(callDocRef, {
@@ -4572,7 +4842,20 @@ const handleCreateChannel = async () => {
                 sdp: answerDescription.sdp,
               },
             });
+            sdpSyncTimer = setTimeout(() => {
+              if (!isSubscribed || !pc.localDescription || pc.localDescription.type !== 'answer') return;
+              updateDoc(callDocRef, {
+                answer: {
+                  type: pc.localDescription.type,
+                  sdp: pc.localDescription.sdp,
+                },
+              }).catch(() => {});
+            }, 750);
           };
+
+          if (Array.isArray(callData[remoteCandidatesField])) {
+            callData[remoteCandidatesField].forEach((c: RTCIceCandidateInit) => queueOrAddIceCandidate(c));
+          }
 
           if (callData.offer) {
             await applyOfferAndAnswer(callData.offer).catch(e =>
@@ -4583,11 +4866,19 @@ const handleCreateChannel = async () => {
           unsubCallDoc = onSnapshot(callDocRef, (snap) => {
             const data = snap.data();
             if (!isSubscribed || !data) return;
+
+            if (Array.isArray(data[remoteCandidatesField])) {
+              data[remoteCandidatesField].forEach((c: RTCIceCandidateInit) => queueOrAddIceCandidate(c));
+            }
+
             if (data.offer && !offerApplied && !pc.currentRemoteDescription) {
               applyOfferAndAnswer(data.offer).catch(() => {});
             } else if (data.offer && offerApplied && data.renegotiatedBy === 'caller' && data.offer.sdp !== pc.remoteDescription?.sdp) {
               pc.setRemoteDescription(new RTCSessionDescription(data.offer))
-                .then(() => pc.createAnswer())
+                .then(() => {
+                  processIceBuffer();
+                  return pc.createAnswer();
+                })
                 .then((ans) => pc.setLocalDescription(ans).then(() => ans))
                 .then((ans) =>
                   updateDoc(callDocRef, {
@@ -4609,6 +4900,7 @@ const handleCreateChannel = async () => {
 
     return () => {
       isSubscribed = false;
+      if (sdpSyncTimer) clearTimeout(sdpSyncTimer);
       if (unsubCandidates1) unsubCandidates1();
       if (unsubCallDoc) unsubCallDoc();
       if (localStreamRef.current) {
@@ -5228,6 +5520,93 @@ const handleCreateChannel = async () => {
 
 
 
+  const [pullSearchOffset, setPullSearchOffset] = useState(0);
+  const [pullSearchArmed, setPullSearchArmed] = useState(false);
+  const pullSearchTouchRef = useRef<{ startY: number; active: boolean; armed: boolean } | null>(null);
+  const [channelRecSlideX, setChannelRecSlideX] = useState(0);
+  const channelRecTouchRef = useRef<{ startX: number; armed: boolean } | null>(null);
+
+  const inboxFilterOrder: Array<'all' | 'unread' | 'groups'> = ['all', 'unread', 'groups'];
+  const { swipeHandlers: inboxTabSwipeHandlers } = useSwipeNavigation({
+    disabled: Boolean(!user || activeChat || activeChannel || activeMessagesTab === 'settings' || sidebarTab !== 'messages'),
+    onEdgeSwipeRight: () => {
+      triggerHaptic('light');
+      navigate(originHomePath === '/loops' ? '/loops' : '/');
+    },
+    onSwipeLeft: () => {
+      const idx = inboxFilterOrder.indexOf(messagesFilterTab);
+      if (idx < inboxFilterOrder.length - 1) {
+        triggerHaptic('selection');
+        setMessagesFilterTab(inboxFilterOrder[idx + 1]);
+      }
+    },
+    onSwipeRight: () => {
+      const idx = inboxFilterOrder.indexOf(messagesFilterTab);
+      if (idx > 0) {
+        triggerHaptic('selection');
+        setMessagesFilterTab(inboxFilterOrder[idx - 1]);
+      }
+    },
+  });
+
+  const { swipeHandlers: chatWorkspaceSwipeHandlers } = useSwipeNavigation({
+    disabled: !user || (!activeChat && !activeChannel),
+    edgeThreshold: 34,
+    edgeMinDistance: 48,
+    onEdgeSwipeRight: () => {
+      triggerHaptic('light');
+      if (detailsSubModal) {
+        setDetailsSubModal(null);
+        setConfirmDeleteChannel(false);
+      } else if (showChannelDetailsModal) {
+        setShowChannelDetailsModal(false);
+      } else {
+        setSearchParams({}, { replace: true });
+      }
+    },
+  });
+
+  const dockTouchRef = useRef<{ startX: number; startY: number; at: number } | null>(null);
+  const handleMessagesDockTouchStart = (e: React.TouchEvent<HTMLElement>) => {
+    if (e.touches.length !== 1) {
+      dockTouchRef.current = null;
+      return;
+    }
+    dockTouchRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      at: Date.now(),
+    };
+  };
+  const handleMessagesDockTouchEnd = (e: React.TouchEvent<HTMLElement>) => {
+    const s = dockTouchRef.current;
+    dockTouchRef.current = null;
+    if (!s || !e.changedTouches[0]) return;
+    const dx = e.changedTouches[0].clientX - s.startX;
+    const dy = e.changedTouches[0].clientY - s.startY;
+    if (Math.abs(dx) < 42 || Math.abs(dy) > Math.abs(dx) * 0.75 || Date.now() - s.at > 600) return;
+    const order = ['chats', 'activity', 'profile'] as const;
+    const currentDockIdx = activeMessagesTab === 'settings' ? 2 : 0;
+    const nextDockIdx = dx < 0 ? Math.min(2, currentDockIdx + 1) : Math.max(0, currentDockIdx - 1);
+    const targetDock = order[nextDockIdx];
+    if (targetDock === 'chats') {
+      triggerHaptic('selection');
+      setActiveMessagesTab('chats');
+      setSidebarTab('messages');
+      setShowArchivedOnly(false);
+    } else if (targetDock === 'activity') {
+      triggerHaptic('selection');
+      navigate('/loops/activity');
+    } else if (targetDock === 'profile') {
+      triggerHaptic('selection');
+      if (user?.uid) {
+        navigate(`/author/${user.uid}`);
+      } else {
+        setActiveMessagesTab('settings');
+      }
+    }
+  };
+
   if (!user) {
     return (
         <div className="min-h-screen w-full bg-[#4E4AEB] flex flex-col items-center justify-center p-4 sm:p-6 font-inter select-none">
@@ -5314,7 +5693,7 @@ const handleCreateChannel = async () => {
                         className="w-full bg-[#4E4AEB] hover:bg-[#3d39db] p-2 pl-6 rounded-[24px] flex items-center justify-between shadow-md transition-all group cursor-pointer"
                     >
                         <span className="text-white font-medium text-sm">Sign up with Google account</span>
-                        <div className="w-12 h-12 rounded-[20px] bg-white flex items-center justify-center text-[#4E4AEB] shrink-0 font-bold text-xl">
+                        <div className="w-12 h-12 rounded-[20px] bg-white flex items-center justify-center text-[#4E4AEB] shrink-0 font-semibold text-xl">
                             G
                         </div>
                     </button>
@@ -5367,9 +5746,9 @@ const handleCreateChannel = async () => {
             <img src={user?.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${user?.uid || 'User'}`} alt="Avatar" className="w-full h-full object-cover" />
           </div>
           <div className="min-w-0 flex-1">
-            <h2 className="font-bold text-zinc-950 dark:text-white text-base truncate leading-tight">{user?.displayName || 'User'}</h2>
+            <h2 className="font-semibold text-zinc-950 dark:text-white text-base truncate leading-tight">{user?.displayName || 'User'}</h2>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">@{user?.displayName?.toLowerCase().replace(/ /g, '') || 'username'}</p>
-            <span className="inline-block mt-1.5 text-[10px] font-bold text-[#2F80ED] bg-[#2F80ED]/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+            <span className="inline-block mt-1.5 text-[10px] font-medium text-[#2F80ED] bg-[#2F80ED]/10 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
               {userRole}
             </span>
           </div>
@@ -5386,13 +5765,13 @@ const handleCreateChannel = async () => {
       {/* Settings Sections */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
         <div className="space-y-4">
-          <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
+          <h3 className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
             Privacy & Security
           </h3>
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Allow Direct Messages
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5410,7 +5789,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Online Status
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5428,7 +5807,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Push Notifications
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5444,13 +5823,13 @@ const handleCreateChannel = async () => {
             </button>
           </div>
 
-          <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 pt-3">
+          <h3 className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1 pt-3">
             Advanced Security
           </h3>
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Biometric / PIN Lock
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5468,7 +5847,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Disappearing Messages (24h)
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5486,13 +5865,13 @@ const handleCreateChannel = async () => {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
+          <h3 className="text-[11px] font-semibold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest ml-1">
             Visual & Chat Controls
           </h3>
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 High Contrast Typography
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5510,7 +5889,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Minimalist Chat Bubbles
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5528,7 +5907,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Tactile Haptic Feedback
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5546,7 +5925,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Auto-play Voice Messages
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5564,7 +5943,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Data Saver Mode
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5582,7 +5961,7 @@ const handleCreateChannel = async () => {
 
           <div className="bg-zinc-50 dark:bg-zinc-800/30 border border-zinc-200/70 dark:border-zinc-700/30 rounded-2xl p-4 flex items-center justify-between">
             <div className="space-y-0.5 max-w-[75%]">
-              <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+              <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Do Not Disturb
               </label>
               <p className="text-[11px] text-zinc-500 leading-tight">
@@ -5601,93 +5980,6 @@ const handleCreateChannel = async () => {
       </div>
     </div>
   );
-
-  const [pullSearchOffset, setPullSearchOffset] = useState(0);
-  const [pullSearchArmed, setPullSearchArmed] = useState(false);
-  const pullSearchTouchRef = useRef<{ startY: number; active: boolean; armed: boolean } | null>(null);
-  const [channelRecSlideX, setChannelRecSlideX] = useState(0);
-  const channelRecTouchRef = useRef<{ startX: number; armed: boolean } | null>(null);
-
-  const inboxFilterOrder: Array<'all' | 'unread' | 'groups'> = ['all', 'unread', 'groups'];
-  const { swipeHandlers: inboxTabSwipeHandlers } = useSwipeNavigation({
-    disabled: Boolean(activeChat || activeChannel || activeMessagesTab === 'settings' || sidebarTab !== 'messages'),
-    onEdgeSwipeRight: () => {
-      triggerHaptic('light');
-      navigate(originHomePath === '/loops' ? '/loops' : '/');
-    },
-    onSwipeLeft: () => {
-      const idx = inboxFilterOrder.indexOf(messagesFilterTab);
-      if (idx < inboxFilterOrder.length - 1) {
-        triggerHaptic('selection');
-        setMessagesFilterTab(inboxFilterOrder[idx + 1]);
-      }
-    },
-    onSwipeRight: () => {
-      const idx = inboxFilterOrder.indexOf(messagesFilterTab);
-      if (idx > 0) {
-        triggerHaptic('selection');
-        setMessagesFilterTab(inboxFilterOrder[idx - 1]);
-      }
-    },
-  });
-
-  const { swipeHandlers: chatWorkspaceSwipeHandlers } = useSwipeNavigation({
-    disabled: !activeChat && !activeChannel,
-    edgeThreshold: 34,
-    edgeMinDistance: 48,
-    onEdgeSwipeRight: () => {
-      triggerHaptic('light');
-      if (detailsSubModal) {
-        setDetailsSubModal(null);
-        setConfirmDeleteChannel(false);
-      } else if (showChannelDetailsModal) {
-        setShowChannelDetailsModal(false);
-      } else {
-        setSearchParams({}, { replace: true });
-      }
-    },
-  });
-
-  const dockTouchRef = useRef<{ startX: number; startY: number; at: number } | null>(null);
-  const handleMessagesDockTouchStart = (e: React.TouchEvent<HTMLElement>) => {
-    if (e.touches.length !== 1) {
-      dockTouchRef.current = null;
-      return;
-    }
-    dockTouchRef.current = {
-      startX: e.touches[0].clientX,
-      startY: e.touches[0].clientY,
-      at: Date.now(),
-    };
-  };
-  const handleMessagesDockTouchEnd = (e: React.TouchEvent<HTMLElement>) => {
-    const s = dockTouchRef.current;
-    dockTouchRef.current = null;
-    if (!s || !e.changedTouches[0]) return;
-    const dx = e.changedTouches[0].clientX - s.startX;
-    const dy = e.changedTouches[0].clientY - s.startY;
-    if (Math.abs(dx) < 42 || Math.abs(dy) > Math.abs(dx) * 0.75 || Date.now() - s.at > 600) return;
-    const order = ['chats', 'activity', 'profile'] as const;
-    const currentDockIdx = activeMessagesTab === 'settings' ? 2 : 0;
-    const nextDockIdx = dx < 0 ? Math.min(2, currentDockIdx + 1) : Math.max(0, currentDockIdx - 1);
-    const targetDock = order[nextDockIdx];
-    if (targetDock === 'chats') {
-      triggerHaptic('selection');
-      setActiveMessagesTab('chats');
-      setSidebarTab('messages');
-      setShowArchivedOnly(false);
-    } else if (targetDock === 'activity') {
-      triggerHaptic('selection');
-      navigate('/loops/activity');
-    } else if (targetDock === 'profile') {
-      triggerHaptic('selection');
-      if (user?.uid) {
-        navigate(`/author/${user.uid}`);
-      } else {
-        setActiveMessagesTab('settings');
-      }
-    }
-  };
 
   return (
     <div className="msg-shell ambient-dynamic-bg fixed inset-0 z-[60] flex h-[100dvh] max-h-[100dvh] w-full font-inter overflow-hidden overscroll-none transition-colors duration-200">
@@ -5856,7 +6148,7 @@ const handleCreateChannel = async () => {
                 >
                   <MsgBackChevronIcon className="w-5 h-5" />
                 </button>
-                <h1 className="text-[22px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                <h1 className="text-[22px] font-semibold text-zinc-950 dark:text-white tracking-tight">
                   Chat Settings
                 </h1>
               </div>
@@ -5895,7 +6187,7 @@ const handleCreateChannel = async () => {
               </button>
 
               {/* Center: "Message" Title */}
-              <h1 className="text-[20px] font-bold text-zinc-950 dark:text-white tracking-tight leading-none text-center">
+              <h1 className="text-[20px] font-semibold text-zinc-950 dark:text-white tracking-tight leading-none text-center">
                 Message
               </h1>
 
@@ -6236,7 +6528,7 @@ const handleCreateChannel = async () => {
               {/* "Chats" Section Header + "..." Menu matching IMG_5359 & IMG_5360 */}
               <div className="px-5 pt-2.5 pb-2 flex items-center justify-between relative shrink-0">
                 <div className="flex items-center gap-2">
-                  <h2 className="text-[19px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                  <h2 className="text-[19px] font-semibold text-zinc-950 dark:text-white tracking-tight">
                     {sidebarTab === 'community'
                       ? 'Communities'
                       : sidebarTab === 'calls'
@@ -6351,7 +6643,7 @@ const handleCreateChannel = async () => {
                               {showArchivedOnly ? 'Exit Archived' : 'Archived Chats'}
                             </span>
                             {archivedChatIds.length > 0 && (
-                              <span className="text-[11px] font-bold text-zinc-400">
+                              <span className="text-[11px] font-semibold text-zinc-400">
                                 {archivedChatIds.length}
                               </span>
                             )}
@@ -6553,14 +6845,14 @@ const handleCreateChannel = async () => {
                                         className="w-full h-full object-cover"
                                       />
                                     ) : (
-                                      <div className="w-full h-full flex items-center justify-center bg-[#0084FF]/12 text-[#0084FF] font-bold text-base">
+                                      <div className="w-full h-full flex items-center justify-center bg-[#0084FF]/12 text-[#0084FF] font-semibold text-base">
                                         {(displayChatName || 'U')[0].toUpperCase()}
                                       </div>
                                     )}
                                   </div>
 
                                   {isGroupChat && (
-                                    <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-[#0084FF] text-white text-[10.5px] font-bold flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
+                                    <span className="absolute -bottom-1 -left-1 min-w-[20px] h-[20px] px-1 rounded-full bg-[#0084FF] text-white text-[10.5px] font-semibold flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
                                       {chat.participants?.length || 5}
                                     </span>
                                   )}
@@ -6570,7 +6862,7 @@ const handleCreateChannel = async () => {
                                   )}
 
                                   {!isGroupChat && !isChatUserOnline && shortActiveLabel && (
-                                    <span className="absolute -bottom-0.5 -right-1 px-1.5 py-[1px] rounded-full bg-[#EAF8EB] dark:bg-[#163820] text-[#1D6F2F] dark:text-[#6EE787] text-[10.5px] font-bold leading-[14px] ring-2 ring-white dark:ring-zinc-900 tabular-nums whitespace-nowrap">
+                                    <span className="absolute -bottom-0.5 -right-1 px-1.5 py-[1px] rounded-full bg-[#EAF8EB] dark:bg-[#163820] text-[#1D6F2F] dark:text-[#6EE787] text-[10.5px] font-semibold leading-[14px] ring-2 ring-white dark:ring-zinc-900 tabular-nums whitespace-nowrap">
                                       {shortActiveLabel}
                                     </span>
                                   )}
@@ -6617,7 +6909,7 @@ const handleCreateChannel = async () => {
                                         return (
                                           <p
                                             className={cn(
-                                              'text-[14px] font-bold truncate',
+                                              'text-[14px] font-semibold truncate',
                                               previewInfo.isMissedCall
                                                 ? 'text-rose-600 dark:text-rose-400'
                                                 : 'text-zinc-950 dark:text-white'
@@ -6687,7 +6979,7 @@ const handleCreateChannel = async () => {
                                             className="w-full h-full object-cover"
                                           />
                                         ) : (
-                                          <span className="text-[8px] font-bold text-zinc-600 dark:text-zinc-200">
+                                          <span className="text-[8px] font-semibold text-zinc-600 dark:text-zinc-200">
                                             {(displayChatName || 'U')[0].toUpperCase()}
                                           </span>
                                         )}
@@ -6841,7 +7133,7 @@ const handleCreateChannel = async () => {
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex justify-between items-center gap-2">
-                                <h4 className="font-bold text-zinc-950 dark:text-white text-[15px] truncate">
+                                <h4 className="font-semibold text-zinc-950 dark:text-white text-[15px] truncate">
                                   {channel.name}
                                 </h4>
                                 <span className="text-[11px] font-medium text-zinc-400">
@@ -6894,7 +7186,7 @@ const handleCreateChannel = async () => {
                               className="w-12 h-12 rounded-full object-cover ring-1 ring-black/[0.06] dark:ring-white/10 shrink-0"
                             />
                             <div className="text-left min-w-0">
-                              <h4 className="font-bold text-[15px] text-zinc-950 dark:text-white truncate">
+                              <h4 className="font-semibold text-[15px] text-zinc-950 dark:text-white truncate">
                                 {getChatDisplayName(chat)}
                               </h4>
                               <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 flex items-center gap-1.5">
@@ -7086,7 +7378,7 @@ const handleCreateChannel = async () => {
            <div className="hidden md:flex flex-col h-full w-full overflow-hidden ambient-dynamic-bg border-0">
              <div className="px-6 py-4 border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between shrink-0">
                <div>
-                 <h2 className="text-lg font-bold text-zinc-950 dark:text-white">Chat & Privacy Settings</h2>
+                 <h2 className="text-lg font-semibold text-zinc-950 dark:text-white">Chat & Privacy Settings</h2>
                  <p className="text-xs text-zinc-500 dark:text-zinc-400">Manage messaging preferences, security, and appearance</p>
                </div>
                <button
@@ -7105,7 +7397,7 @@ const handleCreateChannel = async () => {
                      <div className="w-20 h-20 bg-rose-500/12 rounded-full flex items-center justify-center text-rose-500 mb-6 border-0 shadow-[0_4px_20px_rgba(120,90,160,0.08)]">
                          <Icon name="user-x" className="w-10 h-10" />
                      </div>
-                     <h3 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">You are Banned from this Channel</h3>
+                     <h3 className="text-xl font-semibold text-zinc-900 dark:text-white tracking-tight">You are Banned from this Channel</h3>
                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 max-w-sm leading-relaxed">
                          Your account has been banned from this community channel. You cannot view messages or updates in this channel.
                      </p>
@@ -7128,7 +7420,7 @@ const handleCreateChannel = async () => {
                          >
                              <MsgBackChevronIcon className="w-5 h-5" />
                          </button>
-                         <h2 className="font-bold text-[17px] text-zinc-950 dark:text-white tracking-tight">Channel Details</h2>
+                         <h2 className="font-semibold text-[17px] text-zinc-950 dark:text-white tracking-tight">Channel Details</h2>
                          {activeChannel.creatorId === user?.uid ? (
                              <button 
                                  type="button"
@@ -7151,7 +7443,7 @@ const handleCreateChannel = async () => {
                             <ProgressiveImage src={activeChannel.imageUrl} alt="Channel cover" containerClassName="w-24 h-24 rounded-full min-h-0" className="w-full h-full object-cover" />
                           </div>
                         </div>
-                        <h2 className="text-2xl font-bold text-zinc-950 dark:text-white flex items-center gap-1.5 tracking-tight text-center">
+                        <h2 className="text-2xl font-semibold text-zinc-950 dark:text-white flex items-center gap-1.5 tracking-tight text-center">
                             {activeChannel.name}
                             {(activeChannel.verified !== false) && <VerifiedIcon className="w-5 h-5 text-emerald-500 shrink-0" />}
                         </h2>
@@ -7265,7 +7557,7 @@ const handleCreateChannel = async () => {
                                         <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Subscribers</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[13.5px] font-bold text-[#F246F5]">{activeChannel.subscriberCount || 1}</span>
+                                        <span className="text-[13.5px] font-semibold text-[#F246F5]">{activeChannel.subscriberCount || 1}</span>
                                         <Icon name="chevron-right" className="w-4 h-4 text-zinc-400" />
                                     </div>
                                 </div>
@@ -7280,7 +7572,7 @@ const handleCreateChannel = async () => {
                                         <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Administrators</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[13.5px] font-bold text-amber-500">{(channelAdmins?.length || 0) + 1}</span>
+                                        <span className="text-[13.5px] font-semibold text-amber-500">{(channelAdmins?.length || 0) + 1}</span>
                                         <Icon name="chevron-right" className="w-4 h-4 text-zinc-400" />
                                     </div>
                                 </div>
@@ -7295,7 +7587,7 @@ const handleCreateChannel = async () => {
                                         <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">Removed Users</span>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[13.5px] font-bold text-rose-500">{bannedUsers.length}</span>
+                                        <span className="text-[13.5px] font-semibold text-rose-500">{bannedUsers.length}</span>
                                         <Icon name="chevron-right" className="w-4 h-4 text-zinc-400" />
                                     </div>
                                 </div>
@@ -7322,7 +7614,7 @@ const handleCreateChannel = async () => {
                                      >
                                          <MsgBackChevronIcon className="w-5 h-5" />
                                      </button>
-                                     <h3 className="font-bold text-[17px] capitalize text-zinc-950 dark:text-white tracking-tight">
+                                     <h3 className="font-semibold text-[17px] capitalize text-zinc-950 dark:text-white tracking-tight">
                                          {detailsSubModal === 'banned' ? 'Removed Users' : detailsSubModal}
                                      </h3>
                                  </div>
@@ -7335,7 +7627,7 @@ const handleCreateChannel = async () => {
                                               <button
                                                   type="button"
                                                   onClick={() => setSelectedSubscriber(null)}
-                                                  className="text-xs font-bold text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-xl transition-all"
+                                                  className="text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-white flex items-center gap-1 bg-zinc-100 dark:bg-zinc-800 px-3 py-1.5 rounded-xl transition-all"
                                               >
                                                   ← Back to Subscribers
                                               </button>
@@ -7347,7 +7639,7 @@ const handleCreateChannel = async () => {
                                                       {selectedSubscriber.photoURL ? (
                                                           <img src={selectedSubscriber.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                       ) : (
-                                                          <div className="w-full h-full flex items-center justify-center font-black text-3xl bg-[#F246F5]/12 text-[#F246F5]">
+                                                          <div className="w-full h-full flex items-center justify-center font-semibold text-3xl bg-[#F246F5]/12 text-[#F246F5]">
                                                               {(selectedSubscriber.displayName || 'U')[0].toUpperCase()}
                                                           </div>
                                                       )}
@@ -7355,9 +7647,9 @@ const handleCreateChannel = async () => {
                                                   </div>
 
                                                   <div className="space-y-1">
-                                                      <h3 className="font-bold text-lg text-zinc-900 dark:text-white flex items-center justify-center gap-1">
+                                                      <h3 className="font-semibold text-lg text-zinc-900 dark:text-white flex items-center justify-center gap-1">
                                                           {selectedSubscriber.displayName || 'Anonymous User'}
-                                                          {selectedSubscriber.id === activeChannel.creatorId && <span className="bg-[#F246F5] text-white text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Owner</span>}
+                                                          {selectedSubscriber.id === activeChannel.creatorId && <span className="bg-[#F246F5] text-white text-[9px] font-medium px-2 py-0.5 rounded-full uppercase tracking-wider">Owner</span>}
                                                       </h3>
                                                       <p className="text-xs text-zinc-400 font-medium">Joined {selectedSubscriber.joinedAt ? new Date(selectedSubscriber.joinedAt).toLocaleDateString() : 'recently'}</p>
                                                       <p className="text-[10px] font-mono text-zinc-500 select-all bg-zinc-100/80 dark:bg-zinc-800/80 px-2.5 py-1 rounded-full inline-block">UID: {selectedSubscriber.id}</p>
@@ -7371,7 +7663,7 @@ const handleCreateChannel = async () => {
                                                               setSearchParams({ chatId: selectedSubscriber.id });
                                                               setShowChannelDetailsModal(false);
                                                           }}
-                                                          className="w-full py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                                          className="w-full py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full text-xs font-medium shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
                                                       >
                                                           <Icon name="message-square" className="w-4 h-4" />
                                                           Send Private Message
@@ -7382,7 +7674,7 @@ const handleCreateChannel = async () => {
                                                           <button
                                                               type="button"
                                                               onClick={() => handleToggleMuteSubscriber(selectedSubscriber)}
-                                                              className={`w-full py-3 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${selectedSubscriber.muted ? 'bg-amber-500/12 text-amber-600 hover:bg-amber-500/20' : 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                              className={`w-full py-3 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-2 cursor-pointer ${selectedSubscriber.muted ? 'bg-amber-500/12 text-amber-600 hover:bg-amber-500/20' : 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                                                           >
                                                               {selectedSubscriber.muted ? (
                                                                   <>
@@ -7406,7 +7698,7 @@ const handleCreateChannel = async () => {
                                                                   await handleBanSubscriber(selectedSubscriber);
                                                                   setSelectedSubscriber(null);
                                                               }}
-                                                              className="w-full py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/25 text-rose-600 dark:text-rose-400 hover:text-rose-700 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+                                                              className="w-full py-3 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/25 text-rose-600 dark:text-rose-400 hover:text-rose-700 rounded-full text-xs font-medium transition-all flex items-center justify-center gap-2 cursor-pointer"
                                                           >
                                                               <Icon name="user-minus" className="w-4 h-4" />
                                                               Remove & Ban Member
@@ -7419,17 +7711,17 @@ const handleCreateChannel = async () => {
                                               <div className="w-full bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] flex flex-col overflow-hidden mt-4 divide-y divide-zinc-100/80 dark:divide-white/[0.05]">
                                                   <div className="p-4 text-left">
                                                       <p className="text-[14px] font-semibold text-zinc-900 dark:text-white mb-0.5">{(selectedSubscriber.hideEmail && selectedSubscriber.id !== user?.uid) ? "Email Hidden" : (formatDisplayEmail(selectedSubscriber.email) || "No email registered")}</p>
-                                                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Email Address</p>
+                                                      <p className="text-[11px] font-normal text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Email Address</p>
                                                   </div>
                                                   <div className="p-4 text-left">
                                                       <p className="text-[14px] font-semibold text-zinc-900 dark:text-white mb-0.5">@{selectedSubscriber.displayName?.toLowerCase().replace(/ /g, '') || "subscriber"}</p>
-                                                      <p className="text-[11px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Username</p>
+                                                      <p className="text-[11px] font-normal text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">Username</p>
                                                   </div>
                                               </div>
                                           </div>
                                       ) : detailsSubModal === 'subscribers' ? (
                                           <div className="space-y-3">
-                                              <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider mb-1 px-1">Active Subscribers ({channelSubscribers.length})</p>
+                                              <p className="text-xs text-zinc-400 font-normal uppercase tracking-wider mb-1 px-1">Active Subscribers ({channelSubscribers.length})</p>
                                               {channelSubscribers.length === 0 ? (
                                                   <div className="text-center py-12 text-zinc-400 text-sm font-medium">No subscribers yet</div>
                                               ) : (
@@ -7443,15 +7735,15 @@ const handleCreateChannel = async () => {
                                                                   {sub.photoURL ? (
                                                                       <img src={sub.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                   ) : (
-                                                                      <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-[#F246F5]/12 text-[#F246F5]">
+                                                                      <div className="w-full h-full flex items-center justify-center font-medium text-xs bg-[#F246F5]/12 text-[#F246F5]">
                                                                           {(sub.displayName || 'U')[0].toUpperCase()}
                                                                       </div>
                                                                   )}
                                                               </div>
                                                               <div className="min-w-0 flex-1">
-                                                                  <p className="font-bold text-[14px] text-zinc-900 dark:text-white flex items-center gap-1.5 truncate">
+                                                                  <p className="font-semibold text-[14px] text-zinc-900 dark:text-white flex items-center gap-1.5 truncate">
                                                                       {sub.displayName || 'Anonymous User'}
-                                                                      {sub.id === activeChannel.creatorId && <span className="bg-[#F246F5]/12 text-[#F246F5] text-[8.5px] font-bold px-1.5 py-0.5 rounded-full">OWNER</span>}
+                                                                      {sub.id === activeChannel.creatorId && <span className="bg-[#F246F5]/12 text-[#F246F5] text-[8.5px] font-semibold px-1.5 py-0.5 rounded-full">OWNER</span>}
                                                                   </p>
                                                                   <p className="text-[11px] text-zinc-400 mt-0.5 truncate">Joined {sub.joinedAt ? new Date(sub.joinedAt).toLocaleDateString() : 'recently'}</p>
                                                               </div>
@@ -7461,7 +7753,7 @@ const handleCreateChannel = async () => {
                                                                   <button 
                                                                       type="button"
                                                                       onClick={() => handleToggleMuteSubscriber(sub)}
-                                                                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all cursor-pointer ${sub.muted ? 'bg-amber-500/12 text-amber-500 hover:bg-amber-500/20' : 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
+                                                                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-medium transition-all cursor-pointer ${sub.muted ? 'bg-amber-500/12 text-amber-500 hover:bg-amber-500/20' : 'bg-zinc-100/90 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700'}`}
                                                                       title={sub.muted ? 'Unmute' : 'Mute'}
                                                                   >
                                                                       {sub.muted ? <Icon name="volume-x" className="w-4 h-4" /> : <Icon name="volume-2" className="w-4 h-4" />}
@@ -7469,7 +7761,7 @@ const handleCreateChannel = async () => {
                                                                   <button 
                                                                       type="button"
                                                                       onClick={() => handleBanSubscriber(sub)}
-                                                                      className="w-9 h-9 rounded-full flex items-center justify-center bg-rose-500/12 text-rose-500 hover:bg-rose-500/20 text-xs font-bold transition-all cursor-pointer"
+                                                                      className="w-9 h-9 rounded-full flex items-center justify-center bg-rose-500/12 text-rose-500 hover:bg-rose-500/20 text-xs font-medium transition-all cursor-pointer"
                                                                       title="Remove User"
                                                                   >
                                                                       <Icon name="user-minus" className="w-4 h-4" />
@@ -7486,7 +7778,7 @@ const handleCreateChannel = async () => {
                                           <div className="space-y-4">
                                               {/* Header / Search Switcher */}
                                               <div className="flex items-center justify-between">
-                                                  <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider px-1">
+                                                  <p className="text-xs text-zinc-400 font-normal uppercase tracking-wider px-1">
                                                       {isSearchingAdmin ? "Add New Administrator" : "Channel Administration"}
                                                   </p>
                                                   
@@ -7498,7 +7790,7 @@ const handleCreateChannel = async () => {
                                                               setAdminSearchResult(null);
                                                               setAdminSearchEmail('');
                                                           }}
-                                                          className="text-xs font-bold text-[#F246F5] hover:underline flex items-center gap-1 bg-[#F246F5]/12 px-3 py-1.5 rounded-full transition-all cursor-pointer"
+                                                          className="text-xs font-medium text-[#F246F5] hover:underline flex items-center gap-1 bg-[#F246F5]/12 px-3 py-1.5 rounded-full transition-all cursor-pointer"
                                                       >
                                                           {isSearchingAdmin ? "Back to Admins" : "+ Add Administrator"}
                                                       </button>
@@ -7509,7 +7801,7 @@ const handleCreateChannel = async () => {
                                                   /* SEARCH USER FOR ADMIN INTERFACE */
                                                   <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 p-4 rounded-[24px] shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-4">
                                                       <div className="space-y-2">
-                                                          <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400">Search by Email</label>
+                                                          <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Search by Email</label>
                                                           <div className="flex gap-2">
                                                               <div className="flex-1 relative">
                                                                   <input
@@ -7524,7 +7816,7 @@ const handleCreateChannel = async () => {
                                                                   type="button"
                                                                   disabled={adminSearchLoading}
                                                                   onClick={handleSearchAdminUser}
-                                                                  className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
+                                                                  className="px-4 py-2.5 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:text-zinc-950 text-white rounded-full text-xs font-medium transition-all cursor-pointer"
                                                               >
                                                                   {adminSearchLoading ? "Searching..." : "Search"}
                                                               </button>
@@ -7538,13 +7830,13 @@ const handleCreateChannel = async () => {
                                                                       {adminSearchResult.photoURL ? (
                                                                           <img src={adminSearchResult.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                       ) : (
-                                                                          <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-[#F246F5]/12 text-[#F246F5]">
+                                                                          <div className="w-full h-full flex items-center justify-center font-medium text-xs bg-[#F246F5]/12 text-[#F246F5]">
                                                                               {(adminSearchResult.displayName || 'U')[0].toUpperCase()}
                                                                           </div>
                                                                       )}
                                                                   </div>
                                                                   <div className="min-w-0">
-                                                                      <p className="font-bold text-xs text-zinc-900 dark:text-white truncate">{adminSearchResult.displayName || 'Anonymous User'}</p>
+                                                                      <p className="font-medium text-xs text-zinc-900 dark:text-white truncate">{adminSearchResult.displayName || 'Anonymous User'}</p>
                                                                       <p className="text-[10px] text-zinc-400 truncate mt-0.5">{(adminSearchResult.hideEmail && adminSearchResult.id !== user?.uid) ? "Email Hidden" : formatDisplayEmail(adminSearchResult.email)}</p>
                                                                       <p className="text-[9px] font-mono text-zinc-500 truncate mt-0.5">UID: {adminSearchResult.id}</p>
                                                                   </div>
@@ -7552,7 +7844,7 @@ const handleCreateChannel = async () => {
 
                                                               {/* PERMISSIONS / ACCESS TOGGLES */}
                                                               <div className="space-y-2.5 bg-zinc-50/60 dark:bg-zinc-800/40 p-3.5 rounded-2xl border-0">
-                                                                  <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest px-0.5">Define Admin Permissions</p>
+                                                                  <p className="text-[10px] font-normal text-zinc-400 uppercase tracking-widest px-0.5">Define Admin Permissions</p>
                                                                   
                                                                   <div className="space-y-2">
                                                                       {[
@@ -7599,13 +7891,13 @@ const handleCreateChannel = async () => {
                                                                   {activeChannel.creatorId === user?.uid && user?.photoURL ? (
                                                                       <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                   ) : (
-                                                                      <div className="w-full h-full flex items-center justify-center font-bold text-base bg-[#F246F5]/12 text-[#F246F5]">
+                                                                      <div className="w-full h-full flex items-center justify-center font-semibold text-base bg-[#F246F5]/12 text-[#F246F5]">
                                                                           {(activeChannel.creatorName || 'O')[0].toUpperCase()}
                                                                       </div>
                                                                   )}
                                                               </div>
                                                               <div className="min-w-0">
-                                                                  <p className="font-bold text-[15px] text-zinc-900 dark:text-white flex items-center gap-1.5 leading-tight">
+                                                                  <p className="font-semibold text-[15px] text-zinc-900 dark:text-white flex items-center gap-1.5 leading-tight">
                                                                       {activeChannel.creatorName || 'Channel Creator'}
                                                                       <VerifiedIcon className="w-4 h-4 text-emerald-500 shrink-0" />
                                                                   </p>
@@ -7613,7 +7905,7 @@ const handleCreateChannel = async () => {
                                                                   <p className="text-[9px] font-mono text-zinc-500 mt-1 truncate">ID: {activeChannel.creatorId}</p>
                                                               </div>
                                                           </div>
-                                                          <span className="bg-[#F246F5] text-white text-[9.5px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
+                                                          <span className="bg-[#F246F5] text-white text-[9.5px] font-medium px-2.5 py-1 rounded-full uppercase tracking-wider">
                                                               Creator
                                                           </span>
                                                       </div>
@@ -7627,13 +7919,13 @@ const handleCreateChannel = async () => {
                                                                           {adm.photoURL ? (
                                                                               <img src={adm.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                           ) : (
-                                                                              <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-zinc-200 text-zinc-600">
+                                                                              <div className="w-full h-full flex items-center justify-center font-medium text-xs bg-zinc-200 text-zinc-600">
                                                                                   {(adm.displayName || 'A')[0].toUpperCase()}
                                                                               </div>
                                                                           )}
                                                                       </div>
                                                                       <div className="min-w-0">
-                                                                          <p className="font-bold text-[14px] text-zinc-900 dark:text-white truncate">{adm.displayName || 'Administrator'}</p>
+                                                                          <p className="font-semibold text-[14px] text-zinc-900 dark:text-white truncate">{adm.displayName || 'Administrator'}</p>
                                                                           <p className="text-[10px] text-zinc-400 mt-0.5">
                                                                               {adm.hideEmail && adm.id !== user?.uid ? 'Email hidden' : (formatDisplayEmail(adm.email) || 'No email registered')}
                                                                           </p>
@@ -7646,7 +7938,7 @@ const handleCreateChannel = async () => {
                                                                       <button
                                                                           type="button"
                                                                           onClick={() => handleRemoveAdmin(adm.id)}
-                                                                          className="w-8 h-8 rounded-full flex items-center justify-center bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 hover:text-rose-700 dark:text-rose-400 text-xs font-bold transition-all cursor-pointer"
+                                                                          className="w-8 h-8 rounded-full flex items-center justify-center bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 text-rose-600 hover:text-rose-700 dark:text-rose-400 text-xs font-medium transition-all cursor-pointer"
                                                                           title="Revoke Admin status"
                                                                       >
                                                                           <Icon name="user-x" className="w-4 h-4" />
@@ -7655,7 +7947,7 @@ const handleCreateChannel = async () => {
                                                               </div>
 
                                                               {/* PERMISSION BADGES LIST */}
-                                                              <div className="flex flex-wrap gap-1.5 border-t border-zinc-100/80 dark:border-white/[0.05] pt-2 text-[9px] font-bold uppercase tracking-wider text-zinc-500">
+                                                              <div className="flex flex-wrap gap-1.5 border-t border-zinc-100/80 dark:border-white/[0.05] pt-2 text-[9px] font-medium uppercase tracking-wider text-zinc-500">
                                                                   <span className={cn("px-2 py-0.5 rounded-full", adm.permissions?.canPost !== false ? "bg-[#F246F5]/12 text-[#F246F5]" : "bg-zinc-100 text-zinc-400 line-through")}>Post</span>
                                                                   <span className={cn("px-2 py-0.5 rounded-full", adm.permissions?.canDelete !== false ? "bg-[#F246F5]/12 text-[#F246F5]" : "bg-zinc-100 text-zinc-400 line-through")}>Delete</span>
                                                                   <span className={cn("px-2 py-0.5 rounded-full", adm.permissions?.canPin !== false ? "bg-[#F246F5]/12 text-[#F246F5]" : "bg-zinc-100 text-zinc-400 line-through")}>Pin</span>
@@ -7670,7 +7962,7 @@ const handleCreateChannel = async () => {
 
                                       {detailsSubModal === 'banned' && (
                                          <div className="space-y-3">
-                                             <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider mb-1 px-1">Removed Users ({bannedUsers.length})</p>
+                                             <p className="text-xs text-zinc-400 font-normal uppercase tracking-wider mb-1 px-1">Removed Users ({bannedUsers.length})</p>
                                              {bannedUsers.length === 0 ? (
                                                  <div className="text-center py-12 text-zinc-400 text-sm font-medium">No removed or banned users</div>
                                              ) : (
@@ -7681,20 +7973,20 @@ const handleCreateChannel = async () => {
                                                                  {bUser.photoURL ? (
                                                                      <img src={bUser.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                                                                  ) : (
-                                                                     <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-rose-100 dark:bg-rose-950/30 text-rose-500">
+                                                                     <div className="w-full h-full flex items-center justify-center font-medium text-xs bg-rose-100 dark:bg-rose-950/30 text-rose-500">
                                                                          {(bUser.displayName || 'U')[0].toUpperCase()}
                                                                      </div>
                                                                  )}
                                                              </div>
                                                              <div>
-                                                                 <p className="font-bold text-[14px] text-zinc-900 dark:text-white">{bUser.displayName || 'Banned User'}</p>
+                                                                 <p className="font-semibold text-[14px] text-zinc-900 dark:text-white">{bUser.displayName || 'Banned User'}</p>
                                                                  <p className="text-[11px] text-zinc-400 mt-0.5">Banned on {bUser.bannedAt ? new Date(bUser.bannedAt).toLocaleDateString() : 'recently'}</p>
                                                              </div>
                                                          </div>
                                                          <button 
                                                              type="button"
                                                              onClick={() => handleUnbanUser(bUser)}
-                                                             className="px-3.5 py-1.5 rounded-full bg-zinc-100/90 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-bold text-zinc-700 dark:text-zinc-200 transition-all cursor-pointer"
+                                                             className="px-3.5 py-1.5 rounded-full bg-zinc-100/90 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-xs font-medium text-zinc-700 dark:text-zinc-200 transition-all cursor-pointer"
                                                          >
                                                              Unban
                                                          </button>
@@ -7712,17 +8004,17 @@ const handleCreateChannel = async () => {
                                                      <div className="w-8 h-8 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center">
                                                          <Icon name="trending-up" className="w-4 h-4" />
                                                      </div>
-                                                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Channel Insights & Growth</p>
+                                                     <p className="text-xs font-normal uppercase tracking-wider text-zinc-500">Channel Insights & Growth</p>
                                                  </div>
                                                  <div className="grid grid-cols-2 gap-2.5">
                                                      <div className="p-3.5 bg-zinc-100/70 dark:bg-zinc-800/60 rounded-2xl border-0">
-                                                         <p className="text-[10px] font-bold text-zinc-400 uppercase">Interaction Rate</p>
-                                                         <p className="text-lg font-black text-[#F246F5] mt-1">94.8%</p>
+                                                         <p className="text-[10px] font-normal text-zinc-400 uppercase">Interaction Rate</p>
+                                                         <p className="text-lg font-semibold text-[#F246F5] mt-1">94.8%</p>
                                                          <p className="text-[10px] text-zinc-400 mt-0.5">High engagement</p>
                                                      </div>
                                                      <div className="p-3.5 bg-zinc-100/70 dark:bg-zinc-800/60 rounded-2xl border-0">
-                                                         <p className="text-[10px] font-bold text-zinc-400 uppercase">Channel Views</p>
-                                                         <p className="text-lg font-black text-zinc-800 dark:text-zinc-100 mt-1">
+                                                         <p className="text-[10px] font-normal text-zinc-400 uppercase">Channel Views</p>
+                                                         <p className="text-lg font-semibold text-zinc-800 dark:text-zinc-100 mt-1">
                                                              {Math.max(12, (activeChannel.subscriberCount || 1) * 28 + 142)}
                                                          </p>
                                                          <p className="text-[10px] text-zinc-400 mt-0.5">Updated live</p>
@@ -7730,9 +8022,9 @@ const handleCreateChannel = async () => {
                                                  </div>
                                                  {/* Simple mini sparkline */}
                                                  <div className="pt-1.5">
-                                                     <p className="text-[10px] font-bold text-zinc-400 uppercase mb-1 flex justify-between">
+                                                     <p className="text-[10px] font-normal text-zinc-400 uppercase mb-1 flex justify-between">
                                                          <span>7-Day Subscriber Trend</span>
-                                                         <span className="text-[#F246F5] font-bold">+12.5%</span>
+                                                         <span className="text-[#F246F5] font-semibold">+12.5%</span>
                                                      </p>
                                                      <div className="h-6 flex items-end gap-1 px-1">
                                                          {[40, 55, 48, 70, 85, 75, 98].map((val, i) => (
@@ -7753,7 +8045,7 @@ const handleCreateChannel = async () => {
                                                      <div className="w-8 h-8 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center">
                                                          <Icon name="link" className="w-4 h-4" />
                                                      </div>
-                                                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Affiliate Referral Program</p>
+                                                     <p className="text-xs font-normal uppercase tracking-wider text-zinc-500">Affiliate Referral Program</p>
                                                  </div>
                                                  <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-relaxed font-medium">
                                                      Share your unique custom tracker link to earn platform referral points and recruit subscribers seamlessly.
@@ -7777,7 +8069,7 @@ const handleCreateChannel = async () => {
                                                          <Icon name="copy" className="w-4 h-4" />
                                                      </button>
                                                  </div>
-                                                 <div className="flex items-center justify-between text-[11px] font-bold text-zinc-400 pt-0.5">
+                                                 <div className="flex items-center justify-between text-[11px] font-semibold text-zinc-400 pt-0.5">
                                                      <span>Total referrals recruited</span>
                                                      <span className="text-[#F246F5]">8 users</span>
                                                  </div>
@@ -7785,12 +8077,12 @@ const handleCreateChannel = async () => {
 
                                              {/* Interactive configurations */}
                                              <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] p-5 shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-3">
-                                                 <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider px-0.5">Interactive Controls</p>
+                                                 <p className="text-xs text-zinc-400 font-normal uppercase tracking-wider px-0.5">Interactive Controls</p>
                                                  
                                                  {/* Channel Type Toggle */}
                                                  <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
-                                                         <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                                                         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                                                              <Icon name="shield" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Private Channel</span>
                                                          </p>
@@ -7814,7 +8106,7 @@ const handleCreateChannel = async () => {
                                                  {/* Discussion Comments Toggle */}
                                                  <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
-                                                         <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                                                         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                                                              <Icon name="message-square" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Enable Comments</span>
                                                          </p>
@@ -7838,7 +8130,7 @@ const handleCreateChannel = async () => {
                                                  {/* Allow Direct Messages */}
                                                  <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
-                                                         <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                                                         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                                                              <Icon name="user" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Allow DM Contacts</span>
                                                          </p>
@@ -7862,7 +8154,7 @@ const handleCreateChannel = async () => {
                                                  {/* Auto-Translate Toggle */}
                                                  <div className="flex items-center justify-between p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl">
                                                      <div>
-                                                         <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                                                         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                                                              <Icon name="sparkles" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Auto-Translate Posts</span>
                                                          </p>
@@ -7886,7 +8178,7 @@ const handleCreateChannel = async () => {
                                                  {/* Allowed Reactions Selector */}
                                                  <div className="p-3.5 bg-zinc-100/70 dark:bg-zinc-800/50 border-0 rounded-2xl space-y-2.5">
                                                      <div>
-                                                         <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
+                                                         <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5">
                                                              <Icon name="info" className="w-4 h-4 text-[#F246F5]" />
                                                              <span>Allowed Reactions</span>
                                                          </p>
@@ -7903,7 +8195,7 @@ const handleCreateChannel = async () => {
                                                                          notify(`Allowed reactions updated to: ${opt}`, 'success');
                                                                      } catch(e) { notify('Failed to update setting', 'error'); }
                                                                  }}
-                                                                 className={`flex-1 py-2 rounded-full text-xs font-bold capitalize transition-all cursor-pointer ${
+                                                                 className={`flex-1 py-2 rounded-full text-xs font-medium capitalize transition-all cursor-pointer ${
                                                                      (activeChannel.allowedReactions || 'all') === opt 
                                                                          ? 'bg-[#F246F5] text-white shadow-sm' 
                                                                          : 'bg-white/90 dark:bg-zinc-700/60 text-zinc-600 dark:text-zinc-300 hover:bg-white dark:hover:bg-zinc-700'
@@ -7922,7 +8214,7 @@ const handleCreateChannel = async () => {
                                                      <div className="w-8 h-8 rounded-full bg-teal-500/12 text-teal-500 flex items-center justify-center">
                                                          <Icon name="activity" className="w-4 h-4" />
                                                      </div>
-                                                     <p className="text-xs font-bold uppercase tracking-wider text-zinc-500">Recent Admin Audit Log</p>
+                                                     <p className="text-xs font-normal uppercase tracking-wider text-zinc-500">Recent Admin Audit Log</p>
                                                  </div>
                                                  <div className="space-y-2 text-[10.5px] font-semibold text-zinc-500 dark:text-zinc-400">
                                                      <div className="flex justify-between py-1 border-b border-zinc-100/70 dark:border-white/[0.04]">
@@ -7942,14 +8234,14 @@ const handleCreateChannel = async () => {
 
                                              {/* Standard profile & delete actions */}
                                              <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 rounded-[26px] p-5 shadow-[0_4px_20px_rgba(120,90,160,0.05)] space-y-3">
-                                                 <p className="text-xs text-zinc-400 font-bold uppercase tracking-wider px-0.5">Danger Zone</p>
+                                                 <p className="text-xs text-zinc-400 font-normal uppercase tracking-wider px-0.5">Danger Zone</p>
                                                  <button 
                                                      type="button"
                                                      onClick={() => {
                                                          setDetailsSubModal(null);
                                                          handleEditChannel();
                                                      }}
-                                                     className="w-full py-3 px-4 bg-zinc-100/90 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-full font-bold text-sm text-zinc-800 dark:text-zinc-100 flex items-center justify-between transition-colors cursor-pointer"
+                                                     className="w-full py-3 px-4 bg-zinc-100/90 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 rounded-full font-semibold text-sm text-zinc-800 dark:text-zinc-100 flex items-center justify-between transition-colors cursor-pointer"
                                                  >
                                                      <span>Edit Channel Profile Info</span>
                                                      <Icon name="edit" className="w-4 h-4 text-zinc-400" />
@@ -7960,14 +8252,14 @@ const handleCreateChannel = async () => {
                                                          <button 
                                                              type="button"
                                                              onClick={() => setConfirmDeleteChannel(true)}
-                                                             className="w-full py-3 px-4 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+                                                             className="w-full py-3 px-4 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-semibold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
                                                          >
                                                              <Icon name="trash" className="w-4 h-4" />
                                                              <span>Delete Channel Session</span>
                                                          </button>
                                                      ) : (
                                                          <div className="bg-rose-500/8 border-0 rounded-2xl p-4 text-center space-y-3">
-                                                             <p className="text-xs font-extrabold text-rose-500 uppercase tracking-widest">Critically Dangerous Action</p>
+                                                             <p className="text-xs font-medium text-rose-500 uppercase tracking-widest">Critically Dangerous Action</p>
                                                              <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">
                                                                  Are you absolutely certain? This will delete the channel cover, all messages, all subscriptions, and this operation CANNOT be undone!
                                                              </p>
@@ -7975,14 +8267,14 @@ const handleCreateChannel = async () => {
                                                                  <button 
                                                                      type="button"
                                                                      onClick={() => setConfirmDeleteChannel(false)}
-                                                                     className="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 rounded-full text-xs font-bold transition-all cursor-pointer"
+                                                                     className="flex-1 py-2.5 bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-100 rounded-full text-xs font-medium transition-all cursor-pointer"
                                                                  >
                                                                      Cancel
                                                                  </button>
                                                                  <button 
                                                                      type="button"
                                                                      onClick={handleDeleteChannel}
-                                                                     className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
+                                                                     className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-full text-xs font-medium transition-all cursor-pointer"
                                                                  >
                                                                      Yes, Delete
                                                                  </button>
@@ -8019,7 +8311,7 @@ const handleCreateChannel = async () => {
                               </div>
 
                               <div className="min-w-0 flex flex-col justify-center">
-                                  <h3 className="font-bold text-[16px] text-zinc-950 dark:text-white truncate flex items-center gap-1.5 leading-tight">
+                                  <h3 className="font-semibold text-[16px] text-zinc-950 dark:text-white truncate flex items-center gap-1.5 leading-tight">
                                       <span>{activeChannel.name}</span>
                                       {activeChannel.verified && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                   </h3>
@@ -8070,7 +8362,7 @@ const handleCreateChannel = async () => {
                                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-white"></span>
                               </span>
                               <div className="text-xs text-left">
-                                  <p className="font-extrabold text-[11px] uppercase tracking-wider">Live Discussion Active</p>
+                                  <p className="font-medium text-[11px] uppercase tracking-wider">Live Discussion Active</p>
                                   <p className="text-[10px] opacity-90 mt-0.5">{liveParticipants.length} people are tuning in</p>
                               </div>
                           </div>
@@ -8084,7 +8376,7 @@ const handleCreateChannel = async () => {
                                           notify("Live Share Link copied!", "success");
                                       } catch(err) {}
                                   }}
-                                  className="px-3 py-1 bg-white/15 hover:bg-white/25 text-[10px] font-bold rounded-full transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer"
+                                  className="px-3 py-1 bg-white/15 hover:bg-white/25 text-[10px] font-medium rounded-full transition-all flex items-center gap-1 uppercase tracking-wider cursor-pointer"
                                   title="Share Live Link"
                               >
                                   <Icon name="link" className="w-3 h-3" />
@@ -8095,7 +8387,7 @@ const handleCreateChannel = async () => {
                                   <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); setShowLiveCallModal(true); }}
-                                      className="px-3 py-1 bg-white text-[#F246F5] hover:bg-white/90 text-[10px] font-bold rounded-full transition-all uppercase tracking-wider cursor-pointer"
+                                      className="px-3 py-1 bg-white text-[#F246F5] hover:bg-white/90 text-[10px] font-medium rounded-full transition-all uppercase tracking-wider cursor-pointer"
                                   >
                                       Joined
                                   </button>
@@ -8103,7 +8395,7 @@ const handleCreateChannel = async () => {
                                   <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); handleJoinLiveCall(); }}
-                                      className="px-3 py-1 bg-white text-[#F246F5] hover:bg-white/90 text-[10px] font-bold rounded-full transition-all uppercase tracking-wider animate-pulse cursor-pointer"
+                                      className="px-3 py-1 bg-white text-[#F246F5] hover:bg-white/90 text-[10px] font-medium rounded-full transition-all uppercase tracking-wider animate-pulse cursor-pointer"
                                   >
                                       Join
                                   </button>
@@ -8133,7 +8425,7 @@ const handleCreateChannel = async () => {
                         <Icon name="pin" className="w-3.5 h-3.5 text-[#F246F5] rotate-45 shrink-0" />
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
-                              <p className="font-bold text-[10px] text-[#F246F5] uppercase tracking-wider">Pinned Message {pins.length > 1 ? `(${ (currentPinnedIndex % pins.length) + 1 }/${pins.length})` : ""}</p>
+                              <p className="font-medium text-[10px] text-[#F246F5] uppercase tracking-wider">Pinned Message {pins.length > 1 ? `(${ (currentPinnedIndex % pins.length) + 1 }/${pins.length})` : ""}</p>
                               {pins.length > 1 && <span className="text-[9px] text-zinc-500 font-medium">Click to see next pin</span>}
                           </div>
                           <p className="text-[11.5px] text-zinc-600 dark:text-zinc-300 truncate mt-0.5">{currentPin.text}</p>
@@ -8161,7 +8453,7 @@ const handleCreateChannel = async () => {
                           <Icon name="shield-alert" className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h5 className="font-bold text-xs text-zinc-900 dark:text-amber-300 flex items-center gap-1.5">
+                          <h5 className="font-semibold text-xs text-zinc-900 dark:text-amber-300 flex items-center gap-1.5">
                             Safety Warning &amp; Transaction Guidelines
                           </h5>
                           <p className="text-[11px] text-zinc-600 dark:text-amber-200/80 mt-0.5 leading-relaxed font-medium">
@@ -8175,7 +8467,7 @@ const handleCreateChannel = async () => {
                           localStorage.setItem('deepshop_safety_notice_dismissed', 'true');
                           setSafetyNoticeDismissed(true);
                         }}
-                        className="px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-bold text-[10.5px] shrink-0 self-center transition active:scale-95 flex items-center gap-1 cursor-pointer"
+                        className="px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white font-semibold text-[10.5px] shrink-0 self-center transition active:scale-95 flex items-center gap-1 cursor-pointer"
                         title="Dismiss Safety Notice"
                       >
                         <span>Got it</span>
@@ -8189,7 +8481,7 @@ const handleCreateChannel = async () => {
                       {channelMessages.length === 0 ? (
                           <div className="flex flex-col items-center justify-center h-full text-zinc-400 p-6 text-center">
                               <Icon name="sparkles" className="w-12 h-12 mb-3 text-[#F246F5] animate-pulse" />
-                              <p className="font-bold text-sm text-zinc-800 dark:text-zinc-200">Welcome to @{activeChannel.customLink}!</p>
+                              <p className="font-semibold text-sm text-zinc-800 dark:text-zinc-200">Welcome to @{activeChannel.customLink}!</p>
                               <p className="text-xs mt-1 text-zinc-500 max-w-xs leading-relaxed">This is the community group channel. Members and sellers can share updates here.</p>
                           </div>
                       ) : (
@@ -8257,7 +8549,7 @@ const handleCreateChannel = async () => {
                                             {msg.senderPhoto ? (
                                                 <img src={msg.senderPhoto} alt="Avatar" className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full flex items-center justify-center bg-[#F246F5]/12 text-[#F246F5] font-bold text-xs">
+                                                <div className="w-full h-full flex items-center justify-center bg-[#F246F5]/12 text-[#F246F5] font-medium text-xs">
                                                     {(msg.senderName || 'U')[0].toUpperCase()}
                                                 </div>
                                             )}
@@ -8273,19 +8565,19 @@ const handleCreateChannel = async () => {
                                                   {isSeller && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                                                 </span>
                                                 {isCreator ? (
-                                                  <span className="bg-[#F246F5] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
+                                                  <span className="bg-[#F246F5] text-white text-[8px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       CREATOR
                                                   </span>
                                                 ) : isChannelAdmin ? (
-                                                  <span className="bg-purple-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
+                                                  <span className="bg-purple-500 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       ADMIN
                                                   </span>
                                                 ) : isSeller ? (
-                                                  <span className="bg-amber-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
+                                                  <span className="bg-amber-500 text-white text-[8px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       SELLER
                                                   </span>
                                                 ) : (
-                                                  <span className="bg-white/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
+                                                  <span className="bg-white/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 text-[8px] font-medium px-1.5 py-0.5 rounded-full uppercase tracking-wider select-none">
                                                       MEMBER
                                                   </span>
                                                 )}
@@ -8403,7 +8695,7 @@ const handleCreateChannel = async () => {
                                                           <span key={`chan-react-${emoji}-${emIdx}`} className="text-[12px]">{emoji}</span>
                                                       ))}
                                                       {reactionEntries.length > 1 && (
-                                                          <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 self-center ml-0.5">{reactionEntries.length}</span>
+                                                          <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 self-center ml-0.5">{reactionEntries.length}</span>
                                                       )}
                                                   </>
                                               ) : (
@@ -8443,7 +8735,7 @@ const handleCreateChannel = async () => {
                                    className="mb-2 px-3.5 py-2.5 bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_16px_rgba(120,90,160,0.06)] rounded-2xl flex items-center justify-between text-left"
                                >
                                    <div>
-                                       <p className="text-[11px] font-bold text-[#F246F5]">Replying to {replyingTo.senderName || (replyingTo.senderId === user?.uid ? "You" : "User")}</p>
+                                       <p className="text-[11px] font-semibold text-[#F246F5]">Replying to {replyingTo.senderName || (replyingTo.senderId === user?.uid ? "You" : "User")}</p>
                                        <p className="text-xs text-zinc-600 dark:text-zinc-300 truncate max-w-xs sm:max-w-md mt-0.5">{replyingTo.text}</p>
                                    </div>
                                    <button type="button" onClick={() => setReplyingTo(null)} className="p-1 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-full hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer">
@@ -8498,7 +8790,7 @@ const handleCreateChannel = async () => {
                                           </span>
                                       </div>
                                       <div className="flex items-center gap-3">
-                                          <span className={cn("text-xs font-medium", channelRecSlideX <= -75 ? "text-rose-500 font-bold" : "text-zinc-400 animate-pulse")}>
+                                          <span className={cn("text-xs font-medium", channelRecSlideX <= -75 ? "text-rose-500 font-medium" : "text-zinc-400 animate-pulse")}>
                                             {channelRecSlideX <= -75 ? 'Release to cancel' : '← Slide to cancel'}
                                           </span>
                                           <button type="button" onClick={cancelRecording} className="text-zinc-500 hover:text-rose-500 transition-colors bg-zinc-100 dark:bg-zinc-800 p-1.5 rounded-full cursor-pointer">
@@ -8608,7 +8900,7 @@ const handleCreateChannel = async () => {
                                   <button
                                       type="button"
                                       onClick={() => handleToggleMuteChannel(activeChannel, userSubscription.muted)}
-                                      className="w-full max-w-sm py-3 bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full font-bold text-sm shadow-[0_4px_16px_rgba(120,90,160,0.06)] transition flex items-center justify-center gap-2 cursor-pointer"
+                                      className="w-full max-w-sm py-3 bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full font-semibold text-sm shadow-[0_4px_16px_rgba(120,90,160,0.06)] transition flex items-center justify-center gap-2 cursor-pointer"
                                   >
                                       {userSubscription.muted ? <Icon name="volume-2" className="w-5 h-5 text-[#F246F5]" /> : <Icon name="volume-x" className="w-5 h-5 text-zinc-500" />}
                                       <span>{userSubscription.muted ? "Unmute" : "Mute"}</span>
@@ -8617,7 +8909,7 @@ const handleCreateChannel = async () => {
                                   <button
                                       type="button"
                                       onClick={() => handleSubscribeToChannel(activeChannel)}
-                                      className="w-full max-w-sm py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full font-bold text-sm transition flex items-center justify-center gap-2 shadow-[0_6px_18px_rgba(242,70,245,0.25)] cursor-pointer"
+                                      className="w-full max-w-sm py-3 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full font-semibold text-sm transition flex items-center justify-center gap-2 shadow-[0_6px_18px_rgba(242,70,245,0.25)] cursor-pointer"
                                   >
                                       <span>Join Channel</span>
                                   </button>
@@ -8634,7 +8926,7 @@ const handleCreateChannel = async () => {
                      <div className="w-16 h-16 rounded-[24px] bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_6px_24px_rgba(120,90,160,0.07)] flex items-center justify-center mb-5">
                          <Icon name="message-circle" className="w-7 h-7 text-[#F246F5]" />
                      </div>
-                     <h2 className="font-bold text-[22px] text-zinc-950 dark:text-white tracking-tight">
+                     <h2 className="font-semibold text-[22px] text-zinc-950 dark:text-white tracking-tight">
                          Select a conversation
                      </h2>
                      <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-sm leading-relaxed">
@@ -8653,7 +8945,7 @@ const handleCreateChannel = async () => {
                              <div className="w-10 h-10 rounded-full bg-[#16181D] dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center">
                                  <Icon name="plus" className="w-5 h-5" />
                              </div>
-                             <span className="text-xs font-bold text-zinc-900 dark:text-white">New Chat</span>
+                             <span className="text-xs font-medium text-zinc-900 dark:text-white">New Chat</span>
                          </button>
 
                          <button
@@ -8667,7 +8959,7 @@ const handleCreateChannel = async () => {
                              <div className="w-10 h-10 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center">
                                  <Icon name="user-plus" className="w-5 h-5" />
                              </div>
-                             <span className="text-xs font-bold text-zinc-900 dark:text-white">New Contact</span>
+                             <span className="text-xs font-medium text-zinc-900 dark:text-white">New Contact</span>
                          </button>
 
                          <button
@@ -8681,7 +8973,7 @@ const handleCreateChannel = async () => {
                              <div className="w-10 h-10 rounded-full bg-emerald-500/12 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
                                  <Icon name="users" className="w-5 h-5" />
                              </div>
-                             <span className="text-xs font-bold text-zinc-900 dark:text-white">Community</span>
+                             <span className="text-xs font-medium text-zinc-900 dark:text-white">Community</span>
                          </button>
                      </div>
                  </div>
@@ -8731,7 +9023,7 @@ const handleCreateChannel = async () => {
                                 }
                             }}
                          >
-                             <h3 className="font-bold text-[16px] text-zinc-950 dark:text-white truncate flex items-center gap-1.5 leading-tight">
+                             <h3 className="font-semibold text-[16px] text-zinc-950 dark:text-white truncate flex items-center gap-1.5 leading-tight">
                                  <span className="truncate">{getChatDisplayName(activeChat)}</span>
                                  {(activeChat?.otherUser?.kycStatus === "verified" || activeChat?.otherUser?.verified) && <VerifiedIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />}
                              </h3>
@@ -9244,7 +9536,7 @@ const handleCreateChannel = async () => {
                                                         "leading-[1.48] whitespace-pre-wrap break-words",
                                                         isEmojiOnly ? "text-5xl ios-emoji leading-none" : "text-[14.5px]",
                                                         privacySettings.highContrastFonts && !isEmojiOnly
-                                                          ? "font-bold"
+                                                          ? "font-semibold"
                                                           : "font-normal"
                                                     )}>
                                                         {renderTextWithLinks(msg.text, isMe && !privacySettings.minimalistBubbles)}
@@ -9451,20 +9743,37 @@ const handleCreateChannel = async () => {
                 <MsgBackChevronIcon className="w-5 h-5" />
               </button>
 
-              <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
+              <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-white tracking-tight">
                 {activeCallMetaRef.current?.targetUser?.displayName || getChatDisplayName(activeChat) || "Call"}
               </h2>
 
               {Boolean(activeChat?.isGroup || activeChat?.type === "group" || callType === "video") ? (
-                <div className="bg-[#FF2E93] text-white px-3.5 py-1 rounded-full text-xs font-bold border border-pink-400/30">
+                <div className="bg-[#FF2E93] text-white px-3.5 py-1 rounded-full text-xs font-semibold border border-pink-400/30">
                   {callStatus === 'connected'
-                    ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                    ? (iceConnectionState === 'connected' || iceConnectionState === 'completed'
+                        ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                        : iceConnectionState === 'disconnected'
+                          ? "Reconnecting..."
+                          : "Connecting...")
                     : "Ringing..."}
                 </div>
               ) : (
                 <div className="w-11" />
               )}
             </div>
+
+            {audioAutoplayBlocked && (
+              <div className="flex justify-center z-30 mt-2">
+                <button
+                  type="button"
+                  onClick={unlockRemoteAudioElement}
+                  className="px-4 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-medium shadow-lg flex items-center gap-1.5 active:scale-95 transition cursor-pointer"
+                >
+                  <Icon name="volume-2" className="w-4 h-4" />
+                  Tap to enable call audio
+                </button>
+              </div>
+            )}
 
             {/* Main Call View */}
             {Boolean(activeChat?.isGroup || activeChat?.type === "group" || (activeChat?.participants && activeChat?.participants.length > 2)) ? (
@@ -9496,7 +9805,7 @@ const handleCreateChannel = async () => {
                       ) : participant.img ? (
                         <img src={participant.img} alt={participant.name} className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-white font-bold text-lg">
+                        <div className="w-full h-full flex items-center justify-center bg-zinc-900 text-white font-semibold text-lg">
                           {(participant.name || 'U')[0]?.toUpperCase()}
                         </div>
                       )}
@@ -9515,7 +9824,16 @@ const handleCreateChannel = async () => {
                 {/* Main Video (Remote by default, or Local when swapped) */}
                 {swapCallVideos ? (
                   <video
-                    ref={localVideoRef}
+                    ref={(el) => {
+                      localVideoRef.current = el;
+                      const activeLocal = localStreamRef.current || localStream;
+                      if (el && activeLocal && el.srcObject !== activeLocal) {
+                        el.srcObject = activeLocal;
+                        el.muted = true;
+                        el.playsInline = true;
+                        el.play().catch(() => {});
+                      }
+                    }}
                     autoPlay
                     playsInline
                     muted
@@ -9523,7 +9841,15 @@ const handleCreateChannel = async () => {
                   />
                 ) : (
                   <video
-                    ref={remoteVideoRef}
+                    ref={(el) => {
+                      remoteVideoRef.current = el;
+                      if (el && remoteStream && el.srcObject !== remoteStream) {
+                        el.srcObject = remoteStream;
+                        el.muted = true;
+                        el.playsInline = true;
+                        el.play().catch(() => {});
+                      }
+                    }}
                     autoPlay
                     playsInline
                     muted
@@ -9542,13 +9868,13 @@ const handleCreateChannel = async () => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center text-white text-3xl font-bold">
+                        <div className="w-full h-full flex items-center justify-center text-white text-3xl font-semibold">
                           {(activeCallMetaRef.current?.targetUser?.displayName || getChatDisplayName(activeChat) || "U")[0]?.toUpperCase()}
                         </div>
                       )}
                     </div>
                     <p className="mt-3 text-sm font-medium text-white/85">
-                      {callStatus === 'connected' ? 'Connecting video...' : 'Ringing...'}
+                      {callStatus === 'connected' ? 'Connecting remote video...' : 'Ringing...'}
                     </p>
                   </div>
                 )}
@@ -9562,7 +9888,15 @@ const handleCreateChannel = async () => {
                 >
                   {swapCallVideos ? (
                     <video
-                      ref={remoteVideoRef}
+                      ref={(el) => {
+                        remoteVideoRef.current = el;
+                        if (el && remoteStream && el.srcObject !== remoteStream) {
+                          el.srcObject = remoteStream;
+                          el.muted = true;
+                          el.playsInline = true;
+                          el.play().catch(() => {});
+                        }
+                      }}
                       autoPlay
                       playsInline
                       muted
@@ -9570,7 +9904,16 @@ const handleCreateChannel = async () => {
                     />
                   ) : (
                     <video
-                      ref={localVideoRef}
+                      ref={(el) => {
+                        localVideoRef.current = el;
+                        const activeLocal = localStreamRef.current || localStream;
+                        if (el && activeLocal && el.srcObject !== activeLocal) {
+                          el.srcObject = activeLocal;
+                          el.muted = true;
+                          el.playsInline = true;
+                          el.play().catch(() => {});
+                        }
+                      }}
                       autoPlay
                       playsInline
                       muted
@@ -9597,9 +9940,13 @@ const handleCreateChannel = async () => {
                 </div>
 
                 {/* Translucent Frosted Glass Pill Below Avatar */}
-                <div className="relative z-10 -mt-5 px-6 py-2 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-md border border-white/60 dark:border-white/10 text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                <div className="relative z-10 -mt-5 px-6 py-2 rounded-full bg-white/80 dark:bg-black/60 backdrop-blur-md border border-white/60 dark:border-white/10 text-xs font-medium text-zinc-900 dark:text-zinc-100">
                   {callStatus === "connected"
-                    ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                    ? (iceConnectionState === 'connected' || iceConnectionState === 'completed'
+                        ? `${Math.floor(callDuration / 60)}:${(callDuration % 60).toString().padStart(2, "0")}`
+                        : iceConnectionState === 'disconnected'
+                          ? "Reconnecting audio..."
+                          : "Connecting audio...")
                     : "Ringing..."
                   }
                 </div>
@@ -9719,12 +10066,12 @@ const handleCreateChannel = async () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-3xl font-bold text-white">
+                  <span className="text-3xl font-semibold text-white">
                     {(unansweredCallState.targetUser?.displayName || 'U')[0].toUpperCase()}
                   </span>
                 )}
               </div>
-              <h2 className="mt-4 text-[24px] sm:text-[26px] font-bold text-white tracking-tight leading-snug">
+              <h2 className="mt-4 text-[24px] sm:text-[26px] font-semibold text-white tracking-tight leading-snug">
                 {unansweredCallState.targetUser?.displayName || 'User'}
               </h2>
               <p className="mt-1 text-[15px] font-normal text-white/90">
@@ -9945,7 +10292,7 @@ const handleCreateChannel = async () => {
                 <div className="inline-flex p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 mb-3">
                   <Icon name="star" solid className="w-8 h-8 text-amber-500" />
                 </div>
-                <h3 className="text-lg font-black text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
+                <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100 uppercase tracking-tight">
                   Leave a Review
                 </h3>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
@@ -9975,7 +10322,7 @@ const handleCreateChannel = async () => {
 
               {/* Comment Text */}
               <div className="mb-6">
-                <label className="block text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-2">
                   Review Text (Optional)
                 </label>
                 <textarea
@@ -9992,7 +10339,7 @@ const handleCreateChannel = async () => {
                 <button
                   type="button"
                   onClick={() => setShowReviewModal(false)}
-                  className="flex-1 py-3.5 bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full font-bold text-sm shadow-[0_4px_16px_rgba(120,90,160,0.05)] transition-colors cursor-pointer"
+                  className="flex-1 py-3.5 bg-white/90 hover:bg-white dark:bg-zinc-900/80 dark:hover:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full font-semibold text-sm shadow-[0_4px_16px_rgba(120,90,160,0.05)] transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -10000,7 +10347,7 @@ const handleCreateChannel = async () => {
                   type="button"
                   disabled={isSubmittingReview}
                   onClick={handleSubmitReview}
-                  className="flex-1 py-3.5 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full font-bold text-sm transition-all shadow-[0_6px_18px_rgba(242,70,245,0.25)] active:scale-95 flex items-center justify-center gap-2 disabled:opacity-55 cursor-pointer"
+                  className="flex-1 py-3.5 bg-[#F246F5] hover:bg-[#e135e4] text-white rounded-full font-semibold text-sm transition-all shadow-[0_6px_18px_rgba(242,70,245,0.25)] active:scale-95 flex items-center justify-center gap-2 disabled:opacity-55 cursor-pointer"
                 >
                   {isSubmittingReview ? (
                     <Icon name="loader-2" className="w-5 h-5 animate-spin" />
@@ -10031,7 +10378,7 @@ const handleCreateChannel = async () => {
                         <Icon name="sparkles" className="w-5 h-5 text-[#F246F5]" />
                     </div>
                     <div>
-                        <h3 className="text-[17px] font-bold text-zinc-950 dark:text-zinc-100 leading-none mb-1">
+                        <h3 className="text-[17px] font-semibold text-zinc-950 dark:text-zinc-100 leading-none mb-1">
                           {isEditingChannel ? 'Edit Channel' : 'New Channel'}
                         </h3>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">Broadcast your updates</p>
@@ -10079,7 +10426,7 @@ const handleCreateChannel = async () => {
 
                 <div className="space-y-4">
                     <div>
-                      <label className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 ml-1">
+                      <label className="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 ml-1">
                         Channel Name
                       </label>
                       <input
@@ -10092,11 +10439,11 @@ const handleCreateChannel = async () => {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 ml-1">
+                      <label className="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 ml-1">
                         Handle (Unique)
                       </label>
                       <div className="relative">
-                        <span className="absolute left-4 top-[13px] text-zinc-400 text-sm font-bold">@</span>
+                        <span className="absolute left-4 top-[13px] text-zinc-400 text-sm font-semibold">@</span>
                         <input
                           type="text"
                           value={chanLink}
@@ -10108,7 +10455,7 @@ const handleCreateChannel = async () => {
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 ml-1">
+                      <label className="block text-[11px] font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider mb-1.5 ml-1">
                         Description
                       </label>
                       <textarea
@@ -10122,7 +10469,7 @@ const handleCreateChannel = async () => {
 
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Private Channel
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10298,7 +10645,7 @@ const handleCreateChannel = async () => {
                         <Icon name="settings" className="w-5 h-5 text-[#F246F5]" />
                     </div>
                     <div>
-                        <h3 className="text-[17px] font-bold text-zinc-950 dark:text-zinc-100 leading-none mb-1">
+                        <h3 className="text-[17px] font-semibold text-zinc-950 dark:text-zinc-100 leading-none mb-1">
                           Privacy & Settings
                         </h3>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400">Manage your communication</p>
@@ -10316,13 +10663,13 @@ const handleCreateChannel = async () => {
               <div className="px-5 pb-5 pt-2 overflow-y-auto space-y-6">
                 {/* Privacy & Security Section */}
                 <div className="space-y-3">
-                    <h4 className="text-[11px] font-extrabold text-[#F246F5] uppercase tracking-widest ml-1">
+                    <h4 className="text-[11px] font-medium text-[#F246F5] uppercase tracking-widest ml-1">
                         Privacy & Security
                     </h4>
                     
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Allow Direct Messages
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10344,7 +10691,7 @@ const handleCreateChannel = async () => {
 
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Online Presence Indicator
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10366,7 +10713,7 @@ const handleCreateChannel = async () => {
 
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Biometric & PIN Passcode Lock
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10389,7 +10736,7 @@ const handleCreateChannel = async () => {
 
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Disappearing Messages (24h)
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10413,13 +10760,13 @@ const handleCreateChannel = async () => {
 
                 {/* Appearance & Themes Section */}
                 <div className="space-y-3">
-                    <h4 className="text-[11px] font-extrabold text-[#F246F5] uppercase tracking-widest ml-1">
+                    <h4 className="text-[11px] font-medium text-[#F246F5] uppercase tracking-widest ml-1">
                         Design & Styling
                     </h4>
                     
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Liquid Glass Mode
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10441,7 +10788,7 @@ const handleCreateChannel = async () => {
 
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           High Contrast Typography
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10464,13 +10811,13 @@ const handleCreateChannel = async () => {
 
                 {/* Interactive Controls */}
                 <div className="space-y-3">
-                    <h4 className="text-[11px] font-extrabold text-[#F246F5] uppercase tracking-widest ml-1">
+                    <h4 className="text-[11px] font-medium text-[#F246F5] uppercase tracking-widest ml-1">
                         Chat & Audio Controls
                     </h4>
                     
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Apple Haptic Feedback
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10492,7 +10839,7 @@ const handleCreateChannel = async () => {
 
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Auto-Play Voice Notes
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10514,7 +10861,7 @@ const handleCreateChannel = async () => {
 
                     <div className="bg-white/90 dark:bg-zinc-900/80 border-0 shadow-[0_4px_16px_rgba(120,90,160,0.05)] rounded-[22px] p-4 flex items-center justify-between">
                       <div className="space-y-1 max-w-[75%]">
-                        <label className="block text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                        <label className="block text-sm font-medium text-zinc-900 dark:text-zinc-100">
                           Do Not Disturb Mode
                         </label>
                         <p className="text-[11px] text-zinc-500 leading-tight">
@@ -10540,7 +10887,7 @@ const handleCreateChannel = async () => {
                 <button
                   type="button"
                   onClick={() => setShowPrivacySettingsModal(false)}
-                  className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] text-white font-bold shadow-[0_6px_18px_rgba(242,70,245,0.25)] transition flex justify-center items-center cursor-pointer"
+                  className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] text-white font-semibold shadow-[0_6px_18px_rgba(242,70,245,0.25)] transition flex justify-center items-center cursor-pointer"
                 >
                   Close Settings
                 </button>
@@ -10608,7 +10955,7 @@ const handleCreateChannel = async () => {
                 className="px-5 pt-3 sm:pt-4 pb-3 border-b border-zinc-100 dark:border-white/[0.06] flex items-center justify-between shrink-0 touch-none"
               >
                 <div>
-                  <h3 className="text-[16px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                  <h3 className="text-[16px] font-semibold text-zinc-950 dark:text-white tracking-tight">
                     Forward message
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -10939,7 +11286,7 @@ const handleCreateChannel = async () => {
                   <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
                 </div>
                 <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-                  <h3 className="text-center font-bold text-zinc-900 dark:text-white">Delete Message</h3>
+                  <h3 className="text-center font-semibold text-zinc-900 dark:text-white">Delete Message</h3>
                 </div>
                 <div className="p-4 space-y-2">
                   <button
@@ -10969,7 +11316,7 @@ const handleCreateChannel = async () => {
                       }
                       setDeleteMessageId(null);
                     }}
-                    className="w-full py-4 text-center font-bold text-[15px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-2xl transition"
+                    className="w-full py-4 text-center font-semibold text-[15px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white rounded-2xl transition"
                   >
                     Delete for me
                   </button>
@@ -11002,14 +11349,14 @@ const handleCreateChannel = async () => {
                         }
                         setDeleteMessageId(null);
                       }}
-                      className="w-full py-4 text-center font-bold text-[15px] bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-500 rounded-2xl transition"
+                      className="w-full py-4 text-center font-semibold text-[15px] bg-rose-50 dark:bg-rose-950/20 hover:bg-rose-100 dark:hover:bg-rose-950/40 text-rose-600 dark:text-rose-500 rounded-2xl transition"
                     >
                       Delete for everyone
                     </button>
                   )}
                   <button
                     onClick={() => setDeleteMessageId(null)}
-                    className="w-full py-4 mt-2 text-center font-bold text-[15px] text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition"
+                    className="w-full py-4 mt-2 text-center font-semibold text-[15px] text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition"
                   >
                     Cancel
                   </button>
@@ -11061,7 +11408,7 @@ const handleCreateChannel = async () => {
               >
                 <div className="flex items-center gap-2">
                   <Icon name="image" className="w-5 h-5 text-[#F246F5]" />
-                  <h3 className="font-extrabold text-base text-zinc-900 dark:text-zinc-100">Change Chat Wallpaper</h3>
+                  <h3 className="font-semibold text-base text-zinc-900 dark:text-zinc-100">Change Chat Wallpaper</h3>
                 </div>
                 <button onClick={() => setShowWallpaperModal(false)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] text-zinc-600 dark:text-zinc-300 flex items-center justify-center transition cursor-pointer">
                   <Icon name="x" className="w-5 h-5" />
@@ -11071,7 +11418,7 @@ const handleCreateChannel = async () => {
               <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
                 {/* Preset gradients / colors */}
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Preset Wallpapers</p>
+                  <p className="text-xs font-normal text-zinc-400 uppercase tracking-wider">Preset Wallpapers</p>
                   <div className="grid grid-cols-4 gap-3">
                     {[
                       { name: 'Warm sunset', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80' },
@@ -11104,7 +11451,7 @@ const handleCreateChannel = async () => {
 
                 {/* Custom URL input */}
                 <div className="space-y-3">
-                  <p className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Custom Image URL</p>
+                  <p className="text-xs font-normal text-zinc-400 uppercase tracking-wider">Custom Image URL</p>
                   <form onSubmit={(e) => {
                     e.preventDefault();
                     const urlInput = (e.currentTarget.elements.namedItem('urlInput') as HTMLInputElement).value;
@@ -11121,7 +11468,7 @@ const handleCreateChannel = async () => {
                       placeholder="Paste image address (https://...)"
                       className="flex-1 px-4 py-2 text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl outline-none focus:ring-2 ring-[#EF8020] text-zinc-800 dark:text-zinc-200"
                     />
-                    <button type="submit" className="px-4 py-2 bg-[#F246F5] text-white text-xs font-bold rounded-full hover:bg-[#e135e4] transition-colors cursor-pointer">
+                    <button type="submit" className="px-4 py-2 bg-[#F246F5] text-white text-xs font-semibold rounded-full hover:bg-[#e135e4] transition-colors cursor-pointer">
                       Apply
                     </button>
                   </form>
@@ -11138,7 +11485,7 @@ const handleCreateChannel = async () => {
                         setShowWallpaperModal(false);
                       }
                     }}
-                    className="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 rounded-full text-xs font-bold transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/30 text-red-600 rounded-full text-xs font-medium transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Icon name="trash" className="w-4 h-4" />
                     <span>Reset to Default Wallpaper</span>
@@ -11185,7 +11532,7 @@ const handleCreateChannel = async () => {
                   <div className="w-10 h-10 rounded-full bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center text-orange-500">
                     <Icon name="phone-off" className="w-5 h-5" />
                   </div>
-                  <h3 className="font-bold text-[16px] text-zinc-900 dark:text-zinc-100">Call Unavailable</h3>
+                  <h3 className="font-semibold text-[16px] text-zinc-900 dark:text-zinc-100">Call Unavailable</h3>
                 </div>
                 <button onClick={() => setDisabledCallUser(null)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
                   <Icon name="x" className="w-5 h-5 text-zinc-500" />
@@ -11193,12 +11540,12 @@ const handleCreateChannel = async () => {
               </div>
               <div className="mb-6">
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium leading-relaxed">
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{disabledCallUser.displayName || "This user"}</span> has disabled incoming calls. You cannot call or connect with them at this time.
+                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">{disabledCallUser.displayName || "This user"}</span> has disabled incoming calls. You cannot call or connect with them at this time.
                 </p>
               </div>
               <button 
                 onClick={() => setDisabledCallUser(null)} 
-                className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-bold rounded-xl shadow-md transition-all duration-200"
+                className="w-full h-12 bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 text-xs font-medium rounded-xl shadow-md transition-all duration-200"
               >
                 Understood
               </button>
@@ -11238,7 +11585,7 @@ const handleCreateChannel = async () => {
                 <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
               </div>
               <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
-                <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Auto-Delete</h3>
+                <h3 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">Auto-Delete</h3>
                 <button onClick={() => setShowAutoDeleteModal(false)} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
                   <Icon name="x" className="w-5 h-5 text-zinc-500" />
                 </button>
@@ -11264,7 +11611,7 @@ const handleCreateChannel = async () => {
                       }}
                       className="w-full flex items-center justify-between px-4 py-3 bg-zinc-100 dark:bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl transition"
                     >
-                      <span className="font-bold">{t.label}</span>
+                      <span className="font-semibold">{t.label}</span>
                       {activeChat?.autoDeleteTimer?.duration === t.val && <Icon name="check-double" className="w-5 h-5 text-emerald-500" />}
                     </button>
                 ))}
@@ -11278,7 +11625,7 @@ const handleCreateChannel = async () => {
                             setShowAutoDeleteModal(false);
                         } catch(e) {}
                       }}
-                      className="w-full mt-4 py-3 text-center font-bold text-[15px] bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-500 rounded-xl transition"
+                      className="w-full mt-4 py-3 text-center font-semibold text-[15px] bg-rose-50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-500 rounded-xl transition"
                     >
                       Turn Off
                     </button>
@@ -11326,7 +11673,7 @@ const handleCreateChannel = async () => {
                   <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700" />
                 </div>
                 <div className="p-4 flex items-center justify-between border-b border-zinc-200 dark:border-zinc-800">
-                  <h3 className="font-bold text-lg text-zinc-900 dark:text-zinc-100">Clear Chat</h3>
+                  <h3 className="font-semibold text-lg text-zinc-900 dark:text-zinc-100">Clear Chat</h3>
                   <button onClick={closeClearModal} className="w-9 h-9 rounded-full bg-white/95 dark:bg-zinc-800/90 shadow-[0_4px_14px_rgba(120,90,160,0.06)] flex items-center justify-center transition cursor-pointer">
                     <Icon name="x" className="w-5 h-5 text-zinc-500" />
                   </button>
@@ -11351,7 +11698,7 @@ const handleCreateChannel = async () => {
                   <div className="grid grid-cols-2 gap-3 mt-4">
                     <button
                       onClick={closeClearModal}
-                      className="py-3 font-bold text-[14px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl transition"
+                      className="py-3 font-semibold text-[14px] bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-900 dark:text-zinc-100 rounded-xl transition"
                     >
                       Cancel
                     </button>
@@ -11405,7 +11752,7 @@ const handleCreateChannel = async () => {
                           setIsClearingChat(false);
                         }
                       }}
-                      className={`py-3 font-bold text-[14px] rounded-xl transition text-white ${
+                      className={`py-3 font-semibold text-[14px] rounded-xl transition text-white ${
                         isClearingChat 
                           ? 'bg-rose-400 dark:bg-rose-600/50 cursor-not-allowed' 
                           : 'bg-rose-500 hover:bg-rose-600 active:scale-95'
@@ -11438,7 +11785,7 @@ const handleCreateChannel = async () => {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
                   </span>
-                  <h3 className="font-extrabold text-xs tracking-wider uppercase text-zinc-300">Live Voice Chat</h3>
+                  <h3 className="font-medium text-xs tracking-wider uppercase text-zinc-300">Live Voice Chat</h3>
                 </div>
                 <button 
                   onClick={() => setShowLiveCallModal(false)}
@@ -11453,8 +11800,8 @@ const handleCreateChannel = async () => {
                 <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-500/30 bg-zinc-800 shadow-md mb-2">
                   <img src={activeChannel?.imageUrl} alt="Channel Cover" className="w-full h-full object-cover" />
                 </div>
-                <h4 className="font-bold text-base truncate max-w-[240px]">{activeLiveCall.title}</h4>
-                <p className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider mt-0.5">Host: {activeLiveCall.hostName}</p>
+                <h4 className="font-semibold text-base truncate max-w-[240px]">{activeLiveCall.title}</h4>
+                <p className="text-[9px] text-zinc-400 font-normal uppercase tracking-wider mt-0.5">Host: {activeLiveCall.hostName}</p>
                 
                 {/* Direct Link Share Code */}
                 <div className="mt-3 bg-zinc-950/60 rounded-xl px-2.5 py-1.5 border border-zinc-800 flex items-center justify-between gap-2 max-w-[240px] w-full">
@@ -11467,7 +11814,7 @@ const handleCreateChannel = async () => {
                         notify("Live link copied to clipboard!", "success");
                       } catch(err) {}
                     }}
-                    className="text-[9px] font-black uppercase text-emerald-400 hover:text-emerald-300 shrink-0"
+                    className="text-[9px] font-medium uppercase text-emerald-400 hover:text-emerald-300 shrink-0"
                   >
                     Copy
                   </button>
@@ -11476,7 +11823,7 @@ const handleCreateChannel = async () => {
 
               {/* Participants list */}
               <div className="flex-1 overflow-y-auto py-3 space-y-2 no-scrollbar">
-                <p className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest px-1">Tuned In ({liveParticipants.length})</p>
+                <p className="text-[9px] font-normal text-zinc-500 uppercase tracking-widest px-1">Tuned In ({liveParticipants.length})</p>
                 {liveParticipants.length === 0 ? (
                   <div className="text-center py-6 text-zinc-600 text-xs font-semibold">Connecting...</div>
                 ) : (
@@ -11491,15 +11838,15 @@ const handleCreateChannel = async () => {
                             {p.photoURL ? (
                               <img src={p.photoURL} alt="Avatar" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-xs bg-emerald-500/10 text-emerald-400">
+                              <div className="w-full h-full flex items-center justify-center font-medium text-xs bg-emerald-500/10 text-emerald-400">
                                 {(p.displayName || "U")[0].toUpperCase()}
                               </div>
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="font-bold text-xs truncate flex items-center gap-1">
+                            <p className="font-medium text-xs truncate flex items-center gap-1">
                               <span>{p.displayName || "Anonymous"}</span>
-                              {p.isHost && <span className="bg-emerald-500 text-zinc-950 text-[7px] font-black px-1 rounded uppercase shrink-0">Host</span>}
+                              {p.isHost && <span className="bg-emerald-500 text-zinc-950 text-[7px] font-medium px-1 rounded uppercase shrink-0">Host</span>}
                             </p>
                           </div>
                         </div>
@@ -11510,7 +11857,7 @@ const handleCreateChannel = async () => {
                             <>
                               <button
                                 onClick={() => handleToggleMuteParticipant(p.uid, p.muted)}
-                                className={`p-1 rounded-lg text-xs font-bold transition ${p.muted ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"}`}
+                                className={`p-1 rounded-lg text-xs font-medium transition ${p.muted ? "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20" : "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"}`}
                                 title={p.muted ? "Unmute Participant" : "Mute Participant"}
                               >
                                 {p.muted ? <Icon name="mic-off" className="w-3.5 h-3.5" /> : <Icon name="mic" className="w-3.5 h-3.5" />}

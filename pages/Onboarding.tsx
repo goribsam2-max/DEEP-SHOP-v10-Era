@@ -79,7 +79,7 @@ const Onboarding: React.FC<{ onFinish: () => void }> = ({ onFinish }) => {
                   alt=""
                 />
               </div>
-              <h1 className="ds-apple-display text-[24px] sm:text-[26px] font-bold text-center mb-3 tracking-[-0.025em] leading-[1.15] text-[#1D1D1F] dark:text-[#F5F5F7] px-2">
+              <h1 className="ds-apple-display text-[24px] sm:text-[26px] font-semibold text-center mb-3 tracking-[-0.025em] leading-[1.15] text-[#1D1D1F] dark:text-[#F5F5F7] px-2">
                 {slides[current].title}
               </h1>
               <p className="ds-apple-muted text-[15px] text-center leading-relaxed mb-8 px-4 font-normal">

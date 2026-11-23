@@ -38,9 +38,7 @@ const isEmbeddedFrame = (() => {
 let authInstance: Auth;
 try {
   authInstance = initializeAuth(app, {
-    persistence: isEmbeddedFrame
-      ? [browserLocalPersistence]
-      : [indexedDBLocalPersistence, browserLocalPersistence],
+    persistence: [indexedDBLocalPersistence, browserLocalPersistence],
   });
 } catch {
   authInstance = getAuth(app);
@@ -49,20 +47,17 @@ export const auth = authInstance;
 
 let firestoreInstance: Firestore;
 try {
+  // Prefer robust persistent IndexedDB cache across all sessions for instantaneous 0s reads
   firestoreInstance = initializeFirestore(app, {
-    localCache: isEmbeddedFrame
-      ? memoryLocalCache()
-      : persistentLocalCache({
-          tabManager: persistentMultipleTabManager(),
-        }),
-    experimentalAutoDetectLongPolling: true,
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
     ignoreUndefinedProperties: true,
   });
 } catch {
   try {
     firestoreInstance = initializeFirestore(app, {
       localCache: memoryLocalCache(),
-      experimentalAutoDetectLongPolling: true,
       ignoreUndefinedProperties: true,
     });
   } catch {

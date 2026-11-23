@@ -421,7 +421,7 @@ export default function SubscriptionPage() {
                 </div>
               </div>
 
-              <h1 className="ds-apple-display text-[21px] sm:text-[26px] lg:text-[31px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] leading-[1.2]">
+              <h1 className="ds-apple-display text-[21px] sm:text-[26px] lg:text-[31px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-[1.2]">
                 ০ টাকা অগ্রিমে আনলিমিটেড ফুল ক্যাশ অন ডেলিভারি ও ভিআইপি রিসেলার পাস
               </h1>
 
@@ -458,7 +458,7 @@ export default function SubscriptionPage() {
                 <span className="text-xs font-medium ds-apple-muted block">
                   অ্যাকাউন্ট স্ট্যাটাস
                 </span>
-                <h2 className="text-base sm:text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate mt-0.5">
+                <h2 className="text-base sm:text-lg font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate mt-0.5">
                   {memberDisplayName}
                 </h2>
               </div>
@@ -481,7 +481,7 @@ export default function SubscriptionPage() {
               <div className="py-4 space-y-3 tabular-nums">
                 <div className="flex items-baseline justify-between gap-2 text-xs">
                   <span className="ds-apple-muted">সক্রিয় প্ল্যান</span>
-                  <span className="text-sm font-bold text-[#248A3D] dark:text-[#30D158]">
+                  <span className="text-sm font-semibold text-[#248A3D] dark:text-[#30D158]">
                     {subStatus.plan?.nameBn || "ভিআইপি মেম্বারশিপ"}
                   </span>
                 </div>
@@ -491,7 +491,7 @@ export default function SubscriptionPage() {
                     <span className="text-xs ds-apple-muted block">
                       অবশিষ্ট মেয়াদ
                     </span>
-                    <span className="text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <span className="text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                       {subStatus.daysRemaining} দিন
                     </span>
                   </div>
@@ -533,7 +533,7 @@ export default function SubscriptionPage() {
                   <span className="text-[#1D1D1F] dark:text-[#F5F5F7] font-medium">
                     VIP চালু করলে
                   </span>
-                  <span className="font-bold text-[#248A3D] dark:text-[#30D158]">
+                  <span className="font-semibold text-[#248A3D] dark:text-[#30D158]">
                     ৳০ অগ্রিম &middot; ১০০% COD
                   </span>
                 </div>
@@ -543,13 +543,13 @@ export default function SubscriptionPage() {
             <div className="pt-4 grid grid-cols-2 gap-4 text-xs tabular-nums">
               <div>
                 <span className="ds-apple-muted block">ডেলিভারি কভারেজ</span>
-                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mt-0.5 block">
+                <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mt-0.5 block">
                   ৬৪ জেলা ফ্রি শিপমেন্ট
                 </span>
               </div>
               <div>
                 <span className="ds-apple-muted block">অর্ডার লিমিট</span>
-                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mt-0.5 block">
+                <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mt-0.5 block">
                   আনলিমিটেড পার্সেল
                 </span>
               </div>
@@ -562,7 +562,7 @@ export default function SubscriptionPage() {
           <div className="p-5 flex items-start gap-3.5">
             <BadgeCheck className="w-5 h-5 text-[#248A3D] dark:text-[#30D158] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+              <p className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                 ৳০ অগ্রিম বুকিং
               </p>
               <p className="text-xs ds-apple-muted mt-1 leading-relaxed">
@@ -574,7 +574,7 @@ export default function SubscriptionPage() {
           <div className="p-5 flex items-start gap-3.5">
             <Truck className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <p className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 ফ্রি এক্সপ্রেস ডেলিভারি
               </p>
               <p className="text-xs ds-apple-muted mt-1 leading-relaxed">
@@ -586,7 +586,7 @@ export default function SubscriptionPage() {
           <div className="p-5 flex items-start gap-3.5">
             <PackageCheck className="w-5 h-5 text-[#FF9F0A] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <p className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 রিসেলার ড্রপশিপিং
               </p>
               <p className="text-xs ds-apple-muted mt-1 leading-relaxed">
@@ -598,7 +598,7 @@ export default function SubscriptionPage() {
           <div className="p-5 flex items-start gap-3.5">
             <Headphones className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF] shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <p className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+              <p className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                 ২৪/৭ ভিআইপি সাপোর্ট
               </p>
               <p className="text-xs ds-apple-muted mt-1 leading-relaxed">
@@ -612,7 +612,7 @@ export default function SubscriptionPage() {
         <div id="vip-plans" ref={pricingRef} className="relative scroll-mt-20 w-full min-w-0">
           {creatingOrder && (
             <div className="ds-apple-backdrop absolute inset-0 z-30 flex items-center justify-center rounded-3xl">
-              <div className="ds-apple-popover flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <div className="ds-apple-popover flex items-center gap-2.5 px-5 py-3 rounded-2xl text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 <Loader2 className="w-5 h-5 animate-spin text-[#0071E3] dark:text-[#0A84FF]" />
                 <span>পেমেন্ট পেজ প্রস্তুত হচ্ছে...</span>
               </div>
@@ -649,7 +649,7 @@ export default function SubscriptionPage() {
         {/* How VIP Works */}
         <section className="ds-apple-surface rounded-[24px] overflow-hidden min-w-0 max-w-full">
           <div className="px-5 sm:px-8 py-5 sm:py-6 border-b border-black/[0.06] dark:border-white/[0.08]">
-            <h2 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+            <h2 className="text-lg sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
               মাত্র ৩টি সহজ ধাপে ভিআইপি সুবিধা শুরু করুন
             </h2>
             <p className="text-xs sm:text-sm ds-apple-muted mt-1">
@@ -674,7 +674,7 @@ export default function SubscriptionPage() {
                     </span>
                   </div>
                   <div className="space-y-1.5">
-                    <h3 className="text-sm sm:text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <h3 className="text-sm sm:text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                       {item.title}
                     </h3>
                     <p className="text-xs sm:text-[13.5px] ds-apple-muted leading-relaxed">
@@ -701,7 +701,7 @@ export default function SubscriptionPage() {
         <section className="ds-apple-surface rounded-[24px] overflow-hidden min-w-0 max-w-full">
           <div className="px-5 sm:px-7 py-5 border-b border-black/[0.06] dark:border-white/[0.08] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-base sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+              <h2 className="text-base sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                 ফ্রি মেম্বার বনাম ভিআইপি মেম্বার তুলনা
               </h2>
               <p className="text-xs sm:text-sm ds-apple-muted mt-0.5">
@@ -756,7 +756,7 @@ export default function SubscriptionPage() {
           <div className="md:hidden divide-y divide-black/[0.06] dark:divide-white/[0.08]">
             {TIER_COMPARISONS.map((row, idx) => (
               <div key={idx} className="p-4 sm:p-5 space-y-2.5 min-w-0">
-                <div className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <div className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   {row.feature}
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 pt-1 min-w-0">
@@ -790,7 +790,7 @@ export default function SubscriptionPage() {
           <div className="px-5 sm:px-8 py-5 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center gap-2.5">
             <HelpCircle className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
             <div>
-              <h2 className="text-base sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+              <h2 className="text-base sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                 ভিআইপি মেম্বারশিপ সম্পর্কে সচরাচর জিজ্ঞাসিত প্রশ্ন
               </h2>
               <p className="text-xs ds-apple-muted mt-0.5">
@@ -847,7 +847,7 @@ export default function SubscriptionPage() {
         {myHistory.length > 0 && (
           <section className="ds-apple-surface rounded-[24px] overflow-hidden">
             <div className="px-5 sm:px-7 py-4 border-b border-black/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-3">
-              <h3 className="text-sm sm:text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2 truncate">
+              <h3 className="text-sm sm:text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2 truncate">
                 <History className="w-4 h-4 ds-apple-muted shrink-0" />
                 <span>আপনার পূর্ববর্তী সাবস্ক্রিপশন ইতিহাস</span>
               </h3>

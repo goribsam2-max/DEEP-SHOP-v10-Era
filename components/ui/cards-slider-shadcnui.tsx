@@ -178,7 +178,7 @@ export function CardsSlider({ cards = defaultCards, autoSlide = false }: { cards
                   <div className="absolute top-4 left-4">
                     <Badge
                       variant="secondary"
-                      className="bg-background/80 backdrop-blur-md border-white/10 text-[10px] md:text-xs font-bold px-3 py-1 shadow-sm text-foreground"
+                      className="bg-background/80 backdrop-blur-md border-white/10 text-[10px] md:text-xs font-medium px-3 py-1 shadow-sm text-foreground"
                     >
                       {card.category}
                     </Badge>
@@ -197,7 +197,7 @@ export function CardsSlider({ cards = defaultCards, autoSlide = false }: { cards
 
                 <div className="p-5 md:p-6 flex flex-col h-[calc(100%-10rem)] md:h-[calc(100%-12rem)] justify-between">
                   <div className="space-y-2 md:space-y-3">
-                    <h3 className="text-lg md:text-xl font-bold leading-tight tracking-tight text-foreground transition-colors group-hover:text-zinc-900 dark:text-zinc-100 line-clamp-1">
+                    <h3 className="text-lg md:text-xl font-semibold leading-tight tracking-tight text-foreground transition-colors group-hover:text-zinc-900 dark:text-zinc-100 line-clamp-1">
                       {card.title}
                     </h3>
                     <p className="line-clamp-2 md:line-clamp-3 text-xs md:text-sm text-muted-foreground leading-relaxed font-medium">
@@ -216,7 +216,7 @@ export function CardsSlider({ cards = defaultCards, autoSlide = false }: { cards
                           <AvatarFallback>{card.author.name[0]}</AvatarFallback>
                         </Avatar>
                         <div className="flex flex-col">
-                          <span className="text-xs font-bold text-foreground">
+                          <span className="text-xs font-medium text-foreground">
                             {card.author.name}
                           </span>
                           <span className="text-[10px] font-semibold text-muted-foreground">
@@ -225,10 +225,10 @@ export function CardsSlider({ cards = defaultCards, autoSlide = false }: { cards
                         </div>
                       </div>
                     ) : (
-                       <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300">Available Now</span>
+                       <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300">Available Now</span>
                     )}
                     {card.readTime && (
-                      <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-bold text-muted-foreground bg-secondary/50 px-2.5 py-1 rounded-full">
+                      <div className="flex items-center gap-1.5 text-[10px] md:text-xs font-medium text-muted-foreground bg-secondary/50 px-2.5 py-1 rounded-full">
                         <Clock className="h-3 w-3" />
                         <span>{card.readTime}</span>
                       </div>

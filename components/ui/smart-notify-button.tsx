@@ -62,7 +62,7 @@ export default function SmartNotifyButton(props: SmartNotifyButtonProps) {
 
   return (
     <>
-      <Button variant={variant} className={className} onClick={handleClick}>
+      <Button variant={variant === "primary" ? "default" : variant} className={className} onClick={handleClick}>
         {label}
       </Button>
 

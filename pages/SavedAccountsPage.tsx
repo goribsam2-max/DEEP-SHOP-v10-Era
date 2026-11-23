@@ -419,7 +419,7 @@ const SavedAccountsPage: React.FC = () => {
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    <h3 className="text-[16px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                    <h3 className="text-[16px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                       Profiles on this device ({accounts.length})
                     </h3>
                   </div>

@@ -173,7 +173,7 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
                 <Zap className="w-4 h-4 fill-current" />
               </div>
               <div className="min-w-0">
-                <h3 className="ds-apple-display font-bold text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
+                <h3 className="ds-apple-display font-semibold text-[15px] text-[#1d1d1f] dark:text-[#f5f5f7] truncate">
                   Border Stock Phone Booking
                 </h3>
                 <p className="text-[11px] text-[#6e6e73] dark:text-[#98989d] truncate">
@@ -206,14 +206,14 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
                 className="w-16 h-16 object-contain bg-white dark:bg-[#1c1c1e] rounded-xl p-1.5 border border-black/[0.06] dark:border-white/[0.08] shrink-0"
               />
               <div className="flex-1 min-w-0">
-                <span className="inline-block text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-500/12 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                <span className="inline-block text-[10px] font-medium text-amber-700 dark:text-amber-400 bg-amber-500/12 px-2 py-0.5 rounded-md uppercase tracking-wider">
                   Border Offer
                 </span>
-                <h4 className="font-bold text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] truncate mt-1">
+                <h4 className="font-semibold text-[14px] text-[#1d1d1f] dark:text-[#f5f5f7] truncate mt-1">
                   {product.name}
                 </h4>
                 <div className="flex items-baseline gap-2 mt-0.5 tabular-nums">
-                  <span className="font-bold text-[#0071E3] dark:text-[#0A84FF] text-[15px]">
+                  <span className="font-semibold text-[#0071E3] dark:text-[#0A84FF] text-[15px]">
                     {formatPrice(displayPrice)}
                   </span>
                   <span className="text-[11px] text-[#6e6e73] dark:text-[#98989d]">
@@ -225,7 +225,7 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
 
             {/* Advance Notice */}
             <div className="rounded-2xl bg-amber-500/10 border border-amber-500/25 p-3.5 space-y-1">
-              <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-bold text-xs">
+              <div className="flex items-center gap-1.5 text-amber-700 dark:text-amber-400 font-medium text-xs">
                 <Lock className="w-3.5 h-3.5 shrink-0" />
                 <span>
                   {isFullAdvance ? "100% Full Advance Required" : "Offer Booking Advance Required"}
@@ -329,7 +329,7 @@ export const BorderOfferOrderModal: React.FC<BorderOfferOrderModalProps> = ({
                 <span>Grand Total:</span>
                 <span className="font-semibold">{formatPrice(grandTotal)}</span>
               </div>
-              <div className="flex justify-between font-bold text-[#0071E3] dark:text-[#0A84FF] text-[14px] pt-1.5 border-t border-black/[0.06] dark:border-white/[0.08]">
+              <div className="flex justify-between font-semibold text-[#0071E3] dark:text-[#0A84FF] text-[14px] pt-1.5 border-t border-black/[0.06] dark:border-white/[0.08]">
                 <span>Payable Advance:</span>
                 <span>{formatPrice(payableAdvance)}</span>
               </div>

@@ -124,7 +124,7 @@ export default function OnboardingOffersModal() {
                 </div>
 
                 <div className="mt-8 md:mt-24 max-w-2xl">
-                  <h1 className="text-4xl sm:text-5xl md:text-6xl text-white font-bold leading-[1.06] tracking-[-0.03em] drop-shadow-md">
+                  <h1 className="text-4xl sm:text-5xl md:text-6xl text-white font-semibold leading-[1.06] tracking-[-0.03em] drop-shadow-md">
                     {offer.title1} <br />
                     {offer.title2}{" "}
                     <span className="relative inline-block whitespace-nowrap">
@@ -159,7 +159,7 @@ export default function OnboardingOffersModal() {
                   <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-white/85">
                     {offer.glassTitle}
                   </div>
-                  <div className="text-3xl font-bold tracking-[-0.03em] mt-1 tabular-nums">
+                  <div className="text-3xl font-semibold tracking-[-0.03em] mt-1 tabular-nums">
                     {offer.glassDiscount}
                   </div>
                 </motion.div>

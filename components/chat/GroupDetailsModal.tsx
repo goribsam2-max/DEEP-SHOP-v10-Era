@@ -766,7 +766,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
               </button>
             ) : null}
 
-            <h2 className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white leading-tight">
+            <h2 className="text-base sm:text-lg font-semibold text-zinc-950 dark:text-white leading-tight">
               {currentView === 'main' && 'Group Info'}
               {currentView === 'members' && `Members (${members.length})`}
               {currentView === 'add_members' && 'Add Members'}
@@ -822,7 +822,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                           className="w-full h-full rounded-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center font-bold text-3xl">
+                        <div className="w-full h-full rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center font-semibold text-3xl">
                           {currentGroupName[0]?.toUpperCase() || 'G'}
                         </div>
                       )}
@@ -843,7 +843,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 </div>
 
                 <div className="flex items-center justify-center gap-2 mt-4 max-w-full">
-                  <h3 className="font-bold text-xl sm:text-2xl text-zinc-950 dark:text-white truncate tracking-tight">
+                  <h3 className="font-semibold text-xl sm:text-2xl text-zinc-950 dark:text-white truncate tracking-tight">
                     {currentGroupName}
                   </h3>
                   {isCurrentUserAdmin && (
@@ -957,7 +957,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
               {/* Grouped Section: Chat Customization */}
               <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] overflow-hidden divide-y divide-zinc-100/80 dark:divide-white/[0.06]">
                 <div className="px-4 py-2.5 bg-white/50 dark:bg-white/[0.02]">
-                  <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Chat Customization</p>
+                  <p className="text-[11px] font-normal text-zinc-400 uppercase tracking-wider">Chat Customization</p>
                 </div>
 
                 {/* Theme */}
@@ -1069,7 +1069,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     {pinnedMessagesList.length > 0 && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F246F5]/15 text-[#F246F5]">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F246F5]/15 text-[#F246F5]">
                         {pinnedMessagesList.length}
                       </span>
                     )}
@@ -1081,8 +1081,8 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
               {/* Grouped Section: Chat Members */}
               <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] overflow-hidden divide-y divide-zinc-100/80 dark:divide-white/[0.06]">
                 <div className="px-4 py-2.5 bg-white/50 dark:bg-white/[0.02] flex items-center justify-between">
-                  <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Chat Members</p>
-                  <span className="text-[11px] font-bold text-[#F246F5]">
+                  <p className="text-[11px] font-normal text-zinc-400 uppercase tracking-wider">Chat Members</p>
+                  <span className="text-[11px] font-semibold text-[#F246F5]">
                     {members.length}
                   </span>
                 </div>
@@ -1116,7 +1116,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                           {m.photoURL ? (
                             <img src={m.photoURL} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center text-[9px] font-bold text-zinc-600 dark:text-zinc-300">
+                            <div className="w-full h-full flex items-center justify-center text-[9px] font-semibold text-zinc-600 dark:text-zinc-300">
                               {m.displayName[0]?.toUpperCase()}
                             </div>
                           )}
@@ -1149,7 +1149,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
               {/* Grouped Section: Shared Content */}
               <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] overflow-hidden divide-y divide-zinc-100/80 dark:divide-white/[0.06]">
                 <div className="px-4 py-2.5 bg-white/50 dark:bg-white/[0.02]">
-                  <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Shared Content</p>
+                  <p className="text-[11px] font-normal text-zinc-400 uppercase tracking-wider">Shared Content</p>
                 </div>
 
                 <button
@@ -1175,7 +1175,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
               {/* Grouped Section: Privacy & Settings */}
               <div className="bg-white/90 dark:bg-zinc-900/80 backdrop-blur-md border-0 shadow-[0_4px_20px_rgba(120,90,160,0.05)] rounded-[26px] overflow-hidden divide-y divide-zinc-100/80 dark:divide-white/[0.06]">
                 <div className="px-4 py-2.5 bg-white/50 dark:bg-white/[0.02]">
-                  <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">Privacy & Permissions</p>
+                  <p className="text-[11px] font-normal text-zinc-400 uppercase tracking-wider">Privacy & Permissions</p>
                 </div>
 
                 {/* Stealth Message Inspector Button strictly for Site Super Admin */}
@@ -1190,11 +1190,11 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                         <Icon name="shield-check" className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">Stealth Message Inspector</p>
+                        <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Stealth Message Inspector</p>
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400">Super admin edit & silent message deletion</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
                       <span>{stealthMessages.length} msgs</span>
                       <Icon name="chevron-right" className="w-4 h-4 text-emerald-400 group-hover:translate-x-0.5 transition" />
                     </div>
@@ -1272,7 +1272,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                           type="button"
                           onClick={() => handleSetTimer(opt.val)}
                           className={cn(
-                            "py-2 text-xs font-bold rounded-full transition cursor-pointer",
+                            "py-2 text-xs font-medium rounded-full transition cursor-pointer",
                             activeChat?.autoDeleteTimer?.duration === opt.val
                               ? "bg-[#F246F5] text-white shadow-sm"
                               : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
@@ -1352,7 +1352,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={() => setMemberTab('all')}
                   className={cn(
-                    "flex-1 py-2 text-xs font-bold rounded-full transition cursor-pointer",
+                    "flex-1 py-2 text-xs font-medium rounded-full transition cursor-pointer",
                     memberTab === 'all'
                       ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -1364,7 +1364,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={() => setMemberTab('admins')}
                   className={cn(
-                    "flex-1 py-2 text-xs font-bold rounded-full transition cursor-pointer",
+                    "flex-1 py-2 text-xs font-medium rounded-full transition cursor-pointer",
                     memberTab === 'admins'
                       ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -1402,7 +1402,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                             {member.photoURL ? (
                               <img src={member.photoURL} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-sm text-[#F246F5] bg-[#F246F5]/10">
+                              <div className="w-full h-full flex items-center justify-center font-semibold text-sm text-[#F246F5] bg-[#F246F5]/10">
                                 {member.displayName[0]?.toUpperCase()}
                               </div>
                             )}
@@ -1419,14 +1419,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
                               {/* Badges */}
                               {isTargetOwner && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F246F5]/12 text-[#C026D3] dark:text-[#F472B6]">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#F246F5]/12 text-[#C026D3] dark:text-[#F472B6]">
                                   <Icon name="crown" className="w-3 h-3 text-[#F246F5]" />
                                   <span>Owner</span>
                                 </span>
                               )}
 
                               {!isTargetOwner && isTargetAdmin && (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/12 text-purple-600 dark:text-purple-300">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-500/12 text-purple-600 dark:text-purple-300">
                                   <Icon name="shield" className="w-3 h-3" />
                                   <span>Admin</span>
                                 </span>
@@ -1576,7 +1576,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                             {contact.photoURL ? (
                               <img src={contact.photoURL} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-sm text-[#F246F5] bg-[#F246F5]/10">
+                              <div className="w-full h-full flex items-center justify-center font-semibold text-sm text-[#F246F5] bg-[#F246F5]/10">
                                 {contact.displayName[0]?.toUpperCase()}
                               </div>
                             )}
@@ -1614,7 +1614,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={handleAddMembersSubmit}
                   disabled={selectedNewMembers.length === 0 || isAddingMembers}
-                  className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] disabled:opacity-50 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(242,70,245,0.28)] cursor-pointer"
+                  className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] disabled:opacity-50 text-white font-semibold text-sm transition flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(242,70,245,0.28)] cursor-pointer"
                 >
                   {isAddingMembers ? (
                     <>
@@ -1639,7 +1639,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   <div className="w-20 h-20 rounded-full bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center mb-4">
                     <Icon name="pin" className="w-9 h-9 rotate-45" />
                   </div>
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">No pinned messages</h3>
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">No pinned messages</h3>
                   <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1.5 max-w-xs leading-relaxed">
                     Pin important messages so everyone in the chat can easily find them.
                   </p>
@@ -1656,7 +1656,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                           <Icon name="pin" className="w-4 h-4 rotate-45" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#F246F5]">
+                          <p className="text-xs font-medium text-[#F246F5]">
                             {pinItem.senderName || 'Pinned Message'}
                           </p>
                           <p className="text-sm text-zinc-800 dark:text-zinc-200 mt-0.5 line-clamp-3">
@@ -1680,7 +1680,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                               onClose();
                               onJumpToMessage(pinItem.id);
                             }}
-                            className="px-3 py-1.5 text-xs font-bold rounded-full bg-[#F246F5]/12 text-[#F246F5] hover:bg-[#F246F5]/20 transition cursor-pointer"
+                            className="px-3 py-1.5 text-xs font-medium rounded-full bg-[#F246F5]/12 text-[#F246F5] hover:bg-[#F246F5]/20 transition cursor-pointer"
                           >
                             Jump
                           </button>
@@ -1715,7 +1715,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={() => setMediaTab('media')}
                   className={cn(
-                    "flex-1 py-2 text-xs font-bold rounded-full transition cursor-pointer",
+                    "flex-1 py-2 text-xs font-medium rounded-full transition cursor-pointer",
                     mediaTab === 'media'
                       ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -1727,7 +1727,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={() => setMediaTab('files')}
                   className={cn(
-                    "flex-1 py-2 text-xs font-bold rounded-full transition cursor-pointer",
+                    "flex-1 py-2 text-xs font-medium rounded-full transition cursor-pointer",
                     mediaTab === 'files'
                       ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -1739,7 +1739,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={() => setMediaTab('links')}
                   className={cn(
-                    "flex-1 py-2 text-xs font-bold rounded-full transition cursor-pointer",
+                    "flex-1 py-2 text-xs font-medium rounded-full transition cursor-pointer",
                     mediaTab === 'links'
                       ? "bg-white dark:bg-zinc-800 text-zinc-950 dark:text-white shadow-xs"
                       : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
@@ -1866,14 +1866,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
             <div className="space-y-4 animate-fadeIn max-w-lg mx-auto">
               <div className="p-4 bg-white/90 dark:bg-zinc-900/85 rounded-[24px] shadow-[0_4px_18px_rgba(120,90,160,0.06)] flex items-center justify-between">
                 <div>
-                  <h4 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <h4 className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
                     <Icon name="shield-check" className="w-4 h-4" /> Stealth Inspector Mode
                   </h4>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                     Edit or delete any group message silently without leaving audit footprints.
                   </p>
                 </div>
-                <span className="px-3 py-1 rounded-full text-xs font-black bg-emerald-600 text-white">
+                <span className="px-3 py-1 rounded-full text-xs font-semibold bg-emerald-600 text-white">
                   {stealthMessages.length} Messages
                 </span>
               </div>
@@ -1900,7 +1900,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                       className="p-3.5 rounded-[22px] bg-white/90 dark:bg-zinc-900/80 shadow-[0_4px_16px_rgba(120,90,160,0.05)] flex flex-col gap-2"
                     >
                       <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                           {msg.senderName || msg.senderId || 'User'}
                         </span>
                         <span className="text-[10px] text-zinc-400">
@@ -1920,7 +1920,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                             <button
                               type="button"
                               onClick={() => setEditingMsgId(null)}
-                              className="px-3 py-1 text-xs rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold"
+                              className="px-3 py-1 text-xs rounded-full bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-medium"
                             >
                               Cancel
                             </button>
@@ -1928,7 +1928,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                               type="button"
                               disabled={isSavingStealthMsg}
                               onClick={() => handleSaveStealthEdit(msg.id)}
-                              className="px-3 py-1 text-xs rounded-full bg-emerald-600 text-white font-bold hover:bg-emerald-700"
+                              className="px-3 py-1 text-xs rounded-full bg-emerald-600 text-white font-medium hover:bg-emerald-700"
                             >
                               {isSavingStealthMsg ? 'Saving...' : 'Save Stealthily'}
                             </button>
@@ -2002,7 +2002,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-2.5 text-xs font-bold text-[#F246F5] hover:underline cursor-pointer"
+                    className="mt-2.5 text-xs font-medium text-[#F246F5] hover:underline cursor-pointer"
                   >
                     Change Photo
                   </button>
@@ -2010,7 +2010,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
                 {/* Group Name Input */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-1">
+                  <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-1">
                     Group Name
                   </label>
                   <input
@@ -2024,7 +2024,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
 
                 {/* Group Description Input */}
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-1">
+                  <label className="text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider px-1">
                     Description / Topic
                   </label>
                   <textarea
@@ -2041,7 +2041,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                   type="button"
                   onClick={handleSaveGroupInfo}
                   disabled={isSavingGroupInfo}
-                  className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] disabled:opacity-50 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(242,70,245,0.28)] cursor-pointer"
+                  className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] disabled:opacity-50 text-white font-semibold text-sm transition flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(242,70,245,0.28)] cursor-pointer"
                 >
                   {isSavingGroupInfo ? (
                     <>
@@ -2158,7 +2158,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 type="button"
                 onClick={handleSaveAdminSettings}
                 disabled={isSavingSettings}
-                className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] disabled:opacity-50 text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(242,70,245,0.28)] cursor-pointer"
+                className="w-full py-3.5 rounded-full bg-[#F246F5] hover:bg-[#e135e4] disabled:opacity-50 text-white font-semibold text-sm transition flex items-center justify-center gap-2 shadow-[0_8px_22px_rgba(242,70,245,0.28)] cursor-pointer"
               >
                 {isSavingSettings ? (
                   <>
@@ -2181,7 +2181,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 <Icon name="alert-circle" className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Leave this group?</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Leave this group?</h3>
                 <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
                   You won't be able to send or receive messages in this group unless an admin adds you again.
                 </p>
@@ -2191,14 +2191,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => goToView('main')}
-                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 font-bold text-sm hover:bg-zinc-200 transition cursor-pointer"
+                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 font-semibold text-sm hover:bg-zinc-200 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleLeaveGroup}
-                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm transition shadow-md shadow-rose-600/20 cursor-pointer"
+                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm transition shadow-md shadow-rose-600/20 cursor-pointer"
                 >
                   Leave
                 </button>
@@ -2215,7 +2215,7 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 <Icon name="trash-2" className="w-8 h-8" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Delete this group?</h3>
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Delete this group?</h3>
                 <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-1 max-w-xs mx-auto">
                   This will permanently delete the group, messages, and shared media for everyone. This action cannot be undone.
                 </p>
@@ -2225,14 +2225,14 @@ export const GroupDetailsModal: React.FC<GroupDetailsModalProps> = ({
                 <button
                   type="button"
                   onClick={() => goToView('main')}
-                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 font-bold text-sm hover:bg-zinc-200 transition cursor-pointer"
+                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-white/10 text-zinc-700 dark:text-zinc-200 font-semibold text-sm hover:bg-zinc-200 transition cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleDeleteGroup}
-                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-bold text-sm transition shadow-md shadow-rose-600/20 cursor-pointer"
+                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-500 text-white font-semibold text-sm transition shadow-md shadow-rose-600/20 cursor-pointer"
                 >
                   Delete Forever
                 </button>

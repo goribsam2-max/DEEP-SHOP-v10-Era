@@ -395,7 +395,7 @@ const ScannableQRCodeCard: React.FC<{
       <div className="bg-white rounded-[24px] p-3.5 border border-slate-200/80 shadow-sm flex flex-col items-center text-center space-y-2 max-w-[220px] w-full">
         <canvas ref={canvasRef} className="w-44 h-44 rounded-xl" />
         <div className="space-y-0.5">
-          <p className="text-xs font-bold text-slate-900 truncate">
+          <p className="text-xs font-medium text-slate-900 truncate">
             {username
               ? username.startsWith("@")
                 ? username
@@ -881,7 +881,7 @@ export const NewsProfilePage: React.FC = () => {
 
         getDocs(collection(db, "users")).then((uSnap) => {
           const list = uSnap.docs
-            .map((d) => ({ uid: d.id, ...(d.data() as Record<string, any>) }))
+            .map((d) => ({ uid: d.id, ...(d.data() as Record<string, any>) }) as Record<string, any> & { uid: string })
             .filter((u) => {
               const pCount = postingUsersMap.get(u.uid) || 0;
               return (
@@ -1336,18 +1336,18 @@ export const NewsProfilePage: React.FC = () => {
                 triggerHaptic();
                 navigate("/loops/profile");
               }}
-              className="text-sm font-bold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
+              className="text-sm font-semibold text-slate-600 dark:text-zinc-400 hover:text-slate-900 cursor-pointer"
             >
               Cancel
             </button>
-            <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+            <h1 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-white">
               Select interests
             </h1>
             <button
               type="button"
               onClick={handleSaveInterests}
               disabled={savingInterests}
-              className="text-sm font-bold text-[#1877F2] hover:underline cursor-pointer disabled:opacity-50"
+              className="text-sm font-semibold text-[#1877F2] hover:underline cursor-pointer disabled:opacity-50"
             >
               {savingInterests ? "Saving..." : "Done"}
             </button>
@@ -1366,7 +1366,7 @@ export const NewsProfilePage: React.FC = () => {
           </div>
 
           <div className="mt-6 space-y-4">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-zinc-400">
               Popular Topics & Categories
             </h2>
 
@@ -1395,7 +1395,7 @@ export const NewsProfilePage: React.FC = () => {
                         <IconComp className="w-4 h-4" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-bold truncate">{topic.label}</p>
+                        <p className="text-xs font-medium truncate">{topic.label}</p>
                         <p className="text-[10px] text-slate-400 truncate">{topic.category}</p>
                       </div>
                     </div>
@@ -1472,7 +1472,7 @@ export const NewsProfilePage: React.FC = () => {
               >
                 <ChevronLeft className="w-6 h-6 stroke-[2.1]" />
               </button>
-              <h1 className="text-[17px] font-bold tracking-tight truncate">
+              <h1 className="text-[17px] font-semibold tracking-tight truncate">
                 Links & social badges
               </h1>
             </div>
@@ -1496,7 +1496,7 @@ export const NewsProfilePage: React.FC = () => {
           <section className="loops-about-card rounded-[26px] p-5 border loops-divider space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-0.5">
-                <h2 className="text-[15.5px] font-bold text-[#0f0f0f] dark:text-white flex items-center gap-2">
+                <h2 className="text-[15.5px] font-semibold text-[#0f0f0f] dark:text-white flex items-center gap-2">
                   <ProfileChainLinkSvg className="w-4 h-4 shrink-0" />
                   <span>Profile links</span>
                 </h2>
@@ -1570,7 +1570,7 @@ export const NewsProfilePage: React.FC = () => {
           {/* Section 2: Instagram Header Shortcut */}
           <section className="loops-about-card rounded-[26px] p-5 border loops-divider space-y-3.5">
             <div className="space-y-0.5">
-              <h2 className="text-[15.5px] font-bold text-[#0f0f0f] dark:text-white flex items-center gap-2">
+              <h2 className="text-[15.5px] font-semibold text-[#0f0f0f] dark:text-white flex items-center gap-2">
                 <InstagramIcon className="w-4 h-4 text-pink-500 shrink-0" />
                 <span>Instagram header button</span>
               </h2>
@@ -1596,7 +1596,7 @@ export const NewsProfilePage: React.FC = () => {
           {/* Section 3: Profile Pill Badges (Loops Handle, WhatsApp, Telegram, TikTok, Facebook, YouTube) */}
           <section className="loops-about-card rounded-[26px] p-5 border loops-divider space-y-4">
             <div className="space-y-0.5">
-              <h2 className="text-[15.5px] font-bold text-[#0f0f0f] dark:text-white">
+              <h2 className="text-[15.5px] font-semibold text-[#0f0f0f] dark:text-white">
                 Profile pill chips
               </h2>
               <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400">
@@ -1768,7 +1768,7 @@ export const NewsProfilePage: React.FC = () => {
               >
                 <ChevronLeft className="w-6 h-6 stroke-[2.1]" />
               </button>
-              <h1 className="text-[17px] font-bold tracking-tight truncate">
+              <h1 className="text-[17px] font-semibold tracking-tight truncate">
                 Edit profile
               </h1>
             </div>
@@ -1829,7 +1829,7 @@ export const NewsProfilePage: React.FC = () => {
               </button>
 
               <div className="min-w-0 space-y-0.5">
-                <h2 className="text-[18px] font-bold text-[#0f0f0f] dark:text-white truncate">
+                <h2 className="text-[18px] font-semibold text-[#0f0f0f] dark:text-white truncate">
                   {editName.trim() || "Your Name"}
                 </h2>
                 <p className="text-[14px] text-zinc-500 dark:text-zinc-400 truncate">
@@ -1852,7 +1852,7 @@ export const NewsProfilePage: React.FC = () => {
           {/* Main Profile Information Card */}
           <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider space-y-4">
             <div className="space-y-0.5">
-              <h3 className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
+              <h3 className="text-[16px] font-semibold text-[#0f0f0f] dark:text-white">
                 Profile information
               </h3>
               <p className="text-[13px] text-zinc-500 dark:text-zinc-400">
@@ -2026,7 +2026,7 @@ export const NewsProfilePage: React.FC = () => {
 
           {/* Privacy & Visibility Preferences Card */}
           <section className="loops-about-card rounded-[28px] p-5 sm:p-6 border loops-divider space-y-4">
-            <h3 className="text-[16px] font-bold text-[#0f0f0f] dark:text-white">
+            <h3 className="text-[16px] font-semibold text-[#0f0f0f] dark:text-white">
               Privacy & display
             </h3>
 
@@ -2494,7 +2494,7 @@ export const NewsProfilePage: React.FC = () => {
         <div className="pt-1 pb-2 space-y-3.5">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-0.5 min-w-0 flex-1 pt-1">
-              <h1 className="text-[23px] sm:text-[26px] font-bold tracking-tight text-zinc-950 dark:text-white leading-tight truncate flex items-center gap-1.5">
+              <h1 className="text-[23px] sm:text-[26px] font-semibold tracking-tight text-zinc-950 dark:text-white leading-tight truncate flex items-center gap-1.5">
                 <span>{displayName}</span>
                 {Boolean(profileUser?.isVerifiedBadge || profileUser?.isVerified || profileUser?.verified || profileUser?.kycStatus === "approved" || profileUser?.role === "admin") && (
                   <VerifiedLoopBadge />
@@ -2572,9 +2572,9 @@ export const NewsProfilePage: React.FC = () => {
                     className="w-full h-full object-cover rounded-full"
                   />
                 ) : (
-                  <div className="w-full h-full rounded-full bg-[#B2FF00] flex flex-col items-center justify-center text-black font-black text-center leading-none p-1">
+                  <div className="w-full h-full rounded-full bg-[#B2FF00] flex flex-col items-center justify-center text-black font-semibold text-center leading-none p-1">
                     <span className="text-[22px] tracking-tighter">DS</span>
-                    <span className="text-[8.5px] uppercase tracking-widest font-bold mt-0.5">
+                    <span className="text-[8.5px] uppercase tracking-widest font-medium mt-0.5">
                       DEEP SHOP
                     </span>
                   </div>
@@ -2712,7 +2712,7 @@ export const NewsProfilePage: React.FC = () => {
               }}
               className="w-full rounded-2xl bg-[#F2F4F7] dark:bg-zinc-900/90 hover:bg-[#E8ECEF] dark:hover:bg-zinc-800/90 px-4 py-3.5 text-left transition cursor-pointer block"
             >
-              <span className="block text-[15.5px] font-bold text-zinc-950 dark:text-white leading-snug">
+              <span className="block text-[15.5px] font-semibold text-zinc-950 dark:text-white leading-snug">
                 Your dashboard
               </span>
               <span className="mt-0.5 flex items-center gap-1.5 text-[13.5px] text-zinc-500 dark:text-zinc-400 tabular-nums">
@@ -2820,7 +2820,7 @@ export const NewsProfilePage: React.FC = () => {
         {isOwnProfile && incompleteSetupSteps.length > 0 && (
           <div className="mt-6 space-y-3">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white">
                 Finish your profile
               </h3>
               <span className="text-xs font-semibold text-slate-400 tabular-nums">
@@ -2838,7 +2838,7 @@ export const NewsProfilePage: React.FC = () => {
                     {step.icon}
                   </div>
                   <div className="space-y-1">
-                    <h4 className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-1">
+                    <h4 className="text-xs font-semibold text-zinc-900 dark:text-white line-clamp-1">
                       {step.title}
                     </h4>
                     <p className="text-[11px] text-zinc-400 leading-snug line-clamp-2">
@@ -2851,7 +2851,7 @@ export const NewsProfilePage: React.FC = () => {
                       triggerHaptic();
                       step.onClick();
                     }}
-                    className="w-full py-2 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-xs font-bold cursor-pointer active:scale-95 transition"
+                    className="w-full py-2 rounded-2xl bg-black dark:bg-white text-white dark:text-black text-xs font-medium cursor-pointer active:scale-95 transition"
                   >
                     {step.cta}
                   </button>
@@ -2865,13 +2865,13 @@ export const NewsProfilePage: React.FC = () => {
         {suggestedProfiles.length > 0 && (
           <div className="mt-8 space-y-4">
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-zinc-200">
+              <h3 className="text-[13px] font-semibold text-slate-800 dark:text-zinc-200">
                 Suggested for you
               </h3>
               <button
                 type="button"
                 onClick={() => setSuggestedProfiles([])}
-                className="text-xs font-bold text-slate-400 hover:text-[#1877F2] transition cursor-pointer"
+                className="text-xs font-medium text-slate-400 hover:text-[#1877F2] transition cursor-pointer"
               >
                 See all
               </button>
@@ -2905,7 +2905,7 @@ export const NewsProfilePage: React.FC = () => {
                     <ProfileAvatar src={sAvatar} name={sName} className="w-[72px] h-[72px] ring-2 ring-white dark:ring-zinc-800 shadow-sm" iconClassName="w-8 h-8" />
 
                     <div className="w-full space-y-0.5">
-                      <p className="text-[13px] font-bold text-slate-900 dark:text-white truncate">{sName}</p>
+                      <p className="text-[13px] font-semibold text-slate-900 dark:text-white truncate">{sName}</p>
                       {sUser && (
                         <p className="text-[11px] font-medium text-slate-400 dark:text-zinc-500 truncate">@{sUser}</p>
                       )}
@@ -2923,7 +2923,7 @@ export const NewsProfilePage: React.FC = () => {
                           currentlyFollowing: isSFollowing,
                         });
                       }}
-                      className={`w-full py-2 rounded-xl text-xs font-bold transition shadow-2xs active:scale-95 cursor-pointer ${
+                      className={`w-full py-2 rounded-xl text-xs font-medium transition shadow-2xs active:scale-95 cursor-pointer ${
                         isSFollowing
                           ? "bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300"
                           : "bg-black dark:bg-white text-white dark:text-black"
@@ -2990,7 +2990,7 @@ export const NewsProfilePage: React.FC = () => {
                 >
                   <div className="loops-highlight-ring w-[74px] h-[74px] rounded-full p-[3.5px] flex items-center justify-center">
                     <div className="loops-highlight-inner w-full h-full rounded-full flex items-center justify-center px-1.5 text-center overflow-hidden">
-                      <span className="text-[9.5px] font-extrabold tracking-[0.04em] uppercase leading-[1.15] line-clamp-2 break-words">
+                      <span className="text-[9.5px] font-medium tracking-[0.04em] uppercase leading-[1.15] line-clamp-2 break-words">
                         {hl.title}
                       </span>
                     </div>
@@ -3046,7 +3046,7 @@ export const NewsProfilePage: React.FC = () => {
               isOwnProfile ? (
                 <div className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[32px] p-6 sm:p-8 border border-slate-200/80 dark:border-zinc-800 shadow-sm space-y-8 flex flex-col items-center text-center">
                   <div className="space-y-2">
-                    <h3 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
+                    <h3 className="text-2xl sm:text-3xl font-semibold text-slate-900 dark:text-white">
                       Start your first Loop
                     </h3>
                     <p className="text-sm text-slate-400 dark:text-zinc-500 font-medium max-w-[280px] mx-auto">
@@ -3070,7 +3070,7 @@ export const NewsProfilePage: React.FC = () => {
                             triggerHaptic();
                             navigate(`/loops/create?text=${encodeURIComponent(suggestion)}`);
                           }}
-                          className="px-5 py-3 rounded-full bg-white dark:bg-zinc-800 text-xs font-bold text-slate-900 dark:text-white border border-slate-200/80 dark:border-zinc-700 shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#0095F6] transition"
+                          className="px-5 py-3 rounded-full bg-white dark:bg-zinc-800 text-xs font-medium text-slate-900 dark:text-white border border-slate-200/80 dark:border-zinc-700 shadow-2xs whitespace-nowrap cursor-pointer hover:border-[#0095F6] transition"
                         >
                           {suggestion}
                         </button>
@@ -3084,7 +3084,7 @@ export const NewsProfilePage: React.FC = () => {
                       triggerHaptic();
                       navigate("/loops/create");
                     }}
-                    className="w-full py-4 rounded-[20px] bg-black dark:bg-white text-white dark:text-black font-extrabold text-sm shadow-lg active:scale-[0.98] transition cursor-pointer"
+                    className="w-full py-4 rounded-[20px] bg-black dark:bg-white text-white dark:text-black font-semibold text-sm shadow-lg active:scale-[0.98] transition cursor-pointer"
                   >
                     Create Loop
                   </button>
@@ -3198,7 +3198,7 @@ export const NewsProfilePage: React.FC = () => {
                         </div>
                       )}
                       {isVideoMedia && (
-                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/65 text-white text-[10px] font-bold">
+                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/65 text-white text-[10px] font-semibold">
                           REEL
                         </span>
                       )}
@@ -3227,7 +3227,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <ProfileAvatar src={comment.userAvatar || avatarUrl} name={comment.userName || displayName} className="w-8 h-8" iconClassName="w-4 h-4" />
                       <div>
-                        <p className="text-xs font-bold text-slate-900 dark:text-white">{comment.userName || displayName}</p>
+                        <p className="text-xs font-medium text-slate-900 dark:text-white">{comment.userName || displayName}</p>
                         <p className="text-[10px] text-slate-400">{comment.createdAt ? formatDhakaFeedTime(comment.createdAt) : "Recently"}</p>
                       </div>
                     </div>
@@ -3280,7 +3280,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="space-y-1 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                         {isOwnProfile ? "Profile options" : `Options for ${displayName}`}
                       </h3>
                       {username && (
@@ -3439,7 +3439,7 @@ export const NewsProfilePage: React.FC = () => {
                           setShowOptionsSheet(false);
                           setShowCampaignStatusSheet(true);
                         }}
-                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-pink-600 dark:text-pink-400 font-bold cursor-pointer text-left transition"
+                        className="w-full flex items-center gap-3.5 px-3.5 py-3.5 rounded-[16px] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] text-[16px] font-normal text-pink-600 dark:text-pink-400 font-semibold cursor-pointer text-left transition"
                       >
                         <Sparkles className="w-[22px] h-[22px] stroke-[2] text-pink-600 dark:text-pink-400 shrink-0" />
                         <span>Cash on Campaign Status</span>
@@ -3549,7 +3549,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="space-y-1 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                         About this profile
                       </h3>
                       <p className="text-[14.5px] leading-snug text-zinc-500 dark:text-zinc-400">
@@ -3661,7 +3661,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="space-y-1 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                         Profile QR code
                       </h3>
                       <p className="text-[14.5px] text-zinc-500 dark:text-zinc-400">
@@ -3748,7 +3748,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="space-y-0.5 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight truncate">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight truncate">
                         {displayName}
                       </h3>
                       {username && (
@@ -3862,7 +3862,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="space-y-1 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                         Scan profile QR code
                       </h3>
                       <p className="text-[14px] text-zinc-500 dark:text-zinc-400">
@@ -3922,7 +3922,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="space-y-1 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                         Activity notifications
                       </h3>
                       <p className="text-[14px] text-zinc-500 dark:text-zinc-400">
@@ -4044,7 +4044,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="space-y-1 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                         Topics that{" "}
                         {username ? username.replace(/^@+/, "") : displayName} loops about
                       </h3>
@@ -4101,7 +4101,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-bold text-[#0f0f0f] dark:text-white tracking-tight flex items-center gap-2">
+                      <h3 className="text-xl font-semibold text-[#0f0f0f] dark:text-white tracking-tight flex items-center gap-2">
                         <Sparkles className="w-5 h-5 text-pink-500" />
                         <span>Cash on Campaign Status</span>
                       </h3>
@@ -4118,10 +4118,10 @@ export const NewsProfilePage: React.FC = () => {
                     {["tasmia.rahman99@gmail.com", "sabbir.hossain.bd@gmail.com", "tanha.jahan@gmail.com", "mahmud.hasan.dev@gmail.com", "anika.tabassum.bd@gmail.com"].includes(currentUser?.email || "") ? (
                       /* Demo Winner Status View */
                       <div className="bg-gradient-to-r from-amber-500/15 via-pink-500/15 to-purple-500/15 border border-amber-500/30 rounded-2xl p-5 space-y-3 text-center">
-                        <div className="w-14 h-14 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center mx-auto shadow-md font-bold">
+                        <div className="w-14 h-14 rounded-full bg-amber-400 text-zinc-950 flex items-center justify-center mx-auto shadow-md font-semibold">
                           🎉
                         </div>
-                        <h4 className="text-lg font-bold text-zinc-900 dark:text-white">
+                        <h4 className="text-lg font-semibold text-zinc-900 dark:text-white">
                           Congratulations! You Won COD Access 🎉
                         </h4>
                         <p className="text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -4134,7 +4134,7 @@ export const NewsProfilePage: React.FC = () => {
                             setShowCampaignStatusSheet(false);
                             navigate("/");
                           }}
-                          className="w-full py-3 rounded-xl bg-amber-400 text-zinc-950 font-bold text-xs hover:brightness-105 active:scale-95 transition cursor-pointer shadow-md"
+                          className="w-full py-3 rounded-xl bg-amber-400 text-zinc-950 font-medium text-xs hover:brightness-105 active:scale-95 transition cursor-pointer shadow-md"
                         >
                           Order with Cash on Delivery
                         </button>
@@ -4142,10 +4142,10 @@ export const NewsProfilePage: React.FC = () => {
                     ) : (
                       /* Standard Applicant Status View: Better Luck Next Time */
                       <div className="bg-zinc-50 dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-5 space-y-3 text-center">
-                        <div className="w-12 h-12 rounded-full bg-pink-500/10 text-pink-500 flex items-center justify-center mx-auto font-bold text-xl">
+                        <div className="w-12 h-12 rounded-full bg-pink-500/10 text-pink-500 flex items-center justify-center mx-auto font-semibold text-xl">
                           🌟
                         </div>
-                        <h4 className="text-base font-bold text-zinc-900 dark:text-white">
+                        <h4 className="text-base font-semibold text-zinc-900 dark:text-white">
                           Better Luck Next Time!
                         </h4>
                         <p className="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
@@ -4158,7 +4158,7 @@ export const NewsProfilePage: React.FC = () => {
                             setShowCampaignStatusSheet(false);
                             navigate("/cash-on-campaign");
                           }}
-                          className="w-full py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs active:scale-95 transition cursor-pointer"
+                          className="w-full py-2.5 rounded-xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-medium text-xs active:scale-95 transition cursor-pointer"
                         >
                           View Application Details
                         </button>
@@ -4195,7 +4195,7 @@ export const NewsProfilePage: React.FC = () => {
                     <div className="w-11 h-1 rounded-full bg-zinc-400/75 dark:bg-zinc-600 mx-auto mb-1 shrink-0" />
 
                     <div className="flex items-center justify-between gap-3 pt-0.5">
-                      <h3 className="text-[16.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                      <h3 className="text-[16.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                         Links
                       </h3>
                       {isOwnProfile && (

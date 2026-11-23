@@ -632,7 +632,7 @@ const MyOrders: React.FC = () => {
             <span className="text-[11px] font-semibold uppercase tracking-wider text-zinc-400 block">
               Order Summary
             </span>
-            <h3 className="text-base font-bold text-zinc-900 dark:text-white mt-0.5">
+            <h3 className="text-base font-semibold text-zinc-900 dark:text-white mt-0.5">
               #{order.id.slice(0, 10).toUpperCase()}
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -679,14 +679,14 @@ const MyOrders: React.FC = () => {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Total Amount</span>
-            <span className="text-sm font-extrabold text-zinc-900 dark:text-white">
+            <span className="text-sm font-semibold text-zinc-900 dark:text-white">
               {formatPrice(order.total)}
             </span>
           </div>
           {paidAdv > 0 && (
             <div className="flex items-center justify-between text-xs">
               <span className="text-zinc-500 dark:text-zinc-400">Advance Paid</span>
-              <span className="font-bold text-emerald-600 dark:text-emerald-400">
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
                 {formatPrice(paidAdv)} {dueAmt > 0 ? `(Due: ${formatPrice(dueAmt)})` : "(Fully Paid)"}
               </span>
             </div>
@@ -732,7 +732,7 @@ const MyOrders: React.FC = () => {
                 )}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-zinc-900 dark:text-white line-clamp-1">
+                <p className="text-xs font-medium text-zinc-900 dark:text-white line-clamp-1">
                   {item.name}
                 </p>
                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -741,7 +741,7 @@ const MyOrders: React.FC = () => {
                   {item.storage ? ` • ${item.storage}` : ""}
                 </p>
               </div>
-              <span className="text-xs font-bold text-zinc-900 dark:text-white shrink-0">
+              <span className="text-xs font-medium text-zinc-900 dark:text-white shrink-0">
                 {formatPrice((item.price || item.priceAtPurchase || 0) * (item.quantity || 1))}
               </span>
             </div>
@@ -753,7 +753,7 @@ const MyOrders: React.FC = () => {
         {(isBorder || addressStr) && (
           <div className="orders-v2-seller-box rounded-2xl p-3.5 space-y-2 text-xs">
             {isBorder && (
-              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold">
+              <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-semibold">
                 <Zap className="w-3.5 h-3.5" />
                 <span>Border Stock Offer Order</span>
               </div>
@@ -776,7 +776,7 @@ const MyOrders: React.FC = () => {
         {/* Rejection Reason if Cancelled */}
         {order.status === OrderStatus.CANCELLED && (order as any).rejectReason && (
           <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200/70 dark:border-rose-900/50 text-xs text-rose-700 dark:text-rose-300">
-            <span className="font-bold block mb-0.5">Cancellation Reason:</span>
+            <span className="font-semibold block mb-0.5">Cancellation Reason:</span>
             {(order as any).rejectReason}
           </div>
         )}
@@ -830,7 +830,7 @@ const MyOrders: React.FC = () => {
             <Crown className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-zinc-900 dark:text-white">
+            <h2 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-white">
               DEEP SHOP VIP Subscription
             </h2>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-400">
@@ -855,7 +855,7 @@ const MyOrders: React.FC = () => {
             <Crown className="w-7 h-7" />
           </div>
           <div className="space-y-1.5">
-            <h3 className="font-bold text-base text-zinc-900 dark:text-white">
+            <h3 className="font-semibold text-base text-zinc-900 dark:text-white">
               No VIP Subscription Record Found
             </h3>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
@@ -912,17 +912,17 @@ const MyOrders: React.FC = () => {
               >
                 <div className="flex items-start justify-between gap-2 border-b border-zinc-100 dark:border-zinc-800 pb-3">
                   <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1">
+                    <span className="text-[10px] font-medium uppercase tracking-wider text-amber-500 flex items-center gap-1">
                       <Crown className="w-3 h-3" />
                       <span>DEEP SHOP VIP &bull; {sub.durationDays} Days</span>
                     </span>
-                    <h3 className="font-bold text-base sm:text-lg text-zinc-900 dark:text-white mt-0.5">
+                    <h3 className="font-semibold text-base sm:text-lg text-zinc-900 dark:text-white mt-0.5">
                       {sub.planName}
                     </h3>
                   </div>
 
                   <span
-                    className={`px-3 py-1 rounded-full text-[11px] font-bold shrink-0 ${
+                    className={`px-3 py-1 rounded-full text-[11px] font-semibold shrink-0 ${
                       isExpired
                         ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400"
                         : sub.status === "approved"
@@ -944,25 +944,25 @@ const MyOrders: React.FC = () => {
 
                 {sub.status === "approved" && !isExpired ? (
                   <div className="p-3.5 rounded-2xl orders-v2-seller-box text-xs space-y-2">
-                    <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-bold">
+                    <div className="flex items-center justify-between text-emerald-700 dark:text-emerald-400 font-semibold">
                       <span className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-4 h-4" />
                         <span>VIP Membership Active</span>
                       </span>
-                      <span className="text-[11px] bg-emerald-500/15 px-2.5 py-0.5 rounded-full font-bold">
+                      <span className="text-[11px] bg-emerald-500/15 px-2.5 py-0.5 rounded-full font-semibold">
                         {daysRemaining} days left
                       </span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 text-[11px] text-zinc-600 dark:text-zinc-400 pt-1.5 border-t border-zinc-200/60 dark:border-zinc-700/50">
                       <div>
                         <span className="text-zinc-400 block">Start Date:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                           {startDateStr}
                         </span>
                       </div>
                       <div>
                         <span className="text-zinc-400 block">Expiry Date:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                           {expiryDateStr}
                         </span>
                       </div>
@@ -970,18 +970,18 @@ const MyOrders: React.FC = () => {
                   </div>
                 ) : sub.status === "pending" ? (
                   <div className="p-3.5 rounded-2xl orders-v2-seller-box text-xs space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-[#FF9500] dark:text-[#FF9F0A] font-bold">
+                    <div className="flex items-center gap-1.5 text-[#FF9500] dark:text-[#FF9F0A] font-semibold">
                       <Clock className="w-4 h-4" />
                       <span>Verification in Progress</span>
                     </div>
                     <p className="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
                       Your Transaction ID (
-                      <span className="font-mono font-bold tabular-nums">{sub.trxId}</span>) is being verified. Subscriptions are typically activated within 1–7 hours.
+                      <span className="font-mono font-semibold tabular-nums">{sub.trxId}</span>) is being verified. Subscriptions are typically activated within 1–7 hours.
                     </p>
                   </div>
                 ) : sub.status === "rejected" ? (
                   <div className="p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/30 border border-rose-200/60 dark:border-rose-900/40 text-xs space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400 font-bold">
+                    <div className="flex items-center gap-1.5 text-rose-700 dark:text-rose-400 font-semibold">
                       <AlertTriangle className="w-4 h-4" />
                       <span>Request Rejected</span>
                     </div>
@@ -991,13 +991,13 @@ const MyOrders: React.FC = () => {
                   </div>
                 ) : (
                   <div className="p-3.5 rounded-2xl orders-v2-seller-box text-xs flex items-center justify-between">
-                    <span className="font-bold text-zinc-600 dark:text-zinc-300">
+                    <span className="font-semibold text-zinc-600 dark:text-zinc-300">
                       Membership Expired
                     </span>
                     <button
                       type="button"
                       onClick={() => navigate("/subscription")}
-                      className="px-3 py-1 rounded-full orders-v2-btn-explore font-bold text-[11px] flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1 rounded-full orders-v2-btn-explore font-semibold text-[11px] flex items-center gap-1 cursor-pointer"
                     >
                       <RefreshCw className="w-3 h-3" />
                       <span>Renew</span>
@@ -1009,26 +1009,26 @@ const MyOrders: React.FC = () => {
                   <div className="grid grid-cols-3 gap-2">
                     <div>
                       <span className="text-[10px] text-zinc-400 block">Payment Method</span>
-                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                      <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                         {sub.paymentMethod}
                       </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-zinc-400 block">Sender Number</span>
-                      <span className="font-bold font-mono text-zinc-800 dark:text-zinc-200">
+                      <span className="font-semibold font-mono text-zinc-800 dark:text-zinc-200">
                         {sub.senderNumber || "N/A"}
                       </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-zinc-400 block">TrxID</span>
-                      <span className="font-bold font-mono text-amber-600 dark:text-amber-400">
+                      <span className="font-semibold font-mono text-amber-600 dark:text-amber-400">
                         {sub.trxId}
                       </span>
                     </div>
                   </div>
                   <div className="flex items-center justify-between pt-2 border-t border-zinc-200/60 dark:border-zinc-700/50 text-[11px] text-zinc-500">
                     <span>Requested: {requestedDateStr}</span>
-                    <span className="font-extrabold text-zinc-900 dark:text-white text-xs">
+                    <span className="font-semibold text-zinc-900 dark:text-white text-xs">
                       ৳{sub.price?.toLocaleString("en-BD")}
                     </span>
                   </div>
@@ -1084,7 +1084,7 @@ const MyOrders: React.FC = () => {
               {formatOrderCardDate(order.createdAt)}
             </p>
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-[17px] sm:text-[18px] font-bold tabular-nums text-zinc-900 dark:text-white tracking-tight">
+              <span className="text-[17px] sm:text-[18px] font-semibold tabular-nums text-zinc-900 dark:text-white tracking-tight">
                 {formatPrice(order.total)}
               </span>
               <span className="text-[11px] font-semibold uppercase text-zinc-400">
@@ -1115,7 +1115,7 @@ const MyOrders: React.FC = () => {
                     </div>
                   )}
                   {showOverflow && (
-                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px] font-semibold text-white">
                       +{extraCount}
                     </div>
                   )}
@@ -1140,7 +1140,7 @@ const MyOrders: React.FC = () => {
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-[13.5px] font-bold text-zinc-900 dark:text-white truncate">
+              <h4 className="text-[13.5px] font-semibold text-zinc-900 dark:text-white truncate">
                 {sellerName}
               </h4>
               <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400">
@@ -1171,7 +1171,7 @@ const MyOrders: React.FC = () => {
                   )}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-bold text-zinc-900 dark:text-white truncate">
+                  <p className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate">
                     {firstItem?.name || "Order Package"}
                     {(order.items?.length || 0) > 1
                       ? ` + ${(order.items?.length || 1) - 1} more`
@@ -1203,25 +1203,25 @@ const MyOrders: React.FC = () => {
               <div className="orders-v2-seller-box rounded-2xl p-3 space-y-2">
                 <div className="grid grid-cols-2 gap-2 text-center">
                   <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-black/5">
-                    <span className="text-[10px] font-bold uppercase text-zinc-400 block">
+                    <span className="text-[10px] font-medium uppercase text-zinc-400 block">
                       Courier
                     </span>
-                    <span className="text-xs font-extrabold text-zinc-900 dark:text-white">
+                    <span className="text-xs font-semibold text-zinc-900 dark:text-white">
                       {order.courierName}
                     </span>
                   </div>
                   <div className="bg-white dark:bg-zinc-900 p-2.5 rounded-xl border border-black/5">
-                    <span className="text-[10px] font-bold uppercase text-zinc-400 block">
+                    <span className="text-[10px] font-medium uppercase text-zinc-400 block">
                       Rider Phone
                     </span>
-                    <span className="text-xs font-extrabold font-mono text-zinc-900 dark:text-white">
+                    <span className="text-xs font-semibold font-mono text-zinc-900 dark:text-white">
                       {order.riderNumber}
                     </span>
                   </div>
                 </div>
               </div>
             ) : (order as any).courierPaymentStatus === "checking" ? (
-              <div className="orders-v2-seller-box rounded-2xl p-3 flex items-center justify-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400">
+              <div className="orders-v2-seller-box rounded-2xl p-3 flex items-center justify-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
                 <Clock className="w-4 h-4" />
                 <span>Courier 20% Payment Verification in Progress</span>
               </div>
@@ -1299,7 +1299,7 @@ const MyOrders: React.FC = () => {
         {/* Top Editorial Header + Desktop Summary Strip */}
         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-5 lg:mb-7">
           <div>
-            <h1 className="text-[30px] sm:text-[34px] lg:text-[38px] font-bold tracking-[-0.028em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-none">
+            <h1 className="text-[30px] sm:text-[34px] lg:text-[38px] font-semibold tracking-[-0.028em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-none">
               Orders
             </h1>
             <p className="hidden lg:block text-sm text-[#6E6E73] dark:text-[#98989D] mt-2">
@@ -1313,7 +1313,7 @@ const MyOrders: React.FC = () => {
               <span className="text-[11px] font-medium text-zinc-400 block">
                 Total Orders
               </span>
-              <span className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
+              <span className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
                 {orders.length}
               </span>
             </div>
@@ -1321,7 +1321,7 @@ const MyOrders: React.FC = () => {
               <span className="text-[11px] font-medium text-zinc-400 block">
                 In Progress
               </span>
-              <span className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
+              <span className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
                 {tabCounts.Pending + tabCounts.Active}
               </span>
             </div>
@@ -1329,7 +1329,7 @@ const MyOrders: React.FC = () => {
               <span className="text-[11px] font-medium text-zinc-400 block">
                 Total Value
               </span>
-              <span className="text-lg font-bold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
+              <span className="text-lg font-semibold tabular-nums text-zinc-900 dark:text-white mt-0.5 block">
                 {formatPrice(totalSpent)}
               </span>
             </div>
@@ -1431,7 +1431,7 @@ const MyOrders: React.FC = () => {
           {/* Desktop Left Sidebar Rail (Distinct Desktop Architecture) */}
           <aside className="hidden lg:block lg:col-span-3 sticky top-24 space-y-4">
             <div className="orders-v2-card rounded-[22px] p-3 space-y-1">
-              <p className="px-3 pt-1.5 pb-2 text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+              <p className="px-3 pt-1.5 pb-2 text-[11px] font-normal uppercase tracking-wider text-zinc-400">
                 Order Categories
               </p>
               {tabs.map((tab) => {
@@ -1448,7 +1448,7 @@ const MyOrders: React.FC = () => {
                     }`}
                   >
                     <span>{tab.label}</span>
-                    <span className="orders-v2-status-pill px-2 py-0.5 rounded-full text-[11px] font-bold">
+                    <span className="orders-v2-status-pill px-2 py-0.5 rounded-full text-[11px] font-semibold">
                       {tab.count}
                     </span>
                   </button>
@@ -1458,7 +1458,7 @@ const MyOrders: React.FC = () => {
 
             {activeTab !== "Subscription" && (
               <div className="orders-v2-card rounded-[22px] p-4 space-y-3">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                <p className="text-[11px] font-normal uppercase tracking-wider text-zinc-400">
                   Quick Filter
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -1489,7 +1489,7 @@ const MyOrders: React.FC = () => {
             )}
 
             <div className="orders-v2-card rounded-[22px] p-4 space-y-2.5">
-              <div className="flex items-center gap-2 text-amber-500 font-bold text-xs">
+              <div className="flex items-center gap-2 text-amber-500 font-medium text-xs">
                 <Crown className="w-4 h-4" />
                 <span>DEEP SHOP VIP Pass</span>
               </div>
@@ -1569,7 +1569,7 @@ const MyOrders: React.FC = () => {
               /* Empty State matching IMG_5387 Left Screen */
               <div className="py-16 sm:py-24 flex flex-col items-center justify-center text-center px-4">
                 <EmptyOrdersGraphic customImage={illustrations.emptyOrders} />
-                <h2 className="text-[18px] font-bold text-zinc-900 dark:text-white tracking-tight">
+                <h2 className="text-[18px] font-semibold text-zinc-900 dark:text-white tracking-tight">
                   No orders found
                 </h2>
                 <p className="text-[13px] text-zinc-500 dark:text-zinc-400 mt-1 mb-6 max-w-[240px]">

@@ -121,7 +121,7 @@ const BlogDetails: React.FC = () => {
             name="newspaper"
             className="text-3xl text-[#6E6E73] dark:text-[#98989D] mx-auto"
           />
-          <h2 className="ds-apple-display text-lg font-bold">
+          <h2 className="ds-apple-display text-lg font-semibold">
             Article Not Found
           </h2>
           <p className="ds-apple-muted text-sm">
@@ -174,7 +174,7 @@ const BlogDetails: React.FC = () => {
                   })}
                 />
               </div>
-              <h1 className="ds-apple-display text-[22px] sm:text-[28px] font-bold text-white tracking-tight leading-[1.2]">
+              <h1 className="ds-apple-display text-[22px] sm:text-[28px] font-semibold text-white tracking-tight leading-[1.2]">
                 {blog.title}
               </h1>
             </motion.div>
@@ -257,7 +257,7 @@ const BlogDetails: React.FC = () => {
                           <p className="text-[11px] font-medium ds-apple-muted mb-1">
                             {p.category}
                           </p>
-                          <p className="text-base font-bold text-[#0071E3] dark:text-[#0A84FF] tabular-nums">
+                          <p className="text-base font-semibold text-[#0071E3] dark:text-[#0A84FF] tabular-nums">
                             {formatPrice(p.isOffer ? p.offerPrice : p.price)}
                           </p>
                         </div>

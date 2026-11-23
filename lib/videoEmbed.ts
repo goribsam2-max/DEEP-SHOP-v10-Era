@@ -301,7 +301,7 @@ export function prewarmVideoFirstChunk(rawUrl?: string | null): void {
   if (candidate.startsWith("/api/stream-media")) {
     fetch(candidate, {
       method: "GET",
-      headers: { Range: "bytes=0-262143" },
+      headers: { Range: "bytes=0-524287" },
       credentials: "same-origin",
     }).catch(() => {});
     return;
@@ -309,7 +309,7 @@ export function prewarmVideoFirstChunk(rawUrl?: string | null): void {
 
   fetch(candidate, {
     method: "GET",
-    headers: { Range: "bytes=0-327679" },
+    headers: { Range: "bytes=0-524287" },
     mode: "cors",
     credentials: "omit",
   })
@@ -321,7 +321,7 @@ export function prewarmVideoFirstChunk(rawUrl?: string | null): void {
       if (proxied && proxied !== candidate) {
         fetch(proxied, {
           method: "GET",
-          headers: { Range: "bytes=0-262143" },
+          headers: { Range: "bytes=0-524287" },
           credentials: "same-origin",
         }).catch(() => {});
       }

@@ -29,6 +29,8 @@ export interface DeepShopAdMediaItem {
   url: string;
   type: "video" | "image";
   ratio?: string;
+  thumbnail?: string;
+  poster?: string;
 }
 
 export interface DeepShopAdItem {
@@ -44,6 +46,7 @@ export interface DeepShopAdItem {
   rewardCoins?: number;
   timerDuration?: number;
   isSponsored?: boolean;
+  thumbnailUrl?: string;
 }
 
 const HIDDEN_ADS_STORAGE_KEY = "ds_hidden_ads_v1";
@@ -457,7 +460,7 @@ const DeepShopBrandEmblem: React.FC<{ className?: string }> = ({
   className = "w-10 h-10",
 }) => (
   <div
-    className={`${className} rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center font-black tracking-tighter select-none shrink-0`}
+    className={`${className} rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 border border-zinc-200 dark:border-zinc-700 flex items-center justify-center font-semibold tracking-tighter select-none shrink-0`}
   >
     <span className="text-[13px] leading-none">d.</span>
   </div>
@@ -752,7 +755,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
       const adPosterImg =
         activeMedia?.thumbnail ||
         activeMedia?.poster ||
-        ad.media.find((m) => m.type === "photo")?.url ||
+        ad.media.find((m) => m.type === "image")?.url ||
         ad.thumbnailUrl ||
         "";
       return (
@@ -1063,7 +1066,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                   >
                     <X className="w-5 h-5" />
                   </button>
-                  <h3 className="text-[17px] font-bold">Report ad</h3>
+                  <h3 className="text-[17px] font-semibold">Report ad</h3>
                   <div className="w-9" />
                 </div>
                 <p className="text-[13.5px] ds-sponsored-muted px-1">
@@ -1109,7 +1112,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                   >
                     <X className="w-6 h-6" />
                   </button>
-                  <h3 className="text-[18px] font-bold tracking-tight">
+                  <h3 className="text-[18px] font-semibold tracking-tight">
                     Why you saw this ad
                   </h3>
                 </div>
@@ -1125,7 +1128,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 {/* Miniature Ad Preview Card */}
                 <div className="flex justify-center my-5">
                   <div className="w-[136px] rounded-[20px] p-2.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-[0_8px_28px_rgba(0,0,0,0.08)] space-y-2">
-                    <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/70 dark:border-zinc-700 flex items-center justify-center font-black text-[14px]">
+                    <div className="w-8 h-8 rounded-xl bg-zinc-50 dark:bg-zinc-800 border border-zinc-200/70 dark:border-zinc-700 flex items-center justify-center font-semibold text-[14px]">
                       d<span className="text-emerald-500">.</span>
                     </div>
                     <div className="w-full aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center">
@@ -1264,7 +1267,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                 <div className="my-5 border-t border-zinc-200/80 dark:border-zinc-800" />
 
                 {/* What you can do */}
-                <h4 className="text-[18px] font-bold mb-3.5">
+                <h4 className="text-[18px] font-semibold mb-3.5">
                   What you can do
                 </h4>
 
@@ -1318,7 +1321,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
               >
                 <div className="w-11 h-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600 mx-auto" />
 
-                <h3 className="text-[18px] font-bold text-center tracking-tight">
+                <h3 className="text-[18px] font-semibold text-center tracking-tight">
                   About this ad
                 </h3>
 
@@ -1438,7 +1441,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
               >
                 <div className="w-11 h-1.5 rounded-full bg-zinc-400/70 dark:bg-zinc-600 mx-auto" />
 
-                <h3 className="text-[19px] font-bold tracking-tight pt-1">
+                <h3 className="text-[19px] font-semibold tracking-tight pt-1">
                   Why you&apos;re seeing this post
                 </h3>
 
@@ -1453,7 +1456,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                       onActionNavigate?.();
                       navigate("/loops/personalization");
                     }}
-                    className="ds-sponsored-link font-bold hover:underline cursor-pointer"
+                    className="ds-sponsored-link font-semibold hover:underline cursor-pointer"
                   >
                     Learn more
                   </button>
@@ -1484,7 +1487,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                   >
                     <X className="w-5 h-5" />
                   </button>
-                  <h3 className="text-[17px] font-bold">
+                  <h3 className="text-[17px] font-semibold">
                     Deep Shop&apos;s Ad Library
                   </h3>
                   <div className="w-9" />
@@ -1524,7 +1527,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                           ) : null}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-[14px] font-bold truncate">
+                          <p className="text-[14px] font-semibold truncate">
                             {stripHtmlTags(item.title) || "Deep Shop Sponsored"}
                           </p>
                           <p className="text-[12.5px] ds-sponsored-muted line-clamp-1">
@@ -1541,7 +1544,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
                             setActivePopup(null);
                             navigateToDestination(item.buttonLink);
                           }}
-                          className="ds-sponsored-cta px-3 py-2 rounded-xl text-[12px] font-bold shrink-0 cursor-pointer"
+                          className="ds-sponsored-cta px-3 py-2 rounded-xl text-[12px] font-semibold shrink-0 cursor-pointer"
                         >
                           {item.buttonText || "See details"}
                         </button>
@@ -1650,7 +1653,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
               e.stopPropagation();
               navigateToDestination();
             }}
-            className="ds-sponsored-cta w-full min-h-[46px] px-5 rounded-[12px] text-[15.5px] font-bold tracking-[-0.01em] flex items-center justify-center shadow-lg active:scale-[0.985] transition cursor-pointer"
+            className="ds-sponsored-cta w-full min-h-[46px] px-5 rounded-[12px] text-[15.5px] font-semibold tracking-[-0.01em] flex items-center justify-center shadow-lg active:scale-[0.985] transition cursor-pointer"
           >
             {ctaLabel}
           </button>
@@ -1764,7 +1767,7 @@ export const DeepShopSponsoredAd: React.FC<DeepShopSponsoredAdProps> = ({
         <button
           type="button"
           onClick={() => navigateToDestination()}
-          className="ds-sponsored-cta w-full min-h-[46px] px-5 rounded-[12px] text-[15.5px] font-bold tracking-[-0.01em] flex items-center justify-center shadow-sm active:scale-[0.985] transition cursor-pointer"
+          className="ds-sponsored-cta w-full min-h-[46px] px-5 rounded-[12px] text-[15.5px] font-semibold tracking-[-0.01em] flex items-center justify-center shadow-sm active:scale-[0.985] transition cursor-pointer"
         >
           {ctaLabel}
         </button>

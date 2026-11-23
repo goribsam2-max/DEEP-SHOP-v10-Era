@@ -105,7 +105,7 @@ const HelpCenter: React.FC = () => {
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
   
   // Call states
-  const [callState, setCallState] = useState<'idle' | 'calling' | 'incoming' | 'active'>(
+  const [callState, setCallState] = useState<'idle' | 'calling' | 'ringing' | 'incoming' | 'active'>(
     acceptCallParam ? 'active' : 'idle'
   );
   const [callType, setCallType] = useState<'audio' | 'video'>(typeParam);
@@ -613,7 +613,7 @@ const HelpCenter: React.FC = () => {
     if (isCaller) {
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-      await updateDoc(callRef, { offer: { type: offer.type, sdp: offer.sdp } }, { merge: true });
+      await updateDoc(callRef, { offer: { type: offer.type, sdp: offer.sdp } });
       
       const unsubOfferAnswer = onSnapshot(callRef, async (snap) => {
         const data = snap.data();
@@ -636,7 +636,7 @@ const HelpCenter: React.FC = () => {
           await drainCandidates();
           const answer = await pc.createAnswer();
           await pc.setLocalDescription(answer);
-          await updateDoc(callRef, { answer: { type: answer.type, sdp: answer.sdp } }, { merge: true });
+          await updateDoc(callRef, { answer: { type: answer.type, sdp: answer.sdp } });
         } catch (err) {
           console.error('Error setting remote description:', err);
         }

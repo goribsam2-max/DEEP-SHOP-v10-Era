@@ -1855,14 +1855,14 @@ function cleanPayload<T>(obj: T): T {
     return (
       <div className="min-h-screen ambient-dynamic-bg flex flex-col items-center justify-center p-6 text-center text-zinc-900 dark:text-white">
         <Icon name="shield-alert" className="w-16 h-16 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold">Posting Restricted</h2>
+        <h2 className="text-xl font-semibold">Posting Restricted</h2>
         <p className="text-sm text-zinc-500 max-w-sm mt-2">
           Your account has received 3 copyright strikes or severe guideline violations. Creating new Loops posts is currently disabled.
         </p>
         <button
           type="button"
           onClick={() => navigate('/loops/account-status')}
-          className="mt-6 px-6 py-3 bg-red-600 text-white font-bold text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
+          className="mt-6 px-6 py-3 bg-red-600 text-white font-medium text-xs rounded-full shadow-lg hover:bg-red-500 transition-colors"
         >
           Check Account Status
         </button>
@@ -1921,7 +1921,7 @@ function cleanPayload<T>(obj: T): T {
               <Icon name="chevron-left" className="w-5 h-5" />
             </button>
 
-            <h1 className="text-[18.5px] font-bold tracking-tight text-zinc-900 dark:text-white">
+            <h1 className="text-[18.5px] font-semibold tracking-tight text-zinc-900 dark:text-white">
               Create post
             </h1>
 
@@ -1963,7 +1963,7 @@ function cleanPayload<T>(obj: T): T {
             >
               <MusicNotesOutlineIcon className="w-4 h-4 text-pink-500 shrink-0" />
               <span className="max-w-[120px] truncate">
-                {attachedMusic ? (attachedMusic.title || attachedMusic.name || "Music") : "Add Music"}
+                {attachedMusic ? ((attachedMusic as any).title || (attachedMusic as any).name || "Music") : "Add Music"}
               </span>
               {attachedMusic && (
                 <span
@@ -1971,7 +1971,7 @@ function cleanPayload<T>(obj: T): T {
                     e.stopPropagation();
                     setAttachedMusic(null);
                   }}
-                  className="ml-1 text-white/80 hover:text-white font-bold"
+                  className="ml-1 text-white/80 hover:text-white font-semibold"
                 >
                   ✕
                 </span>
@@ -2037,7 +2037,7 @@ function cleanPayload<T>(obj: T): T {
           {activeInlinePanel === "audience" && (
             <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/10 p-3 shadow-md space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Who can see this post?</span>
+                <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200">Who can see this post?</span>
                 <button
                   type="button"
                   onClick={() => setActiveInlinePanel(null)}
@@ -2068,7 +2068,7 @@ function cleanPayload<T>(obj: T): T {
                           : "bg-zinc-50 dark:bg-zinc-800 border-black/5 dark:border-white/5 text-zinc-700 dark:text-zinc-300"
                       }`}
                     >
-                      <div className="flex items-center gap-1.5 text-xs font-bold">
+                      <div className="flex items-center gap-1.5 text-xs font-medium">
                         <Icon name={aud.iconName} className="w-3.5 h-3.5 shrink-0" />
                         <span>{aud.label}</span>
                       </div>
@@ -2084,7 +2084,7 @@ function cleanPayload<T>(obj: T): T {
           {showTagPopover && (
             <div className="rounded-2xl bg-white dark:bg-zinc-900 border border-black/5 dark:border-white/10 p-3 shadow-md space-y-2.5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">Tag Topic or Mention</span>
+                <span className="text-xs font-medium text-zinc-800 dark:text-zinc-200">Tag Topic or Mention</span>
                 <button
                   type="button"
                   onClick={() => setShowTagPopover(false)}
@@ -2094,7 +2094,7 @@ function cleanPayload<T>(obj: T): T {
                 </button>
               </div>
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800">
-                <span className="text-xs font-bold text-zinc-400">#</span>
+                <span className="text-xs font-medium text-zinc-400">#</span>
                 <input
                   type="text"
                   value={tagInput}
@@ -2118,7 +2118,7 @@ function cleanPayload<T>(obj: T): T {
                     }
                     setShowTagPopover(false);
                   }}
-                  className="text-xs font-bold text-zinc-900 dark:text-white cursor-pointer px-1.5"
+                  className="text-xs font-medium text-zinc-900 dark:text-white cursor-pointer px-1.5"
                 >
                   Set
                 </button>
@@ -2156,7 +2156,7 @@ function cleanPayload<T>(obj: T): T {
           {/* Scam Incident Details (When Scam Post is Active) */}
           {postType === "scam" && (
             <div className="rounded-2xl bg-rose-50/70 dark:bg-rose-950/25 border border-rose-200/80 dark:border-rose-900/50 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-300">
+              <div className="flex items-center gap-2 text-xs font-medium text-rose-700 dark:text-rose-300">
                 <Icon name="shield-alert" className="w-4 h-4 shrink-0" />
                 <span>Scam Incident Details (Protect the community)</span>
               </div>
@@ -2213,7 +2213,7 @@ function cleanPayload<T>(obj: T): T {
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="text-zinc-900 dark:text-white font-bold cursor-pointer hover:underline"
+                  className="text-zinc-900 dark:text-white font-semibold cursor-pointer hover:underline"
                 >
                   + Add more
                 </button>
@@ -2277,7 +2277,7 @@ function cleanPayload<T>(obj: T): T {
               <div className="flex items-center gap-2.5 min-w-0">
                 <Icon name="music" className="w-4 h-4 text-purple-600 shrink-0" />
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">{attachedMusic.title}</p>
+                  <p className="text-xs font-medium text-zinc-900 dark:text-white truncate">{attachedMusic.title}</p>
                   <p className="text-[11px] text-zinc-500 truncate">{attachedMusic.artist}</p>
                 </div>
               </div>
@@ -2318,7 +2318,7 @@ function cleanPayload<T>(obj: T): T {
               }}
               className="bg-white dark:bg-zinc-800 rounded-2xl py-3.5 px-2 flex flex-col items-center justify-center gap-1.5 border border-black/5 dark:border-white/10 hover:bg-zinc-50 dark:hover:bg-zinc-700/60 active:scale-95 transition cursor-pointer shadow-2xs"
             >
-              <span className="text-[9.5px] font-bold text-zinc-700 dark:text-zinc-200 border-[1.5px] border-current px-1 py-0.2 rounded-xs leading-none">
+              <span className="text-[9.5px] font-semibold text-zinc-700 dark:text-zinc-200 border-[1.5px] border-current px-1 py-0.2 rounded-xs leading-none">
                 GIF
               </span>
               <span className="text-[12px] font-medium text-zinc-800 dark:text-zinc-200">GIF</span>

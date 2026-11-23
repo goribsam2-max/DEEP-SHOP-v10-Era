@@ -37,7 +37,7 @@ import {
 import { useNotify } from "../../components/Notifications";
 
 export default function ManageSubscriptions() {
-  const { notify } = useNotify();
+  const notify = useNotify();
 
   const [subscriptions, setSubscriptions] = useState<SubscriptionRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -276,7 +276,7 @@ export default function ManageSubscriptions() {
                 <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
                   <Crown className="w-5 h-5" />
                 </div>
-                <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white">
+                <h1 className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-white">
                   VIP Subscription Management
                 </h1>
               </div>
@@ -290,7 +290,7 @@ export default function ManageSubscriptions() {
             <Link
               to="/subscription"
               target="_blank"
-              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+              className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 text-zinc-950 font-medium text-xs flex items-center gap-1.5 shadow-sm transition-all"
             >
               <span>View Public Plan Page</span>
             </Link>
@@ -301,12 +301,12 @@ export default function ManageSubscriptions() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-500 font-bold">Total Revenue</span>
+              <span className="text-xs text-zinc-500 font-semibold">Total Revenue</span>
               <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                 <DollarSign className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white mt-2">
+            <div className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-white mt-2">
               ৳{totalRevenue.toLocaleString("en-BD")}
             </div>
             <div className="text-[11px] text-zinc-400 mt-0.5 font-medium">From subscription fees</div>
@@ -314,12 +314,12 @@ export default function ManageSubscriptions() {
 
           <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-500 font-bold">Active VIP Members</span>
+              <span className="text-xs text-zinc-500 font-medium">Active VIP Members</span>
               <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
                 <Crown className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-amber-500 mt-2">
+            <div className="text-xl sm:text-2xl font-semibold text-amber-500 mt-2">
               {activeVipCount}
             </div>
             <div className="text-[11px] text-zinc-400 mt-0.5 font-medium">Enjoying 0% Advance COD</div>
@@ -327,12 +327,12 @@ export default function ManageSubscriptions() {
 
           <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-500 font-bold">Pending Approval</span>
+              <span className="text-xs text-zinc-500 font-medium">Pending Approval</span>
               <div className="w-7 h-7 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center">
                 <Clock className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 mt-2">
+            <div className="text-xl sm:text-2xl font-semibold text-purple-600 dark:text-purple-400 mt-2">
               {pendingCount}
             </div>
             <div className="text-[11px] text-zinc-400 mt-0.5 font-medium">Verification pending</div>
@@ -340,12 +340,12 @@ export default function ManageSubscriptions() {
 
           <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <div className="flex items-center justify-between">
-              <span className="text-xs text-zinc-500 font-bold">Total Requests</span>
+              <span className="text-xs text-zinc-500 font-semibold">Total Requests</span>
               <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
                 <Users className="w-4 h-4" />
               </div>
             </div>
-            <div className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-white mt-2">
+            <div className="text-xl sm:text-2xl font-semibold text-zinc-900 dark:text-white mt-2">
               {subscriptions.length}
             </div>
             <div className="text-[11px] text-zinc-400 mt-0.5 font-medium">All submitted applications</div>
@@ -366,7 +366,7 @@ export default function ManageSubscriptions() {
               <button
                 key={tab.id}
                 onClick={() => setFilter(tab.id as any)}
-                className={`px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                   filter === tab.id
                     ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
                     : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
@@ -392,13 +392,13 @@ export default function ManageSubscriptions() {
 
         {/* Subscription Requests List */}
         {loading ? (
-          <div className="p-12 text-center text-zinc-400 font-bold">
+          <div className="p-12 text-center text-zinc-400 font-semibold">
             Loading subscription data...
           </div>
         ) : filteredList.length === 0 ? (
           <div className="p-12 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-center">
             <Crown className="w-10 h-10 text-zinc-400 mx-auto mb-2 opacity-50" />
-            <h3 className="font-bold text-base text-zinc-800 dark:text-zinc-200">
+            <h3 className="font-semibold text-base text-zinc-800 dark:text-zinc-200">
               No subscription requests found
             </h3>
             <p className="text-xs text-zinc-500 mt-1">
@@ -422,16 +422,16 @@ export default function ManageSubscriptions() {
                     {/* Top Status & Plan Header */}
                     <div className="flex items-start justify-between gap-2">
                       <div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500 block">
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-amber-500 block">
                           {sub.durationDays}-Day VIP Pack
                         </span>
-                        <h3 className="font-black text-base text-zinc-900 dark:text-white">
+                        <h3 className="font-semibold text-base text-zinc-900 dark:text-white">
                           {sub.planName}
                         </h3>
                       </div>
 
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        className={`px-3 py-1 rounded-full text-[10px] font-medium uppercase tracking-wider ${
                           isActuallyExpired
                             ? "bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900"
                             : sub.status === "approved"
@@ -453,7 +453,7 @@ export default function ManageSubscriptions() {
 
                     {/* Customer Info Card */}
                     <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800 text-xs space-y-1.5">
-                      <div className="font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                      <div className="font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5">
                         <Users className="w-3.5 h-3.5 text-zinc-400" />
                         <span>{sub.userName}</span>
                       </div>
@@ -473,25 +473,25 @@ export default function ManageSubscriptions() {
                     <div className="p-3 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/40 text-xs space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-zinc-500">Payment Method:</span>
-                        <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        <span className="font-semibold text-zinc-800 dark:text-zinc-200">
                           {sub.paymentMethod}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-zinc-500">Sender Number:</span>
-                        <span className="font-bold font-mono text-zinc-800 dark:text-zinc-200">
+                        <span className="font-semibold font-mono text-zinc-800 dark:text-zinc-200">
                           {sub.senderNumber}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-zinc-500">TrxID:</span>
-                        <span className="font-mono font-black text-amber-600 dark:text-amber-400 tracking-wider">
+                        <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 tracking-wider">
                           {sub.trxId}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between pt-1 border-t border-amber-200/40 dark:border-amber-900/40 font-bold">
+                      <div className="flex items-center justify-between pt-1 border-t border-amber-200/40 dark:border-amber-900/40 font-semibold">
                         <span className="text-zinc-700 dark:text-zinc-300">Fee Amount:</span>
-                        <span className="text-sm font-black text-zinc-900 dark:text-white">
+                        <span className="text-sm font-semibold text-zinc-900 dark:text-white">
                           ৳{(sub.price || 0).toLocaleString("en-BD")}
                         </span>
                       </div>
@@ -526,7 +526,7 @@ export default function ManageSubscriptions() {
                         <button
                           disabled={actionLoading === sub.id}
                           onClick={() => setApproveModalSub(sub)}
-                          className="py-2.5 px-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs flex items-center justify-center gap-1 shadow-sm transition-all disabled:opacity-50"
+                          className="py-2.5 px-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs flex items-center justify-center gap-1 shadow-sm transition-all disabled:opacity-50"
                         >
                           <CheckCircle className="w-3.5 h-3.5" />
                           <span>Approve & Activate</span>
@@ -537,7 +537,7 @@ export default function ManageSubscriptions() {
                             setRejectModalSub(sub);
                             setRejectionReasonText("Payment details or TrxID did not match.");
                           }}
-                          className="py-2.5 px-3 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-rose-100 dark:hover:bg-rose-950 hover:text-rose-600 text-zinc-700 dark:text-zinc-300 font-bold text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-50"
+                          className="py-2.5 px-3 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-rose-100 dark:hover:bg-rose-950 hover:text-rose-600 text-zinc-700 dark:text-zinc-300 font-medium text-xs flex items-center justify-center gap-1 transition-all disabled:opacity-50"
                         >
                           <XCircle className="w-3.5 h-3.5" />
                           <span>Reject</span>
@@ -545,7 +545,7 @@ export default function ManageSubscriptions() {
                       </div>
                     ) : sub.status === "approved" && !isActuallyExpired ? (
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
                           <CheckCircle className="w-3.5 h-3.5" />
                           <span>0% Advance COD Active</span>
                         </span>
@@ -577,7 +577,7 @@ export default function ManageSubscriptions() {
                   <Crown className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base">Approve VIP Subscription</h3>
+                  <h3 className="font-semibold text-base">Approve VIP Subscription</h3>
                   <p className="text-xs text-zinc-500">Enables 0% advance Cash on Delivery on this customer's account</p>
                 </div>
               </div>
@@ -585,21 +585,21 @@ export default function ManageSubscriptions() {
               <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 text-xs space-y-2">
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Customer Name:</span>
-                  <span className="font-bold">{approveModalSub.userName}</span>
+                  <span className="font-semibold">{approveModalSub.userName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Phone/Email:</span>
-                  <span className="font-mono font-bold">{approveModalSub.userPhone || approveModalSub.senderNumber}</span>
+                  <span className="font-mono font-semibold">{approveModalSub.userPhone || approveModalSub.senderNumber}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Plan:</span>
-                  <span className="font-bold text-amber-500">{approveModalSub.planName}</span>
+                  <span className="font-semibold text-amber-500">{approveModalSub.planName}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-zinc-500">Method / TrxID:</span>
-                  <span className="font-mono font-bold text-emerald-600">{approveModalSub.paymentMethod} &bull; {approveModalSub.trxId}</span>
+                  <span className="font-mono font-semibold text-emerald-600">{approveModalSub.paymentMethod} &bull; {approveModalSub.trxId}</span>
                 </div>
-                <div className="flex justify-between pt-1 border-t border-zinc-200 dark:border-zinc-800 font-bold">
+                <div className="flex justify-between pt-1 border-t border-zinc-200 dark:border-zinc-800 font-semibold">
                   <span>Payment Fee:</span>
                   <span className="text-sm">৳{(approveModalSub.price || 0).toLocaleString("en-BD")}</span>
                 </div>
@@ -609,7 +609,7 @@ export default function ManageSubscriptions() {
                 <button
                   type="button"
                   onClick={() => setApproveModalSub(null)}
-                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-xs hover:bg-zinc-200 transition"
+                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-xs hover:bg-zinc-200 transition"
                 >
                   Cancel
                 </button>
@@ -617,7 +617,7 @@ export default function ManageSubscriptions() {
                   type="button"
                   disabled={actionLoading === approveModalSub.id}
                   onClick={confirmApprove}
-                  className="flex-1 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs shadow-md transition disabled:opacity-50"
+                  className="flex-1 py-3 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow-md transition disabled:opacity-50"
                 >
                   {actionLoading === approveModalSub.id ? "Activating..." : "Confirm & Activate"}
                 </button>
@@ -635,14 +635,14 @@ export default function ManageSubscriptions() {
                   <AlertTriangle className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-black text-base">Reject Subscription</h3>
+                  <h3 className="font-semibold text-base">Reject Subscription</h3>
                   <p className="text-xs text-zinc-500">Select a rejection reason for {rejectModalSub.userName}'s request</p>
                 </div>
               </div>
 
               {/* Quick Preset Reason Chips */}
               <div className="space-y-1.5">
-                <span className="text-[11px] font-bold text-zinc-400 block">Quick Preset Reasons:</span>
+                <span className="text-[11px] font-semibold text-zinc-400 block">Quick Preset Reasons:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {[
                     "Payment details or TrxID did not match.",
@@ -654,7 +654,7 @@ export default function ManageSubscriptions() {
                       key={preset}
                       type="button"
                       onClick={() => setRejectionReasonText(preset)}
-                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full border transition ${
+                      className={`text-[10px] font-semibold px-2.5 py-1 rounded-full border transition ${
                         rejectionReasonText === preset
                           ? "bg-rose-500 text-white border-rose-500"
                           : "bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700"
@@ -668,7 +668,7 @@ export default function ManageSubscriptions() {
 
               {/* Custom Reason Textarea */}
               <div className="space-y-1">
-                <span className="text-[11px] font-bold text-zinc-400 block">Rejection Reason (visible to the customer):</span>
+                <span className="text-[11px] font-semibold text-zinc-400 block">Rejection Reason (visible to the customer):</span>
                 <textarea
                   rows={3}
                   value={rejectionReasonText}
@@ -682,7 +682,7 @@ export default function ManageSubscriptions() {
                 <button
                   type="button"
                   onClick={() => setRejectModalSub(null)}
-                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-bold text-xs hover:bg-zinc-200 transition"
+                  className="flex-1 py-3 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 font-medium text-xs hover:bg-zinc-200 transition"
                 >
                   Cancel
                 </button>
@@ -690,7 +690,7 @@ export default function ManageSubscriptions() {
                   type="button"
                   disabled={actionLoading === rejectModalSub.id}
                   onClick={confirmReject}
-                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-black text-xs shadow-md transition disabled:opacity-50"
+                  className="flex-1 py-3 rounded-full bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-md transition disabled:opacity-50"
                 >
                   {actionLoading === rejectModalSub.id ? "Rejecting..." : "Confirm Rejection"}
                 </button>

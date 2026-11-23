@@ -10,7 +10,7 @@ import { Tr } from "../components/Tr";
 import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 import { triggerHaptic } from "../lib/haptics";
 
-const StatusBadge = ({ status }: { status: OrderStatus }) => {
+const StatusBadge = ({ status }: { status: OrderStatus | string }) => {
   switch (status) {
     case OrderStatus.PENDING:
       return (
@@ -60,11 +60,11 @@ const OrderActionPage: React.FC = () => {
       let data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }) as Order);
 
       if (actionName === "pay") {
-        data = data.filter(o => [OrderStatus.PENDING, OrderStatus.CHECKING_PAYMENT].includes(o.status));
+        data = data.filter(o => [OrderStatus.PENDING, OrderStatus.CHECKING_PAYMENT].includes(o.status as OrderStatus));
       } else if (actionName === "ship") {
-        data = data.filter(o => [OrderStatus.APPROVED, OrderStatus.PROCESSING, OrderStatus.COMPLETE_PACKAGING].includes(o.status));
+        data = data.filter(o => [OrderStatus.APPROVED, OrderStatus.PROCESSING, OrderStatus.COMPLETE_PACKAGING].includes(o.status as OrderStatus));
       } else if (actionName === "receive") {
-        data = data.filter(o => [OrderStatus.DELIVER_ON_COURIER, OrderStatus.ON_THE_WAY].includes(o.status));
+        data = data.filter(o => [OrderStatus.DELIVER_ON_COURIER, OrderStatus.ON_THE_WAY].includes(o.status as OrderStatus));
       } else if (actionName === "review") {
         data = data.filter(o => o.status === OrderStatus.DELIVERED);
       }
@@ -102,7 +102,7 @@ const OrderActionPage: React.FC = () => {
       <div className="w-20 h-20 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.08] rounded-full flex items-center justify-center mb-5">
         <PackageOpen className="w-9 h-9 text-[#6E6E73] dark:text-[#98989D]" strokeWidth={1.5} />
       </div>
-      <h3 className="text-[19px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
+      <h3 className="text-[19px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] mb-1.5">
         <Tr>No orders found</Tr>
       </h3>
       <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D] mb-7 max-w-[260px]">
@@ -125,7 +125,7 @@ const OrderActionPage: React.FC = () => {
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-black pb-20 ds-apple-shop-canvas">
       <div className="max-w-3xl mx-auto px-4 md:px-8 pt-6">
         <div className="mb-6">
-          <h1 className="text-[24px] sm:text-[26px] font-bold tracking-[-0.024em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="text-[24px] sm:text-[26px] font-semibold tracking-[-0.024em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             <Tr>{getPageTitle()}</Tr>
           </h1>
           <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D] mt-1">

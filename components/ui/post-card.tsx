@@ -82,7 +82,7 @@ export const PostCard: React.FC<PostCardProps> = ({ blog, isAdmin, onEdit, onDel
       {/* Content */}
       <div className="mt-5 flex flex-col gap-4">
         <Link to={`/blog/${blog.slug}`}>
-          <h2 className="text-xl font-bold tracking-tight text-foreground hover:text-zinc-900 dark:text-zinc-100 transition-colors">
+          <h2 className="text-xl font-semibold tracking-tight text-foreground hover:text-zinc-900 dark:text-zinc-100 transition-colors">
             {blog.title}
           </h2>
           <p className="whitespace-pre-wrap text-sm md:text-base text-muted-foreground leading-relaxed font-sans mt-2">

@@ -272,7 +272,7 @@ const ShippingAddress: React.FC = () => {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-6 flex flex-col gap-5">
         <div className="flex items-start justify-between gap-3 px-1">
           <div className="min-w-0">
-            <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
+            <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
               {isAdding ? "New Delivery Address" : "Delivery Address"}
             </h1>
             <p className="text-xs sm:text-[13px] ds-apple-muted mt-1">

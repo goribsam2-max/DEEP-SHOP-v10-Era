@@ -50,7 +50,7 @@ const CompleteProfile: React.FC = () => {
       <div className="flex-1 flex items-center justify-center px-5 py-8">
         <div className="ds-apple-surface w-full max-w-md rounded-[28px] p-6 sm:p-8">
           <div className="text-center mb-7">
-            <h1 className="ds-apple-display text-[24px] font-bold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+            <h1 className="ds-apple-display text-[24px] font-semibold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
               Complete Your Profile
             </h1>
             <p className="ds-apple-muted text-[14px] leading-relaxed">

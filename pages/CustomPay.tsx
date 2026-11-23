@@ -116,7 +116,7 @@ const CustomPay: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] flex flex-col items-center justify-center p-4">
         <div className="bg-white dark:bg-[#1C1C1E] rounded-[28px] p-8 max-w-sm w-full text-center border border-black/[0.06] dark:border-white/[0.1] shadow-sm">
-          <p className="text-[#FF3B30] dark:text-[#FF453A] font-bold text-lg mb-2">Invalid Link</p>
+          <p className="text-[#FF3B30] dark:text-[#FF453A] font-semibold text-lg mb-2">Invalid Link</p>
           <p className="text-[#6E6E73] dark:text-[#8E8E93] text-xs mb-6">
             This custom payment link is broken or missing parameters.
           </p>
@@ -166,7 +166,7 @@ const CustomPay: React.FC = () => {
                 </div>
               )}
               <div>
-                <h2 className="font-bold text-base leading-tight">{shopName}</h2>
+                <h2 className="font-semibold text-base leading-tight">{shopName}</h2>
                 <p className="text-[#6E6E73] dark:text-[#8E8E93] text-xs font-medium">
                   Custom Payment Link
                 </p>
@@ -178,7 +178,7 @@ const CustomPay: React.FC = () => {
               <span className="text-[11px] font-semibold text-[#6E6E73] dark:text-[#8E8E93] uppercase tracking-[0.06em] block mb-1">
                 Amount to Pay
               </span>
-              <span className="text-3xl font-bold tracking-tight tabular-nums">
+              <span className="text-3xl font-semibold tracking-tight tabular-nums">
                 {formatPrice(Number(amount))}
               </span>
             </div>
@@ -192,7 +192,7 @@ const CustomPay: React.FC = () => {
               {sellerInfo?.bkashNumber && (
                 <div className="flex items-center justify-between bg-[#F5F5F7] dark:bg-[#2C2C2E]/70 p-3.5 rounded-[18px]">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#E2125B]/12 flex items-center justify-center font-bold text-[#E2125B] text-xs">
+                    <div className="w-9 h-9 rounded-xl bg-[#E2125B]/12 flex items-center justify-center font-medium text-[#E2125B] text-xs">
                       bK
                     </div>
                     <div>
@@ -216,7 +216,7 @@ const CustomPay: React.FC = () => {
               {sellerInfo?.nagadNumber && (
                 <div className="flex items-center justify-between bg-[#F5F5F7] dark:bg-[#2C2C2E]/70 p-3.5 rounded-[18px]">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-[#F57C20]/12 flex items-center justify-center font-bold text-[#F57C20] text-xs font-mono">
+                    <div className="w-9 h-9 rounded-xl bg-[#F57C20]/12 flex items-center justify-center font-medium text-[#F57C20] text-xs font-mono">
                       N
                     </div>
                     <div>
@@ -341,7 +341,7 @@ const CustomPay: React.FC = () => {
             </div>
 
             <div>
-              <h2 className="font-bold text-xl">Payment Details Submitted</h2>
+              <h2 className="font-semibold text-xl">Payment Details Submitted</h2>
               <p className="text-[#6E6E73] dark:text-[#8E8E93] text-sm mt-2 leading-relaxed">
                 Your payment verification request of{" "}
                 <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">

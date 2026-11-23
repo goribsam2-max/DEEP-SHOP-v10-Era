@@ -186,7 +186,7 @@ export const BiometricSetup: React.FC = () => {
       {/* Main Container */}
       <div className="px-4 md:px-6 pt-6 max-w-lg mx-auto space-y-5">
         <div className="px-1">
-          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             Face ID &amp; Passcode
           </h1>
         </div>

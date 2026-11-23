@@ -39,7 +39,7 @@ export default function RegionSelect() {
           <div className="mx-auto w-12 h-12 rounded-[16px] bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
             <Globe className="w-6 h-6" />
           </div>
-          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             Choose Your Country
           </h1>
           <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D]">

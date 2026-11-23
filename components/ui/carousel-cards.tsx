@@ -97,7 +97,7 @@ export const ExperienceCard = ({ experience }: { experience: ExperienceItem }) =
 
       {/* Ultra Small Single-Line Pill Shape Tag Badge on Top Left */}
       <div className="absolute top-1.5 left-1.5 z-20 max-w-[75%]">
-        <span className="inline-block whitespace-nowrap truncate max-w-full rounded-full bg-black/75 backdrop-blur-md text-white px-2 py-0.5 text-[8px] sm:text-[9px] font-extrabold uppercase tracking-wider shadow-xs border border-white/10">
+        <span className="inline-block whitespace-nowrap truncate max-w-full rounded-full bg-black/75 backdrop-blur-md text-white px-2 py-0.5 text-[8px] sm:text-[9px] font-medium uppercase tracking-wider shadow-xs border border-white/10">
           {experience.badge || "VERIFIED"}
         </span>
       </div>
@@ -118,7 +118,7 @@ export const ExperienceCard = ({ experience }: { experience: ExperienceItem }) =
     <div className="flex flex-col p-2 sm:p-2.5 gap-1">
       <CardContent className="p-0 space-y-0.5">
         {/* Title */}
-        <h3 className="font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 tracking-tight leading-snug line-clamp-1">
+        <h3 className="font-semibold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 tracking-tight leading-snug line-clamp-1">
           {experience.title}
         </h3>
         
@@ -138,7 +138,7 @@ export const ExperienceCard = ({ experience }: { experience: ExperienceItem }) =
 
       <CardFooter className="flex items-center justify-between gap-1 p-0 pt-1.5 border-t border-zinc-100 dark:border-zinc-800 w-full overflow-hidden mt-0.5">
         {/* Rating and Review Count */}
-        <div className="flex items-center gap-1 text-[10px] sm:text-xs font-bold text-zinc-800 dark:text-zinc-200 whitespace-nowrap shrink-0">
+        <div className="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-zinc-800 dark:text-zinc-200 whitespace-nowrap shrink-0">
           <Star className="h-3 w-3 fill-amber-400 text-amber-400 shrink-0" />
           <span>{experience.rating || 4.9}</span>
           <span className="text-zinc-400 font-normal text-[9px] sm:text-[10px]">
@@ -147,7 +147,7 @@ export const ExperienceCard = ({ experience }: { experience: ExperienceItem }) =
         </div>
 
         {/* Highlighted Price Tag in Pill Shape */}
-        <div className="shrink-0 min-w-max ml-auto px-2.5 py-0.5 sm:py-1 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white font-black text-xs sm:text-sm tracking-tight shadow-xs flex items-center justify-center whitespace-nowrap">
+        <div className="shrink-0 min-w-max ml-auto px-2.5 py-0.5 sm:py-1 rounded-full bg-emerald-600 dark:bg-emerald-500 text-white font-semibold text-xs sm:text-sm tracking-tight shadow-xs flex items-center justify-center whitespace-nowrap">
           {formatPrice(experience.price)}
         </div>
       </CardFooter>
@@ -181,7 +181,7 @@ export const ExperienceSection = ({
     <div className="w-full py-4">
       <div className="mx-auto max-w-[1760px] px-4">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-bold text-lg tracking-tight md:text-xl text-zinc-900 dark:text-zinc-100">
+          <h2 className="font-semibold text-lg tracking-tight md:text-xl text-zinc-900 dark:text-zinc-100">
             {title}
           </h2>
           <div className="flex items-center gap-1.5">
@@ -206,7 +206,7 @@ export const ExperienceSection = ({
               <span className="sr-only">Scroll right</span>
             </Button>
             <Link
-              className="ml-2 hidden font-bold text-xs text-emerald-600 dark:text-emerald-400 hover:underline md:block"
+              className="ml-2 hidden font-medium text-xs text-emerald-600 dark:text-emerald-400 hover:underline md:block"
               to={viewAllHref}
             >
               Show all →

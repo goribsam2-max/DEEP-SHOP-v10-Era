@@ -193,7 +193,7 @@ function Button({
           >
             <motion.span
               layoutId={"text-id-" + title}
-              className="text-sm font-bold font-mono uppercase whitespace-nowrap relative inline-block text-zinc-900 dark:text-zinc-100"
+              className="text-sm font-medium font-mono uppercase whitespace-nowrap relative inline-block text-zinc-900 dark:text-zinc-100"
               style={{ willChange: "transform" }}
             >
               {title}

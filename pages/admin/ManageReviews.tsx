@@ -202,7 +202,7 @@ const ManageReviews = () => {
         <div className="flex bg-zinc-100 dark:bg-zinc-800 p-1 rounded-xl">
           <button
             onClick={() => setActiveTab("product")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${
               activeTab === "product"
                 ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm"
                 : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -212,7 +212,7 @@ const ManageReviews = () => {
           </button>
           <button
             onClick={() => setActiveTab("user")}
-            className={`px-4 py-2 text-xs font-bold rounded-lg transition-all ${
+            className={`px-4 py-2 text-xs font-medium rounded-lg transition-all ${
               activeTab === "user"
                 ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-sm"
                 : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -225,10 +225,10 @@ const ManageReviews = () => {
 
       {editingReview && (
         <div className="mb-6 p-5 border border-amber-200 dark:border-amber-900/40 bg-amber-50/20 dark:bg-amber-950/10 rounded-2xl max-w-xl">
-          <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 mb-3">Edit Review</h3>
+          <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 mb-3">Edit Review</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Rating</label>
+              <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1.5">Rating</label>
               <div className="flex gap-1.5">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <button
@@ -248,7 +248,7 @@ const ManageReviews = () => {
               </div>
             </div>
             <div>
-              <label className="block text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1.5">Comment</label>
+              <label className="block text-xs font-medium text-zinc-400 uppercase tracking-wider mb-1.5">Comment</label>
               <textarea
                 value={editComment}
                 onChange={(e) => setEditComment(e.target.value)}
@@ -259,13 +259,13 @@ const ManageReviews = () => {
             <div className="flex gap-2">
               <button
                 onClick={() => setEditingReview(null)}
-                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 text-xs font-bold rounded-lg transition"
+                className="px-4 py-2 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 text-xs font-medium rounded-lg transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleUpdate}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-lg transition"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded-lg transition"
               >
                 Save Changes
               </button>
@@ -294,7 +294,7 @@ const ManageReviews = () => {
                 >
                   <div className="flex-1 min-w-0 pr-4 text-left">
                     <div className="flex items-center gap-2.5 mb-1.5">
-                      <span className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100 truncate">
+                      <span className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">
                         {activeTab === "product" ? review.userName : review.reviewerName}
                       </span>
                       <div className="flex items-center text-amber-500 gap-0.5">
@@ -310,7 +310,7 @@ const ManageReviews = () => {
                       </div>
                     </div>
                     {activeTab === "user" && (
-                      <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider mb-2">
+                      <p className="text-[10px] font-normal text-zinc-400 uppercase tracking-wider mb-2">
                         Reviewee UID: {review.revieweeId}
                       </p>
                     )}

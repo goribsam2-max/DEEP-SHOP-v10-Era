@@ -162,13 +162,13 @@ export const ChatDrawModal: React.FC<ChatDrawModalProps> = ({
             <X className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-white text-base">Quick Draw</span>
-            <span className="text-[10px] bg-blue-600 text-white font-bold px-2 py-0.5 rounded-full">New</span>
+            <span className="font-semibold text-white text-base">Quick Draw</span>
+            <span className="text-[10px] bg-blue-600 text-white font-semibold px-2 py-0.5 rounded-full">New</span>
           </div>
           <button
             type="button"
             onClick={handleSend}
-            className="px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition"
+            className="px-4 py-1.5 rounded-full bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs flex items-center gap-1.5 shadow-md active:scale-95 transition"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Send</span>
@@ -244,7 +244,7 @@ export const ChatDrawModal: React.FC<ChatDrawModalProps> = ({
                   key={b.label}
                   type="button"
                   onClick={() => setBrushSize(b.size)}
-                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition ${
+                  className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition ${
                     brushSize === b.size ? 'bg-zinc-700 text-white' : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >

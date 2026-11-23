@@ -93,13 +93,13 @@ export default function ManageIllustrations() {
     <div className="max-w-4xl mx-auto space-y-6 pb-20">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-black text-zinc-900 dark:text-white tracking-tight">Manage Illustrations</h2>
+          <h2 className="text-2xl font-semibold text-zinc-900 dark:text-white tracking-tight">Manage Illustrations</h2>
           <p className="text-sm text-zinc-500 mt-1">Configure SVG icons or images for empty states.</p>
         </div>
         <button
           onClick={saveConfig}
           disabled={saving}
-          className="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 font-bold rounded-xl text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
+          className="px-6 py-3 bg-zinc-900 hover:bg-zinc-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-zinc-900 font-semibold rounded-xl text-sm transition-colors disabled:opacity-50 flex items-center gap-2"
         >
           {saving && <Icon name="spinner" className="w-4 h-4 animate-spin" />}
           Save Changes
@@ -109,7 +109,7 @@ export default function ManageIllustrations() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {CONFIG_ITEMS.map(item => (
           <div key={item.id} className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <h3 className="font-bold text-zinc-900 dark:text-zinc-100 mb-1">{item.label}</h3>
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 mb-1">{item.label}</h3>
             <p className="text-xs text-zinc-500 mb-4">{item.description}</p>
             
             <div className="aspect-video relative rounded-[20px] bg-zinc-50 dark:bg-zinc-800/50 border-2 border-dashed border-zinc-200 dark:border-zinc-700 flex flex-col items-center justify-center overflow-hidden">
@@ -126,7 +126,7 @@ export default function ManageIllustrations() {
               ) : (
                 <div className="text-center p-6">
                   <Icon name="cloud-upload-alt" className="text-3xl text-zinc-400 mx-auto mb-2 block" />
-                  <span className="text-xs font-bold text-zinc-500">Upload Image</span>
+                  <span className="text-xs font-medium text-zinc-500">Upload Image</span>
                 </div>
               )}
               

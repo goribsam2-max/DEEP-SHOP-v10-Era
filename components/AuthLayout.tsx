@@ -66,7 +66,7 @@ export function AuthLayout({ children, title, subtitle }: { children: React.Reac
 					{(title || subtitle) && (
 						<div className="flex flex-col space-y-2.5 mb-6">
 							{title && (
-								<h1 className="text-[28px] md:text-[32px] font-bold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+								<h1 className="text-[28px] md:text-[32px] font-semibold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
 									{title}
 								</h1>
 							)}

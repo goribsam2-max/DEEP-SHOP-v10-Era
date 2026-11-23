@@ -58,7 +58,7 @@ export const CommentReply = ({
         {/* Comment Details */}
         <div className="flex-1">
           <div className="flex flex-col mb-2">
-            <h4 className="font-bold text-sm text-zinc-900 dark:text-zinc-100">{review.userName}</h4>
+            <h4 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100">{review.userName}</h4>
             <span className="text-xs text-zinc-400 font-medium">
               {new Date(review.createdAt).toLocaleDateString()}
             </span>
@@ -94,12 +94,12 @@ export const CommentReply = ({
                          {reply.userPhoto ? (
                            <img src={reply.userPhoto} className="w-full h-full object-cover" />
                          ) : (
-                           <div className="w-full h-full flex items-center justify-center text-xs font-bold">{reply.userName?.slice(0,1)}</div>
+                           <div className="w-full h-full flex items-center justify-center text-xs font-medium">{reply.userName?.slice(0,1)}</div>
                          )}
                      </div>
                      <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                           <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{reply.userName}</span>
+                           <span className="text-xs font-medium text-zinc-900 dark:text-zinc-100">{reply.userName}</span>
                            <span className="text-[10px] text-zinc-400">{new Date(reply.createdAt).toLocaleDateString()}</span>
                         </div>
                         <p className="text-sm text-zinc-600 dark:text-zinc-400">{reply.text}</p>
@@ -156,7 +156,7 @@ export const CommentReply = ({
               </div>
               <button 
                 type="button" 
-                className="px-4 py-2 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 font-bold text-xs gap-2"
+                className="px-4 py-2 rounded-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 flex items-center justify-center hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:hover:scale-100 font-medium text-xs gap-2"
                 disabled={!replyText.trim() && !replyImg}
                 onClick={() => {
                   if (onReply) onReply(replyText, replyImg || undefined);

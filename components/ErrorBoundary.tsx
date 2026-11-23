@@ -66,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
               <div className="w-24 h-24 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                  <Icon name="exclamation-triangle" className="text-4xl" />
               </div>
-              <h1 className="text-xl font-bold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">Oops! Something went wrong.</h1>
+              <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4 tracking-tight">Oops! Something went wrong.</h1>
               <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium mb-4 leading-relaxed">
                  {(this.state as any).error?.message || "We've encountered an unexpected issue."}
               </p>

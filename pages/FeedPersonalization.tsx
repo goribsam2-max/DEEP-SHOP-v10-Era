@@ -196,7 +196,7 @@ export const FeedPersonalization: React.FC = () => {
             >
               <ChevronLeft className="w-5 h-5 stroke-[2.2]" />
             </button>
-            <h1 className="text-[19px] sm:text-[21px] font-bold tracking-tight text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
+            <h1 className="text-[19px] sm:text-[21px] font-semibold tracking-tight text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
               <span>Personalize</span>
               <span className="loops-wordmark">Loops</span>
             </h1>
@@ -220,7 +220,7 @@ export const FeedPersonalization: React.FC = () => {
           {/* Themes Section */}
           <div>
             <div className="flex items-center justify-between mb-3.5">
-              <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white">
+              <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-white">
                 Themes
               </h2>
               <button
@@ -259,7 +259,7 @@ export const FeedPersonalization: React.FC = () => {
           {/* Theme Tiles Grid (3 columns on compact mobile, 4 columns on sm+ for clean readability) */}
           <div className="mt-5">
             <div className="flex items-center justify-between gap-2 mb-3.5">
-              <h3 className="text-[16px] font-bold text-zinc-900 dark:text-white">
+              <h3 className="text-[16px] font-semibold text-zinc-900 dark:text-white">
                 {activeThemeTab === "All Selected"
                   ? `Online & Tech Categories (${selectedThemes.length}/${FEED_THEMES.length})`
                   : activeThemeTab}
@@ -313,7 +313,7 @@ export const FeedPersonalization: React.FC = () => {
 
           {/* Types of Content Container matching screenshot */}
           <div className="mt-6 rounded-[28px] bg-[#F5F6F8] dark:bg-zinc-800/60 p-4 space-y-2.5">
-            <h3 className="text-[16px] font-bold text-zinc-900 dark:text-white px-1 pb-1">
+            <h3 className="text-[16px] font-semibold text-zinc-900 dark:text-white px-1 pb-1">
               Types of content
             </h3>
 
@@ -325,7 +325,7 @@ export const FeedPersonalization: React.FC = () => {
             >
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-full bg-[#F5F6F8] dark:bg-zinc-800 flex items-center justify-center">
-                  <span className="w-5 h-5 rounded-[6px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[11px] font-serif italic font-bold flex items-center justify-center">
+                  <span className="w-5 h-5 rounded-[6px] bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 text-[11px] font-serif italic font-semibold flex items-center justify-center">
                     T
                   </span>
                 </div>

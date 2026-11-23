@@ -259,7 +259,7 @@ const AIChat: React.FC = () => {
       <div className="max-w-3xl w-full mx-auto px-4 sm:px-6 pt-4 pb-2 flex items-center justify-between gap-3 shrink-0">
         <div className="min-w-0">
           <p className="ds-apple-eyebrow mb-0.5">Assistant</p>
-          <h1 className="ds-apple-display font-bold text-[20px] sm:text-[22px] leading-tight tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+          <h1 className="ds-apple-display font-semibold text-[20px] sm:text-[22px] leading-tight tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
             Shopping Assistant
           </h1>
         </div>

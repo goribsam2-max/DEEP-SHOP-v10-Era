@@ -133,12 +133,15 @@ export const PixelImage: React.FC<PixelImageProps> = ({
           decoding="async"
           referrerPolicy="no-referrer"
           fetchPriority={loading === "eager" ? "high" : "auto"}
+          data-ds-managed="true"
           onLoad={handleImageLoad}
           onError={handleImageError}
           draggable={false}
           className={cn(
-            "w-full h-full object-contain transition-opacity duration-200 ease-out",
-            isLoaded ? "opacity-100" : "opacity-0 pointer-events-none",
+            "w-full h-full object-contain transition-all duration-300 ease-out",
+            isLoaded
+              ? "opacity-100 scale-100 blur-0"
+              : "opacity-0 scale-[0.98] blur-[1px] pointer-events-none",
             imgClassName
           )}
         />

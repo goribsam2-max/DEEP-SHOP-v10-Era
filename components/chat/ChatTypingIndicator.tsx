@@ -36,7 +36,7 @@ export const ChatTypingIndicator: React.FC<ChatTypingIndicatorProps> = ({
           {userPhoto ? (
             <img src={userPhoto} alt={userName} className="w-full h-full object-cover" />
           ) : (
-            <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+            <span className="text-[11px] font-semibold text-zinc-600 dark:text-zinc-300">
               {displayName.slice(0, 1).toUpperCase()}
             </span>
           )}

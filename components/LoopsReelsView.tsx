@@ -584,7 +584,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     }
   }, [isActive, shouldPreload, isImageMusicReel, rawStreamCandidate]);
 
-  // Fast watchdog: if direct CDN stream stalls silently without firing onError, flip to /api/stream-media proxy
+  // Fast watchdog: if direct CDN stream stalls silently without firing onError, flip to /api/stream-media proxy after 4s
   useEffect(() => {
     if (
       !isActive ||
@@ -603,7 +603,7 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
       if (!v || v.readyState < 2) {
         setUseRawOriginFallback(true);
       }
-    }, 950);
+    }, 2500);
     return () => window.clearTimeout(timer);
   }, [
     isActive,
@@ -841,9 +841,14 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
     (post as any).coverUrl ||
     (post as any).posterUrl ||
     firstPostImg ||
+    (Array.isArray(post.images) && post.images[0]) ||
+    (Array.isArray((post as any).media) && (post as any).media[0]?.thumbnailUrl) ||
+    (Array.isArray((post as any).media) && (post as any).media[0]?.url) ||
     (resolved.platform === "youtube" && resolved.videoId
       ? `https://i.ytimg.com/vi/${resolved.videoId}/hqdefault.jpg`
-      : "");
+      : "") ||
+    post.reporterAvatar ||
+    "";
   const posterImg =
     rawPosterCandidate && !authorAvatarSet.has(rawPosterCandidate.trim())
       ? rawPosterCandidate.trim()
@@ -922,9 +927,48 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
         (hasSeparateReelMusic && reelVideoVolume <= 0.01);
 
       return (
-        <div className="relative w-full h-full bg-black flex items-center justify-center overflow-hidden">
+        <div className="relative w-full h-full bg-zinc-950 flex items-center justify-center overflow-hidden">
+          {/* Instant 0s Thumbnail / Poster Layer — or subtle dark shimmer when video has no separate poster */}
+          {posterImg ? (
+            <div
+              aria-hidden="true"
+              className={`absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-black transition-opacity duration-300 ease-out ${
+                hasLoadedFrame ? "opacity-0 pointer-events-none" : "opacity-100"
+              }`}
+            >
+              <img
+                src={posterImg}
+                alt=""
+                aria-hidden="true"
+                referrerPolicy="no-referrer"
+                className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-40 pointer-events-none"
+              />
+              <img
+                src={posterImg}
+                alt={post.title || "Reel"}
+                referrerPolicy="no-referrer"
+                className="relative z-[1] w-full h-full object-contain"
+              />
+              {!hasLoadedFrame && isActive && (
+                <div className="absolute inset-0 z-[2] flex items-center justify-center pointer-events-none">
+                  <div className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center border border-white/10">
+                    <div className="w-5 h-5 border-2 border-white/80 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            !hasLoadedFrame && (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 z-0 bg-gradient-to-b from-zinc-900 via-zinc-950 to-black pointer-events-none"
+              >
+                <div className="absolute inset-0 ds-skeleton opacity-30" />
+              </div>
+            )
+          )}
+
           <video
-            key={useRawOriginFallback ? `${post.id}_proxy` : `${post.id}_direct`}
             ref={videoRef}
             data-active-reel-video={isActive ? "true" : undefined}
             data-reel-user-paused={isPaused ? "true" : undefined}
@@ -1011,7 +1055,9 @@ const SingleReelMediaStage: React.FC<SingleReelMediaStageProps> = ({
               setIsBuffering(false);
               setDirectFailed(true);
             }}
-            className="w-full h-full object-contain bg-black"
+            className={`relative z-[1] w-full h-full object-contain transition-opacity duration-200 ${
+              posterImg && !hasLoadedFrame ? "opacity-0 bg-transparent" : "opacity-100 bg-transparent"
+            }`}
           />
         </div>
       );
@@ -1605,7 +1651,7 @@ export const YourAlgorithmModal: React.FC<{
                 >
                   <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
                 </button>
-                <h1 className="text-[20px] font-bold tracking-tight truncate">
+                <h1 className="text-[20px] font-semibold tracking-tight truncate">
                   Your algorithm
                 </h1>
               </div>
@@ -1671,7 +1717,7 @@ export const YourAlgorithmModal: React.FC<{
 
             {/* Hero Summary Headline (Exact IMG_5144) */}
             <section className="mt-7 mb-9">
-              <h2 className="text-[27px] sm:text-[31px] font-bold leading-[1.22] tracking-tight text-zinc-950 dark:text-white [text-wrap:balance]">
+              <h2 className="text-[27px] sm:text-[31px] font-semibold leading-[1.22] tracking-tight text-zinc-950 dark:text-white [text-wrap:balance]">
                 {buildAlgorithmHeroHeadline(prefs.moreTopics)}
               </h2>
             </section>
@@ -1679,7 +1725,7 @@ export const YourAlgorithmModal: React.FC<{
             {/* Section 1: What you want to see more of */}
             <section className="space-y-4">
               <div className="space-y-1">
-                <h3 className="text-[16.5px] font-bold text-zinc-950 dark:text-white">
+                <h3 className="text-[16.5px] font-semibold text-zinc-950 dark:text-white">
                   What you want to see more of
                 </h3>
                 <button
@@ -1768,7 +1814,7 @@ export const YourAlgorithmModal: React.FC<{
                   <button
                     type="submit"
                     disabled={!customTopicInput.trim()}
-                    className="px-4 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold disabled:opacity-40 cursor-pointer whitespace-nowrap"
+                    className="px-4 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium disabled:opacity-40 cursor-pointer whitespace-nowrap"
                   >
                     Add topic
                   </button>
@@ -1778,7 +1824,7 @@ export const YourAlgorithmModal: React.FC<{
 
             {/* Section 2: What you want to see less of */}
             <section className="mt-10 space-y-4">
-              <h3 className="text-[16.5px] font-bold text-zinc-950 dark:text-white">
+              <h3 className="text-[16.5px] font-semibold text-zinc-950 dark:text-white">
                 What you want to see less of
               </h3>
 
@@ -1826,7 +1872,7 @@ export const YourAlgorithmModal: React.FC<{
                   <button
                     type="submit"
                     disabled={!customTopicInput.trim()}
-                    className="px-4 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-bold disabled:opacity-40 cursor-pointer whitespace-nowrap"
+                    className="px-4 py-2.5 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-xs font-medium disabled:opacity-40 cursor-pointer whitespace-nowrap"
                   >
                     Mute
                   </button>
@@ -2006,7 +2052,7 @@ const AboutThisReelSheet: React.FC<{
 
             {/* Title & Description + Sources (Exact IMG_5143) */}
             <div className="px-1 space-y-2">
-              <h2 className="text-[18px] font-bold tracking-tight text-zinc-950 dark:text-white">
+              <h2 className="text-[18px] font-semibold tracking-tight text-zinc-950 dark:text-white">
                 About this reel
               </h2>
               <p className="text-[15px] leading-[1.45] text-zinc-800 dark:text-zinc-200 whitespace-pre-line line-clamp-5">
@@ -2035,7 +2081,7 @@ const AboutThisReelSheet: React.FC<{
                 {showSourcesDetail && videoSource && (
                   <div className="mt-2 p-3 rounded-2xl bg-[#F3F4F6] dark:bg-[#1E1F23] flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <p className="text-xs font-bold text-zinc-900 dark:text-white">
+                      <p className="text-xs font-medium text-zinc-900 dark:text-white">
                         {videoSource.platform === "direct"
                           ? "Loops Original Reel"
                           : `${platformMeta.name} (${platformMeta.domain})`}
@@ -2254,7 +2300,7 @@ const AboutThisReelSheet: React.FC<{
                             triggerHaptic();
                             onChangePlaybackSpeed(sp);
                           }}
-                          className={`flex-1 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer tabular-nums ${
+                          className={`flex-1 py-1.5 rounded-xl text-xs font-semibold transition cursor-pointer tabular-nums ${
                             playbackSpeed === sp
                               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900"
                               : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
@@ -2276,7 +2322,7 @@ const AboutThisReelSheet: React.FC<{
                   >
                     <span>Auto-scroll to next reel</span>
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                      className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         autoAdvance
                           ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
                           : "bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
@@ -2333,7 +2379,7 @@ const AboutThisReelSheet: React.FC<{
                       onClose();
                       onOpenAlgorithm();
                     }}
-                    className="text-xs font-bold text-[#0095F6] hover:underline cursor-pointer"
+                    className="text-xs font-medium text-[#0095F6] hover:underline cursor-pointer"
                   >
                     Manage Your algorithm →
                   </button>
@@ -2992,7 +3038,7 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
             <div
               className={`${
                 isReply ? "w-7 h-7 text-[11px]" : "w-9 h-9 text-xs"
-              } rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-bold flex items-center justify-center`}
+              } rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 font-semibold flex items-center justify-center`}
             >
               {displayHandle.charAt(0).toUpperCase()}
             </div>
@@ -3001,7 +3047,7 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
 
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-center gap-1.5 flex-wrap text-[13px]">
-            <span className="font-bold text-zinc-950 dark:text-white truncate max-w-[165px]">
+            <span className="font-semibold text-zinc-950 dark:text-white truncate max-w-[165px]">
               {displayHandle}
             </span>
             {isVerified && <VerifiedLoopBadge className="w-3.5 h-3.5" />}
@@ -3104,7 +3150,7 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
           className="pt-2.5 pb-2 px-4 flex flex-col items-center shrink-0 border-b border-zinc-100 dark:border-white/[0.06] cursor-pointer"
         >
           <div className="w-10 h-1 rounded-full bg-zinc-300 dark:bg-zinc-600 mb-2" />
-          <span className="text-[14px] font-bold text-zinc-900 dark:text-white">
+          <span className="text-[14px] font-semibold text-zinc-900 dark:text-white">
             Comments
           </span>
         </div>
@@ -3118,7 +3164,7 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
             </div>
           ) : rootComments.length === 0 ? (
             <div className="py-16 text-center space-y-1.5">
-              <p className="text-[15px] font-bold text-zinc-900 dark:text-white">
+              <p className="text-[15px] font-semibold text-zinc-900 dark:text-white">
                 No comments yet
               </p>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -3249,7 +3295,7 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
                 className="w-9 h-9 rounded-full object-cover shrink-0 ring-1 ring-black/10 dark:ring-white/15"
               />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-bold flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 text-xs font-medium flex items-center justify-center shrink-0">
                 U
               </div>
             )}
@@ -3293,7 +3339,7 @@ const ReelCommentsSheet: React.FC<ReelCommentsSheetProps> = ({
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="pl-1 text-[13.5px] font-bold text-[#0095F6] hover:opacity-80 disabled:opacity-40 cursor-pointer shrink-0"
+                  className="pl-1 text-[13.5px] font-semibold text-[#0095F6] hover:opacity-80 disabled:opacity-40 cursor-pointer shrink-0"
                 >
                   Post
                 </button>
@@ -3489,9 +3535,14 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     Record<string, boolean>
   >({});
 
+  const primaryTargetLang =
+    translationPrefs.preferredLanguages.find((l) => l.isPrimary)?.id ||
+    translationPrefs.preferredLanguages[0]?.id ||
+    "en";
+
   const targetLangName =
     AVAILABLE_TRANSLATION_LANGUAGES.find(
-      (l) => l.code === translationPrefs.targetLanguage
+      (l) => l.id === primaryTargetLang
     )?.name || "English";
 
   const handleToggleTranslateReel = async (
@@ -3509,7 +3560,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     try {
       const res = await translateLoopsText(
         trimmed,
-        translationPrefs.targetLanguage || "en"
+        primaryTargetLang || "en"
       );
       setTranslatedReelTexts((prev) => ({
         ...prev,
@@ -3536,7 +3587,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
       try {
         const res = await translateLoopsText(
           raw,
-          translationPrefs.targetLanguage || "en"
+          primaryTargetLang || "en"
         );
         if (!cancelled) {
           setTranslatedReelTexts((prev) => ({
@@ -3549,7 +3600,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
     return () => {
       cancelled = true;
     };
-  }, [translationPrefs.targetLanguage]);
+  }, [primaryTargetLang]);
 
   const [endedReel, setEndedReel] = useState<ScamPost | null>(null);
 
@@ -4254,7 +4305,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                   triggerHaptic();
                   setReelsSubTab("reels");
                 }}
-                className={`py-1.5 px-1 text-[18.5px] font-bold tracking-tight transition cursor-pointer whitespace-nowrap touch-manipulation ${
+                className={`py-1.5 px-1 text-[18.5px] font-semibold tracking-tight transition cursor-pointer whitespace-nowrap touch-manipulation ${
                   reelsSubTab === "reels"
                     ? "text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.6)]"
                     : "text-white/55 hover:text-white/80"
@@ -4268,7 +4319,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                   triggerHaptic();
                   setReelsSubTab("friends");
                 }}
-                className={`py-1.5 px-1 text-[18.5px] font-bold tracking-tight transition cursor-pointer whitespace-nowrap touch-manipulation ${
+                className={`py-1.5 px-1 text-[18.5px] font-semibold tracking-tight transition cursor-pointer whitespace-nowrap touch-manipulation ${
                   reelsSubTab === "friends"
                     ? "text-white drop-shadow-[0_1px_6px_rgba(0,0,0,0.6)]"
                     : "text-white/55 hover:text-white/80"
@@ -4301,7 +4352,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
               <Play className="w-7 h-7 fill-white ml-0.5" />
             </div>
             <div className="space-y-1.5 max-w-[300px]">
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-semibold text-white">
                 {reelsSubTab === "friends"
                   ? "No Friend Reels Yet"
                   : "No Reels Shared Yet"}
@@ -4317,7 +4368,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                 <button
                   type="button"
                   onClick={() => setReelsSubTab("reels")}
-                  className="min-h-[44px] px-4 py-2.5 rounded-full bg-white/18 hover:bg-white/25 border border-white/20 text-white text-xs font-bold cursor-pointer whitespace-nowrap active:scale-95 transition"
+                  className="min-h-[44px] px-4 py-2.5 rounded-full bg-white/18 hover:bg-white/25 border border-white/20 text-white text-xs font-medium cursor-pointer whitespace-nowrap active:scale-95 transition"
                 >
                   Explore All Reels
                 </button>
@@ -4585,7 +4636,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                                   className="w-9 h-9 rounded-full object-cover shrink-0 border border-black/10"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-bold flex items-center justify-center shrink-0">
+                                <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 text-xs font-medium flex items-center justify-center shrink-0">
                                   {(topFeaturedComment.userName || "U")
                                     .charAt(0)
                                     .toUpperCase()}
@@ -4594,7 +4645,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
 
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-1.5 text-xs">
-                                  <span className="font-bold truncate">
+                                  <span className="font-semibold truncate">
                                     {topFeaturedComment.userName}
                                   </span>
                                   <span className="text-zinc-500 dark:text-zinc-400 tabular-nums">
@@ -4835,12 +4886,12 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                                 className="w-9 h-9 rounded-full object-cover border border-white/30 shrink-0"
                               />
                             ) : (
-                              <div className="w-9 h-9 rounded-full bg-white/20 text-white text-xs font-bold flex items-center justify-center shrink-0">
+                              <div className="w-9 h-9 rounded-full bg-white/20 text-white text-xs font-medium flex items-center justify-center shrink-0">
                                 {creator.handle.charAt(0).toUpperCase()}
                               </div>
                             )}
 
-                            <span className="text-[14.5px] font-bold text-white truncate drop-shadow">
+                            <span className="text-[14.5px] font-semibold text-white truncate drop-shadow">
                               {creator.handle}
                             </span>
                             {creator.isVerified && (
@@ -4981,7 +5032,7 @@ export const LoopsReelsView: React.FC<LoopsReelsViewProps> = ({
                         className="absolute inset-x-3.5 bottom-[64px] z-30 py-2 -my-2 cursor-pointer touch-none select-none"
                       >
                         {isScrubbing && scrubTimeText && (
-                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-black/90 backdrop-blur-md border border-white/20 text-[11px] font-mono font-bold text-white shadow-xl pointer-events-none">
+                          <div className="absolute -top-7 left-1/2 -translate-x-1/2 px-2.5 py-0.5 rounded-full bg-black/90 backdrop-blur-md border border-white/20 text-[11px] font-mono font-semibold text-white shadow-xl pointer-events-none">
                             {scrubTimeText}
                           </div>
                         )}

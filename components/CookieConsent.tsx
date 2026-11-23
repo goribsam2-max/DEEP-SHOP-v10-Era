@@ -76,7 +76,7 @@ export const CookieConsent: React.FC = () => {
               <ShieldCheck className="w-4 h-4" />
             </div>
             <div className="space-y-1">
-              <div className="ds-apple-display text-[14px] font-bold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
+              <div className="ds-apple-display text-[14px] font-semibold tracking-tight text-[#1d1d1f] dark:text-[#f5f5f7]">
                 Cookie Preferences
               </div>
               <p className="text-[12.5px] leading-[1.48] text-[#6e6e73] dark:text-[#98989d]">

@@ -454,7 +454,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                     className="w-full h-full object-cover bg-black"
                   />
                 ) : (
-                  <span className="text-sm font-bold text-white">
+                  <span className="text-sm font-semibold text-white">
                     {(group.category || "S").charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -520,12 +520,12 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                       className="w-8 h-8 rounded-full object-cover border border-white/30 shrink-0"
                     />
                   ) : (
-                    <div className="w-8 h-8 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-xs font-bold shadow-lg shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-[#1877F2] flex items-center justify-center text-white text-xs font-medium shadow-lg shrink-0">
                       {activeGroup?.category.charAt(0)}
                     </div>
                   )}
                   <div className="min-w-0">
-                    <span className="text-white text-sm font-bold shadow-sm block truncate leading-tight">
+                    <span className="text-white text-sm font-semibold shadow-sm block truncate leading-tight">
                       {activeGroup?.category}
                     </span>
                     {currentStory.createdAt && (
@@ -557,7 +557,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                         setViewerScale(1);
                         setViewerOffset({ x: 0, y: 0 });
                       }}
-                      className="px-2.5 h-8 rounded-full bg-white/15 text-white text-[11px] font-bold flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                      className="px-2.5 h-8 rounded-full bg-white/15 text-white text-[11px] font-semibold flex items-center gap-1 cursor-pointer whitespace-nowrap"
                     >
                       <RefreshCw size={12} />
                       <span>1:1</span>
@@ -735,7 +735,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                   (currentStory as any)?.music?.url) && (
                   <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20 w-fit text-white">
                     <Volume2 className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
-                    <span className="text-xs font-bold truncate max-w-[180px]">
+                    <span className="text-xs font-medium truncate max-w-[180px]">
                       {currentStory.songTitle || "Story Audio"}{" "}
                       {currentStory.songArtist
                         ? `· ${currentStory.songArtist}`
@@ -761,7 +761,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                       <div className="animate-bounce p-2 bg-white/15 backdrop-blur-md rounded-full border border-white/20">
                         <ChevronUp size={20} />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider group-hover:underline">
+                      <span className="text-xs font-medium uppercase tracking-wider group-hover:underline">
                         Open Link
                       </span>
                     </button>
@@ -780,7 +780,7 @@ const StoryViewer: React.FC<StoryViewerProps> = ({
                       <div className="animate-bounce p-2 bg-white/15 backdrop-blur-md rounded-full border border-white/20">
                         <ChevronUp size={20} />
                       </div>
-                      <span className="text-xs font-bold uppercase tracking-wider group-hover:underline">
+                      <span className="text-xs font-medium uppercase tracking-wider group-hover:underline">
                         Open Link
                       </span>
                     </a>

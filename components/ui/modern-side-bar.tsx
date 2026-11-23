@@ -146,7 +146,7 @@ export function Sidebar({ className = "", children, userData }: SidebarProps) {
           {!isCollapsed && (
             <div className="flex items-center space-x-2.5 overflow-hidden">
               <div className="w-8 h-8 bg-[#EF8020] rounded-lg flex items-center justify-center shadow-sm shrink-0">
-                <span className="text-white font-bold text-sm">D</span>
+                <span className="text-white font-semibold text-sm">D</span>
               </div>
               <div className="flex flex-col truncate">
                 <span className="font-semibold text-slate-800 text-sm truncate">DEEP SHOP</span>
@@ -157,7 +157,7 @@ export function Sidebar({ className = "", children, userData }: SidebarProps) {
 
           {isCollapsed && (
             <div className="w-8 h-8 bg-[#EF8020] rounded-lg flex items-center justify-center mx-auto shadow-sm shrink-0">
-              <span className="text-white font-bold text-sm">D</span>
+              <span className="text-white font-semibold text-sm">D</span>
             </div>
           )}
 

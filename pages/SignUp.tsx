@@ -1145,7 +1145,7 @@ const SignUp: React.FC = () => {
           <div className="flex-1 flex flex-col justify-center">
             <DeepShopEcosystemHero />
             <div className="mt-4 space-y-3">
-              <h1 className="text-[26px] sm:text-[28px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="text-[26px] sm:text-[28px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Get started on DEEP SHOP with a DEEP SHOP account
               </h1>
               <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -1176,7 +1176,7 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromSeller} className="space-y-4 pt-1">
             <div className="space-y-1.5">
-              <h1 className="text-[25px] font-bold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="text-[25px] font-semibold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Set up your seller profile
               </h1>
               <p className="text-[15px] text-[#6E6E73] dark:text-[#98989D]">
@@ -1337,7 +1337,7 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromName} className="space-y-5 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your name?
               </h1>
               <p className="text-[15px] leading-[1.4] text-[#6E6E73] dark:text-[#98989D]">
@@ -1415,7 +1415,7 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromBirthday} className="space-y-5 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your date of birth?
               </h1>
               <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -1509,7 +1509,7 @@ const SignUp: React.FC = () => {
                   >
                     <div className="w-10 h-1 rounded-full bg-black/[0.15] dark:bg-white/[0.2] mx-auto mb-3" />
                     <div className="flex items-center justify-between mb-4">
-                      <h3 className="text-[17px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <h3 className="text-[17px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                         Select date of birth
                       </h3>
                       <button
@@ -1640,7 +1640,7 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromGender} className="space-y-5 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your gender?
               </h1>
               <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -1791,7 +1791,7 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromMobile} className="space-y-4 pt-1">
             <div className="space-y-2">
-              <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your mobile number?
               </h1>
               <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -1883,7 +1883,7 @@ const SignUp: React.FC = () => {
         >
           <form onSubmit={handleNextFromEmail} className="space-y-4 pt-1">
             <div className="space-y-2">
-              <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="ds-apple-display text-[26px] font-semibold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 What&apos;s your email address?
               </h1>
               <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -2010,7 +2010,7 @@ const SignUp: React.FC = () => {
         >
           <div className="flex-1 flex flex-col pt-2 pb-4">
             <div className="text-center space-y-2.5 px-1">
-              <h1 className="ds-apple-display text-[25px] sm:text-[27px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7] [text-wrap:balance]">
+              <h1 className="ds-apple-display text-[25px] sm:text-[27px] font-semibold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7] [text-wrap:balance]">
                 You already have a DEEP SHOP account
               </h1>
               <p className="text-[15px] leading-[1.42] text-[#6E6E73] dark:text-[#98989D] max-w-[340px] mx-auto">
@@ -2026,7 +2026,7 @@ const SignUp: React.FC = () => {
                 sizeClass="w-[168px] h-[168px] sm:w-[176px] sm:h-[176px]"
               />
 
-              <h2 className="ds-apple-display mt-5 text-[23px] sm:text-[24px] font-bold tracking-tight text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h2 className="ds-apple-display mt-5 text-[23px] sm:text-[24px] font-semibold tracking-tight text-center text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {realFullName}
               </h2>
               {realContactLabel && (
@@ -2087,7 +2087,7 @@ const SignUp: React.FC = () => {
           footer={bottomFindAccountLink}
         >
           <div className="space-y-4 pt-1">
-            <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="ds-apple-display text-[26px] font-semibold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Agree to DEEP SHOP&apos;s terms and policies
             </h1>
 
@@ -2325,7 +2325,7 @@ const SignUp: React.FC = () => {
         >
           <div className="flex-1 flex flex-col pt-1">
             <div className="space-y-2">
-              <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="ds-apple-display text-[26px] font-semibold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Add a profile picture
               </h1>
               <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -2427,7 +2427,7 @@ const SignUp: React.FC = () => {
         >
           <div className="flex-1 flex flex-col pt-1">
             <div className="space-y-2">
-              <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h1 className="ds-apple-display text-[26px] font-semibold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
                 To get updates faster, allow notifications
               </h1>
               <p className="text-[15px] leading-[1.42] text-[#6E6E73] dark:text-[#98989D]">
@@ -2637,7 +2637,7 @@ const SignUp: React.FC = () => {
       >
         <form onSubmit={handleNextFromPassword} className="space-y-4 pt-1">
           <div className="space-y-2">
-            <h1 className="ds-apple-display text-[26px] font-bold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="ds-apple-display text-[26px] font-semibold tracking-tight leading-[1.18] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Create a password
             </h1>
             <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -2676,12 +2676,12 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasMinLen
-                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-semibold"
                           : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
                           pwdRules.hasMinLen
                             ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
                             : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
@@ -2695,12 +2695,12 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasNumber
-                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-semibold"
                           : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
                           pwdRules.hasNumber
                             ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
                             : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
@@ -2714,12 +2714,12 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasLower
-                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-semibold"
                           : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
                           pwdRules.hasLower
                             ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
                             : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
@@ -2733,12 +2733,12 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 transition ${
                         pwdRules.hasUpper
-                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-semibold"
                           : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
                           pwdRules.hasUpper
                             ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
                             : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"
@@ -2752,12 +2752,12 @@ const SignUp: React.FC = () => {
                     <div
                       className={`flex items-center gap-1.5 col-span-2 transition ${
                         pwdRules.hasSpecial
-                          ? "text-[#248A3D] dark:text-[#30D158] font-bold"
+                          ? "text-[#248A3D] dark:text-[#30D158] font-semibold"
                           : "text-[#6E6E73] dark:text-[#98989D]"
                       }`}
                     >
                       <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-semibold ${
                           pwdRules.hasSpecial
                             ? "bg-[#248A3D] dark:bg-[#30D158] text-white dark:text-black"
                             : "bg-black/10 dark:bg-white/15 text-[#6E6E73] dark:text-[#98989D]"

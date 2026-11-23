@@ -244,13 +244,13 @@ export const BuyStars: React.FC = () => {
             </button>
             <div className="flex items-center gap-2">
               <Star className="w-5 h-5 text-amber-500 fill-amber-500 shrink-0" />
-              <h1 className="text-base font-extrabold text-zinc-900 dark:text-white truncate">
+              <h1 className="text-base font-semibold text-zinc-900 dark:text-white truncate">
                 Buy Stars
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-extrabold whitespace-nowrap font-mono">
+          <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 text-xs font-semibold whitespace-nowrap font-mono">
             <Star className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
             <span>{currentStars.toLocaleString()} Stars</span>
           </div>
@@ -261,10 +261,10 @@ export const BuyStars: React.FC = () => {
         {/* HERO PROMO CARD */}
         <div className="p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20 shadow-xs space-y-2">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+            <span className="text-xs font-medium uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
               <Sparkles className="w-4 h-4" /> Official Star Gateway
             </span>
-            <span className="text-[11px] font-mono font-bold text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+            <span className="text-[11px] font-mono font-semibold text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
               1 Star = ৳1.00 BDT
             </span>
           </div>
@@ -276,7 +276,7 @@ export const BuyStars: React.FC = () => {
 
         {/* STEP 1: SELECT PACKAGE */}
         <div className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             Step 1: Choose Star Package
           </h3>
 
@@ -299,15 +299,15 @@ export const BuyStars: React.FC = () => {
                   }`}
                 >
                   {pkg.bonus && (
-                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-1 block">
+                    <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 mb-1 block">
                       +{pkg.bonus}
                     </span>
                   )}
-                  <div className="flex items-center gap-1 text-sm font-black text-zinc-900 dark:text-white">
+                  <div className="flex items-center gap-1 text-sm font-semibold text-zinc-900 dark:text-white">
                     <Star className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />
                     <span>{pkg.stars} Stars</span>
                   </div>
-                  <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 mt-2 block font-mono">
+                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 mt-2 block font-mono">
                     ৳{pkg.bdt} BDT
                   </span>
                 </button>
@@ -317,7 +317,7 @@ export const BuyStars: React.FC = () => {
 
           {/* Custom Stars Input */}
           <div className="bg-zinc-50 dark:bg-zinc-900 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3">
-            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
+            <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400 whitespace-nowrap">
               Or Enter Custom Stars:
             </span>
             <div className="flex items-center gap-1.5 max-w-[150px]">
@@ -330,7 +330,7 @@ export const BuyStars: React.FC = () => {
                   setCustomStars(e.target.value);
                   setSelectedStars(0);
                 }}
-                className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-xs font-bold font-mono outline-none"
+                className="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 text-xs font-medium font-mono outline-none"
               />
               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
             </div>
@@ -339,7 +339,7 @@ export const BuyStars: React.FC = () => {
 
         {/* STEP 2: ADMIN DASHBOARD PAYMENT NUMBERS (Single rotated number per refresh) */}
         <div className="space-y-3">
-          <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
             Step 2: Payment Method & Details
           </h3>
 
@@ -371,7 +371,7 @@ export const BuyStars: React.FC = () => {
                     }`}
                   >
                     <div>
-                      <span className="text-xs font-black text-rose-600 block whitespace-nowrap">
+                      <span className="text-xs font-semibold text-rose-600 block whitespace-nowrap">
                         bKash ({rotatedBkash.type})
                       </span>
                       <span className="text-[10px] text-zinc-400 whitespace-nowrap">
@@ -406,7 +406,7 @@ export const BuyStars: React.FC = () => {
                     }`}
                   >
                     <div>
-                      <span className="text-xs font-black text-orange-600 block whitespace-nowrap">
+                      <span className="text-xs font-semibold text-orange-600 block whitespace-nowrap">
                         Nagad ({rotatedNagad.type})
                       </span>
                       <span className="text-[10px] text-zinc-400 whitespace-nowrap">
@@ -431,18 +431,18 @@ export const BuyStars: React.FC = () => {
               {activeAccount && (
                 <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-2.5">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-bold text-zinc-500">
+                    <span className="text-xs font-medium text-zinc-500">
                       Official {activeAccount.provider} ({activeAccount.type})
                       Number:
                     </span>
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
                       {getMobileActionLabel(activeAccount.type)}
                     </span>
                   </div>
 
                   {/* Single active rotated number */}
                   <div className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-                    <span className="text-base sm:text-lg font-black font-mono tracking-wider text-zinc-900 dark:text-white">
+                    <span className="text-base sm:text-lg font-semibold font-mono tracking-wider text-zinc-900 dark:text-white">
                       {activeAccount.number}
                     </span>
                     <button
@@ -454,7 +454,7 @@ export const BuyStars: React.FC = () => {
                           `${activeAccount.provider} (${activeAccount.type})`
                         )
                       }
-                      className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-xs font-bold flex items-center gap-1.5 hover:bg-zinc-200 transition cursor-pointer whitespace-nowrap"
+                      className="px-3 py-1.5 rounded-full bg-zinc-100 dark:bg-zinc-700 text-xs font-medium flex items-center gap-1.5 hover:bg-zinc-200 transition cursor-pointer whitespace-nowrap"
                     >
                       {copiedKey === activeAccount.id ? (
                         <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -495,13 +495,13 @@ export const BuyStars: React.FC = () => {
         {/* STEP 3: TRANSACTION SUBMISSION */}
         {(hasBkash || hasNagad) && (
           <form onSubmit={handlePurchaseSubmit} className="space-y-4">
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+            <h3 className="text-xs font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
               Step 3: Verification
             </h3>
 
             <div className="space-y-3">
               <div>
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1">
                   Your Payment Phone Number *
                 </label>
                 <input
@@ -515,7 +515,7 @@ export const BuyStars: React.FC = () => {
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1">
+                <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1">
                   Transaction ID (TrxID) *
                 </label>
                 <input
@@ -530,9 +530,9 @@ export const BuyStars: React.FC = () => {
             </div>
 
             <div className="pt-2 space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold border-t border-zinc-200 dark:border-zinc-800 pt-3">
+              <div className="flex items-center justify-between text-xs font-medium border-t border-zinc-200 dark:border-zinc-800 pt-3">
                 <span>Total Payable Amount:</span>
-                <span className="text-base font-black text-zinc-900 dark:text-white">
+                <span className="text-base font-semibold text-zinc-900 dark:text-white">
                   ৳{totalAmount} BDT ({totalAmount} Stars)
                 </span>
               </div>
@@ -540,7 +540,7 @@ export const BuyStars: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting || totalAmount < 10 || !activeAccount}
-                className="w-full py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-extrabold text-xs shadow-xl hover:opacity-90 active:scale-98 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
+                className="w-full py-3.5 rounded-full bg-black dark:bg-white text-white dark:text-black font-semibold text-xs shadow-xl hover:opacity-90 active:scale-98 transition disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
                 <Star className="w-4 h-4 fill-current shrink-0" />
                 <span>

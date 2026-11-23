@@ -1212,7 +1212,7 @@ const SellerDashboard: React.FC = () => {
             </span>
           )}
           {badge !== undefined && badge > 0 && (
-            <span className="absolute -top-2 -right-2 bg-[#FF3B30] text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center leading-none tabular-nums shadow-xs">
+            <span className="absolute -top-2 -right-2 bg-[#FF3B30] text-white text-[9px] font-semibold px-1.5 py-0.5 rounded-full min-w-[16px] h-[16px] flex items-center justify-center leading-none tabular-nums shadow-xs">
               {badge}
             </span>
           )}
@@ -1277,7 +1277,7 @@ const SellerDashboard: React.FC = () => {
               <span>Orders</span>
             </div>
             {orders.filter((o: any) => (o.status || "").toLowerCase() === "pending").length > 0 && (
-              <span className="bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums">
+              <span className="bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums">
                 {orders.filter((o: any) => (o.status || "").toLowerCase() === "pending").length}
               </span>
             )}
@@ -1448,7 +1448,7 @@ const SellerDashboard: React.FC = () => {
                     <h1 className="text-[20px] font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
                       Orders
                     </h1>
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tabular-nums bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold tabular-nums bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
                       {filteredOrders.length}
                     </span>
                   </div>
@@ -1621,7 +1621,7 @@ const SellerDashboard: React.FC = () => {
                                     </span>
                                   )}
                                 </h4>
-                                <span className="text-[13px] font-bold text-zinc-900 dark:text-zinc-100 shrink-0">
+                                <span className="text-[13px] font-semibold text-zinc-900 dark:text-zinc-100 shrink-0">
                                   {formatPrice(ord.total || 0)}
                                 </span>
                               </div>
@@ -1841,7 +1841,7 @@ const SellerDashboard: React.FC = () => {
                                       {item.name || "Order Item"}
                                     </h4>
                                     <div className="mt-1.5 flex items-baseline gap-2">
-                                      <span className="text-[15px] font-bold text-zinc-900 dark:text-zinc-100">
+                                      <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
                                         {formatPrice(lineTotal)}
                                       </span>
                                       {Number(item.quantity || 1) > 1 && (
@@ -1954,7 +1954,7 @@ const SellerDashboard: React.FC = () => {
                           <div className="flex items-start gap-2.5">
                             <MapPin className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                             <div>
-                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
                                 Delivery Address
                               </span>
                               <span className="text-[12.5px] font-medium text-zinc-800 dark:text-zinc-200 leading-relaxed block mt-0.5">
@@ -1975,10 +1975,10 @@ const SellerDashboard: React.FC = () => {
                           <div className="flex items-start gap-2.5">
                             <Phone className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
                             <div>
-                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">
+                              <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider block">
                                 Contact Phone
                               </span>
-                              <span className="font-mono font-bold text-[12.5px] text-zinc-900 dark:text-zinc-100 block mt-0.5 select-all">
+                              <span className="font-mono font-semibold text-[12.5px] text-zinc-900 dark:text-zinc-100 block mt-0.5 select-all">
                                 {order.contactNumber || order.shippingAddress?.phone || "No phone specified"}
                               </span>
                               {order.altNumber && (
@@ -1991,13 +1991,13 @@ const SellerDashboard: React.FC = () => {
 
                           {(order.guardianNumber || order.nidCardUrl) && (
                             <div className="p-3 bg-amber-50 dark:bg-amber-950/40 rounded-xl border border-amber-200/60 dark:border-amber-900/50 text-xs space-y-1">
-                              <span className="font-bold text-amber-800 dark:text-amber-300 block">
+                              <span className="font-semibold text-amber-800 dark:text-amber-300 block">
                                 Verification Info
                               </span>
                               {order.guardianNumber && (
                                 <p>
                                   <span className="text-zinc-500">Guardian:</span>{" "}
-                                  <span className="font-mono font-bold text-amber-900 dark:text-amber-200">
+                                  <span className="font-mono font-semibold text-amber-900 dark:text-amber-200">
                                     {order.guardianNumber}
                                   </span>
                                 </p>
@@ -2020,7 +2020,7 @@ const SellerDashboard: React.FC = () => {
 
                           {order.isGift && order.giftNote && (
                             <div className="p-2.5 bg-pink-50 dark:bg-pink-950/30 rounded-xl border border-pink-200 dark:border-pink-900 text-xs">
-                              <span className="font-bold text-pink-700 dark:text-pink-300">
+                              <span className="font-semibold text-pink-700 dark:text-pink-300">
                                 Gift Note:
                               </span>{" "}
                               {order.giftNote}
@@ -2040,7 +2040,7 @@ const SellerDashboard: React.FC = () => {
 
                         {order.status === OrderStatus.CANCELLED && order.rejectReason && (
                           <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-100 dark:border-rose-900/60 rounded-xl p-3">
-                            <p className="text-[10px] font-bold text-rose-500 uppercase tracking-wider mb-0.5">
+                            <p className="text-[10px] font-medium text-rose-500 uppercase tracking-wider mb-0.5">
                               Cancellation Reason
                             </p>
                             <p className="text-xs font-semibold text-rose-700 dark:text-rose-300">
@@ -2081,7 +2081,7 @@ const SellerDashboard: React.FC = () => {
 
                         {/* Status Selector Dropdown */}
                         <div className="space-y-1.5 relative">
-                          <Label className="text-[10.5px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
+                          <Label className="text-[10.5px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider">
                             Order Stage
                           </Label>
                           <div className="relative">
@@ -2170,7 +2170,7 @@ const SellerDashboard: React.FC = () => {
 
                         {/* Tracking ID input */}
                         <div className="space-y-1.5">
-                          <Label className="text-[10.5px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">
+                          <Label className="text-[10.5px] font-medium text-zinc-400 dark:text-zinc-500 uppercase tracking-wider block">
                             Courier Tracking ID
                           </Label>
                           <Input
@@ -2194,7 +2194,7 @@ const SellerDashboard: React.FC = () => {
                           </h3>
                           <span
                             className={cn(
-                              "px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider",
+                              "px-2.5 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wider",
                               order.paymentStatus === "paid" || order.paymentStatus === "verified"
                                 ? "bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400"
                                 : "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400"
@@ -2235,13 +2235,13 @@ const SellerDashboard: React.FC = () => {
                             <span className="font-semibold text-zinc-900 dark:text-zinc-100">
                               Grand Total
                             </span>
-                            <span className="text-[15px] font-bold text-zinc-900 dark:text-zinc-100">
+                            <span className="text-[15px] font-semibold text-zinc-900 dark:text-zinc-100">
                               {formatPrice(totalAmount)}
                             </span>
                           </div>
                           <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400">
                             <span>Paid / Advance</span>
-                            <span className="font-bold">
+                            <span className="font-semibold">
                               {formatPrice(
                                 isCod
                                   ? 0
@@ -2253,17 +2253,17 @@ const SellerDashboard: React.FC = () => {
                           </div>
                           <div className="flex justify-between items-center text-rose-600 dark:text-rose-400 pt-1 border-t border-zinc-100 dark:border-zinc-800/80">
                             <span className="font-semibold">Due Amount (COD)</span>
-                            <span className="text-[15px] font-bold">{formatPrice(dueAmount)}</span>
+                            <span className="text-[15px] font-semibold">{formatPrice(dueAmount)}</span>
                           </div>
                         </div>
 
                         {/* Sender / Receiver / TrxID Verification Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80 text-[11px]">
                           <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70">
-                            <span className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider">
+                            <span className="block text-[9.5px] font-medium text-zinc-400 uppercase tracking-wider">
                               Sender Number
                             </span>
-                            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 select-all block mt-0.5">
+                            <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100 select-all block mt-0.5">
                               {order.accountNameSender ||
                                 order.senderNumber ||
                                 order.customerSenderNumber ||
@@ -2273,10 +2273,10 @@ const SellerDashboard: React.FC = () => {
                             </span>
                           </div>
                           <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70">
-                            <span className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider">
+                            <span className="block text-[9.5px] font-medium text-zinc-400 uppercase tracking-wider">
                               Received On
                             </span>
-                            <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 select-all block mt-0.5">
+                            <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100 select-all block mt-0.5">
                               {order.receiverNumber ||
                                 order.merchantNumber ||
                                 order.receivedNumber ||
@@ -2286,10 +2286,10 @@ const SellerDashboard: React.FC = () => {
                           </div>
                           <div className="sm:col-span-2 p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/70 flex items-center justify-between gap-2">
                             <div className="min-w-0">
-                              <span className="block text-[9.5px] font-bold text-zinc-400 uppercase tracking-wider">
+                              <span className="block text-[9.5px] font-medium text-zinc-400 uppercase tracking-wider">
                                 Transaction ID (TrxID)
                               </span>
-                              <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 select-all block mt-0.5 truncate">
+                              <span className="font-mono font-semibold text-zinc-900 dark:text-zinc-100 select-all block mt-0.5 truncate">
                                 {order.transactionId || order.trxId || order.lastDigits || "Not provided"}
                               </span>
                             </div>
@@ -2358,9 +2358,9 @@ const SellerDashboard: React.FC = () => {
                           )}
                         </div>
                         <div className="flex-1 overflow-hidden">
-                           <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate mb-1">{p.name}</h4>
+                           <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate mb-1">{p.name}</h4>
                            <div className="flex items-center gap-3">
-                              <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100">{formatPrice(p.price)}</p>
+                              <p className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{formatPrice(p.price)}</p>
                               <p className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full">Stock: {p.stock}</p>
                            </div>
                            {p.advanceAmount && <p className="text-[10px] text-blue-600 font-medium mt-1">Adv. Req: {formatPrice(p.advanceAmount)}</p>}
@@ -2381,7 +2381,7 @@ const SellerDashboard: React.FC = () => {
                                     notify("Failed to update product status", "error");
                                   }
                                 }}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition border cursor-pointer ${
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-semibold transition border cursor-pointer ${
                                   p.isSold
                                     ? "bg-rose-500/10 text-rose-600 border-rose-500/30 dark:bg-rose-950/40 dark:text-rose-400"
                                     : "bg-amber-500/10 text-amber-600 border-amber-500/30 dark:bg-amber-950/40 dark:text-amber-400 hover:bg-amber-500/20"
@@ -2391,7 +2391,7 @@ const SellerDashboard: React.FC = () => {
                               </button>
 
                               {p.isBorderOffer && (
-                                <span className="text-[9px] font-black bg-amber-500 text-black px-2 py-0.5 rounded-full">
+                                <span className="text-[9px] font-semibold bg-amber-500 text-black px-2 py-0.5 rounded-full">
                                   ⚡ BORDER OFFER
                                 </span>
                               )}
@@ -2421,27 +2421,27 @@ const SellerDashboard: React.FC = () => {
                   <button onClick={() => setActiveTab("products")} className="w-10 h-10 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-750 flex items-center justify-center text-zinc-800 dark:text-zinc-200 shadow-sm">
                     <ArrowLeft className="w-5 h-5" />
                   </button>
-                  <h2 className="text-[17px] font-bold text-zinc-900 dark:text-zinc-100">{activeTab === "add_product" ? "Add New Product" : "Edit Product"}</h2>
+                  <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-zinc-100">{activeTab === "add_product" ? "Add New Product" : "Edit Product"}</h2>
                 </div>
 
                 <form onSubmit={handleProductSubmit} className="space-y-5">
                   <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 dark:border-zinc-800 dark:border-zinc-800 space-y-4">
                     <div>
-                      <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Product Name *</Label>
+                      <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Product Name *</Label>
                       <Input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} placeholder="e.g. Premium Smartwatch" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" required />
                     </div>
                     <div className="flex gap-4">
                       <div className="flex-1">
-                        <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Price (৳) *</Label>
+                        <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Price (৳) *</Label>
                         <Input type="number" value={productForm.price} onChange={e => setProductForm({...productForm, price: e.target.value})} placeholder="0.00" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" required />
                       </div>
                       <div className="flex-1">
-                        <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Stock *</Label>
+                        <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Stock *</Label>
                         <Input type="number" value={productForm.stock} onChange={e => setProductForm({...productForm, stock: e.target.value})} placeholder="10" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" required />
                       </div>
                     </div>
                     <div>
-                       <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">
+                       <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">
                          Advance Payment Option
                        </Label>
                        
@@ -2477,7 +2477,7 @@ const SellerDashboard: React.FC = () => {
                        ) : (
                          <div className="space-y-3 p-3.5 bg-[#F5F5F7] dark:bg-zinc-800/60 rounded-xl border border-zinc-200/80 dark:border-zinc-700/80">
                            <div className="flex items-center gap-3">
-                             <Label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 whitespace-nowrap">Mode:</Label>
+                             <Label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">Mode:</Label>
                              <CustomDropdown
                                options={["Fixed Amount (৳)", "Percentage (%)"]}
                                value={productForm.advanceMode === "percentage" ? "Percentage (%)" : "Fixed Amount (৳)"}
@@ -2499,7 +2499,7 @@ const SellerDashboard: React.FC = () => {
                                    placeholder="e.g. 10 or 20"
                                    className="rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 h-10 text-xs text-zinc-900 dark:text-zinc-100"
                                  />
-                                 <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap bg-emerald-500/10 px-3 py-2.5 rounded-xl border border-emerald-500/20">
+                                 <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap bg-emerald-500/10 px-3 py-2.5 rounded-xl border border-emerald-500/20">
                                    Calc: ৳{Math.round((Number(productForm.price || 0) * (Number(productForm.advancePercentage || 0) / 100)))}
                                  </div>
                                </div>
@@ -2527,7 +2527,7 @@ const SellerDashboard: React.FC = () => {
                         <div className="flex items-center gap-2">
                           <span className="text-amber-500 text-lg">⚡</span>
                           <div>
-                            <Label className="text-xs font-bold text-amber-500 block cursor-pointer">
+                            <Label className="text-xs font-medium text-amber-500 block cursor-pointer">
                               Border Stock Phone Offer
                             </Label>
                             <p className="text-[10px] text-zinc-400">
@@ -2546,7 +2546,7 @@ const SellerDashboard: React.FC = () => {
                       {productForm.isBorderOffer && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-amber-500/20 animate-in fade-in duration-200">
                           <div>
-                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                            <Label className="text-[11px] font-medium text-zinc-300 block mb-1">
                               Storage / Memory (e.g. 8GB / 128GB)
                             </Label>
                             <Input
@@ -2558,7 +2558,7 @@ const SellerDashboard: React.FC = () => {
                           </div>
 
                           <div>
-                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                            <Label className="text-[11px] font-medium text-zinc-300 block mb-1">
                               Condition / Grade (e.g. Grade A Intake)
                             </Label>
                             <Input
@@ -2570,7 +2570,7 @@ const SellerDashboard: React.FC = () => {
                           </div>
 
                           <div>
-                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                            <Label className="text-[11px] font-medium text-zinc-300 block mb-1">
                               Battery Health / Condition
                             </Label>
                             <Input
@@ -2582,7 +2582,7 @@ const SellerDashboard: React.FC = () => {
                           </div>
 
                           <div>
-                            <Label className="text-[11px] font-bold text-zinc-300 block mb-1">
+                            <Label className="text-[11px] font-medium text-zinc-300 block mb-1">
                               Warranty Details
                             </Label>
                             <Input
@@ -2594,7 +2594,7 @@ const SellerDashboard: React.FC = () => {
                           </div>
 
                           <div className="sm:col-span-2 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3">
-                            <Label className="text-[11px] font-bold text-amber-400 block mb-1">
+                            <Label className="text-[11px] font-medium text-amber-400 block mb-1">
                               Dedicated Advance Amount (৳)
                             </Label>
                             <Input
@@ -2613,7 +2613,7 @@ const SellerDashboard: React.FC = () => {
                     </div>
 
                     <div>
-                      <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Category *</Label>
+                      <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Category *</Label>
                       <CustomDropdown
                         options={["Border Cross Products", "Mobile", "Smart Watch", "Earbuds", "Accessories", "Custom Category"]}
                         value={productForm.category === "custom" ? "Custom Category" : productForm.category}
@@ -2624,7 +2624,7 @@ const SellerDashboard: React.FC = () => {
                     </div>
                     {(productForm.category === "custom" || productForm.category === "Custom Category") && (
                       <div className="animate-in fade-in slide-in-from-top-2 duration-200 mt-2">
-                        <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Custom Category Name *</Label>
+                        <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Custom Category Name *</Label>
                         <Input 
                           value={customCategoryName} 
                           onChange={e => setCustomCategoryName(e.target.value)} 
@@ -2638,15 +2638,15 @@ const SellerDashboard: React.FC = () => {
                     {/* Additional Options */}
                     <div className="grid grid-cols-2 gap-4 mt-2">
                        <div>
-                         <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Special Offer</Label>
+                         <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Special Offer</Label>
                          <label className="flex items-center space-x-2 bg-[#F5F5F7] dark:bg-zinc-800 h-12 px-3 rounded-xl cursor-pointer">
                            <input type="checkbox" checked={productForm.isOffer} onChange={e => setProductForm({...productForm, isOffer: e.target.checked})} className="rounded text-[#EF8020] focus:ring-[#EF8020]" />
-                           <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Enable Offer</span>
+                           <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Enable Offer</span>
                          </label>
                        </div>
                        {productForm.isOffer && (
                          <div>
-                           <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Offer Price (৳)</Label>
+                           <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Offer Price (৳)</Label>
                            <Input type="number" value={productForm.offerPrice} onChange={e => setProductForm({...productForm, offerPrice: e.target.value})} placeholder="e.g. 50" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" />
                          </div>
                        )}
@@ -2654,19 +2654,19 @@ const SellerDashboard: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-4 mt-2">
                        <div>
-                         <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Cash on Delivery</Label>
+                         <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Cash on Delivery</Label>
                          <label className="flex items-center space-x-2 bg-[#F5F5F7] dark:bg-zinc-800 h-12 px-3 rounded-xl cursor-pointer">
                            <input type="checkbox" checked={productForm.isCodEnabled} onChange={e => setProductForm({...productForm, isCodEnabled: e.target.checked})} className="rounded text-[#EF8020] focus:ring-[#EF8020]" />
-                           <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Allow COD</span>
+                           <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">Allow COD</span>
                          </label>
                        </div>
                        <div>
-                         <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">D Coin Reward</Label>
+                         <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">D Coin Reward</Label>
                          <Input type="number" value={productForm.coinReward} onChange={e => setProductForm({...productForm, coinReward: e.target.value})} placeholder="0" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" />
                        </div>
                     </div>
                     <div className="space-y-2">
-                      <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1 block">Product Images *</Label>
+                      <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1 block">Product Images *</Label>
                       <div className="border-2 border-dashed border-zinc-200 dark:border-zinc-750 hover:border-[#EF8020] rounded-2xl p-5 text-center bg-zinc-50 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-all cursor-pointer relative">
                         <input 
                           type="file" 
@@ -2684,7 +2684,7 @@ const SellerDashboard: React.FC = () => {
                           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" 
                         />
                         <Camera className="w-8 h-8 text-zinc-400 dark:text-zinc-500 mx-auto mb-2" />
-                        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block">Click or Drag & Drop Images</span>
+                        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block">Click or Drag & Drop Images</span>
                         <span className="text-[10px] text-zinc-400 dark:text-zinc-500 block mt-1">Select multiple product photos to upload</span>
                       </div>
 
@@ -2717,7 +2717,7 @@ const SellerDashboard: React.FC = () => {
                               <div key={`new-${idx}`} className="relative aspect-square rounded-xl overflow-hidden border border-zinc-100 dark:border-zinc-800 group">
                                 <img src={previewUrl} alt="Product Draft" className="w-full h-full object-cover" />
                                 <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                                  <span className="text-[8px] font-bold text-white uppercase bg-[#EF8020] px-1 py-0.5 rounded">New</span>
+                                  <span className="text-[8px] font-medium text-white uppercase bg-[#EF8020] px-1 py-0.5 rounded">New</span>
                                 </div>
                                 <button 
                                   type="button"
@@ -2738,11 +2738,11 @@ const SellerDashboard: React.FC = () => {
                       )}
                     </div>
                     <div>
-                      <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">3D Model URL / Custom Image URL (Optional)</Label>
+                      <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">3D Model URL / Custom Image URL (Optional)</Label>
                       <Input value={productForm.modelUrl} onChange={e => setProductForm({...productForm, modelUrl: e.target.value})} placeholder="https://..." className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100 dark:text-zinc-100" />
                     </div>
                     <div>
-                      <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Description</Label>
+                      <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Description</Label>
                       <Textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} placeholder="Product details..." className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 min-h-[100px]" />
                     </div>
                   </div>
@@ -2757,17 +2757,17 @@ const SellerDashboard: React.FC = () => {
             {/* --- STORE & PAYMENT SETTINGS TAB --- */}
             {(activeTab === "settings_store" || activeTab === "settings_payment") && !selectedOrderId && (
               <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-                 <h2 className="text-[17px] font-bold text-zinc-900 dark:text-zinc-100 mb-6">Store & Payment Settings</h2>
+                 <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-zinc-100 mb-6">Store & Payment Settings</h2>
                  
                  <div className="bg-white dark:bg-zinc-900 rounded-[1.5rem] p-5 shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-6">
                     {/* Logo Upload */}
                     <div className="flex flex-col items-center gap-4 pb-6 border-b border-zinc-100 dark:border-zinc-800">
-                       <div className="w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200 dark:border-zinc-750 flex items-center justify-center text-3xl font-bold text-zinc-400 dark:text-zinc-500">
+                       <div className="w-24 h-24 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden border border-zinc-200 dark:border-zinc-750 flex items-center justify-center text-3xl font-semibold text-zinc-400 dark:text-zinc-500">
                           {shopLogo ? <img src={shopLogo} alt="Logo" className="w-full h-full object-cover" /> : storeInitials}
                        </div>
                        <div className="relative">
                           <input type="file" accept="image/*" onChange={handleLogoUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
-                          <button type="button" className="px-4 py-2 bg-[#F5F5F7] dark:bg-zinc-800 rounded-xl text-xs font-bold text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700">
+                          <button type="button" className="px-4 py-2 bg-[#F5F5F7] dark:bg-zinc-800 rounded-xl text-xs font-semibold text-zinc-900 dark:text-zinc-100 border border-zinc-200 dark:border-zinc-700">
                              Change Store Logo
                           </button>
                        </div>
@@ -2776,16 +2776,16 @@ const SellerDashboard: React.FC = () => {
                     {/* Inputs */}
                     <div className="space-y-4">
                        <div>
-                          <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Store Name</Label>
+                          <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Store Name</Label>
                           <Input value={shopName} onChange={e => setShopName(e.target.value)} placeholder="e.g. DEEP SHOP" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100" />
                        </div>
                        <div>
-                          <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Global Advance Payment (৳)</Label>
+                          <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">Global Advance Payment (৳)</Label>
                           <Input type="number" value={defaultAdvanceAmount} onChange={e => setDefaultAdvanceAmount(e.target.value)} placeholder="0.00" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100" />
                           <p className="text-[10px] text-zinc-500 dark:text-zinc-400 ml-1 mt-1">Default advance amount required for COD orders.</p>
                        </div>
                        <div>
-                          <Label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">TikTok Username</Label>
+                          <Label className="text-xs font-medium text-zinc-900 dark:text-zinc-100 ml-1 mb-1.5 block">TikTok Username</Label>
                           <Input value={tiktokId} onChange={e => setTiktokId(e.target.value)} placeholder="@username" className="rounded-xl bg-[#F5F5F7] dark:bg-zinc-800 border-transparent dark:border-zinc-700 h-12 text-zinc-900 dark:text-zinc-100" />
                        </div>
 
@@ -2793,7 +2793,7 @@ const SellerDashboard: React.FC = () => {
                        <div className="p-4 bg-pink-50/60 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/30 rounded-2xl space-y-3">
                           <div className="flex items-center justify-between gap-2">
                              <div>
-                                <Label className="text-xs font-bold text-[#E2125B] dark:text-pink-300 block">
+                                <Label className="text-xs font-medium text-[#E2125B] dark:text-pink-300 block">
                                    Multiple bKash Numbers (Personal / Payment / Agent)
                                 </Label>
                                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -2812,7 +2812,7 @@ const SellerDashboard: React.FC = () => {
                                    key={accType}
                                    type="button"
                                    onClick={() => setNewBkashType(accType)}
-                                   className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                   className={`px-3 py-1 rounded-full text-[11px] font-semibold transition whitespace-nowrap cursor-pointer ${
                                       newBkashType === accType
                                          ? "bg-[#E2125B] text-white shadow-xs"
                                          : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-pink-200 dark:border-pink-900/40"
@@ -2881,7 +2881,7 @@ const SellerDashboard: React.FC = () => {
                                       bkashNumber: nextNums[0] || "",
                                    });
                                 }}
-                                className="h-11 bg-[#E2125B] hover:bg-[#c20e4d] text-white rounded-xl text-xs font-bold px-4 whitespace-nowrap shrink-0"
+                                className="h-11 bg-[#E2125B] hover:bg-[#c20e4d] text-white rounded-xl text-xs font-medium px-4 whitespace-nowrap shrink-0"
                              >
                                 + Add bKash ({newBkashType})
                              </Button>
@@ -2894,8 +2894,8 @@ const SellerDashboard: React.FC = () => {
                                    className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-800 border border-pink-200 dark:border-pink-800/60 px-3 py-2 rounded-xl shadow-xs flex-wrap"
                                 >
                                    <div className="flex items-center gap-2 min-w-0">
-                                      <span className="text-[11px] font-black text-[#E2125B]">#{i + 1}</span>
-                                      <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">{acc.number}</span>
+                                      <span className="text-[11px] font-semibold text-[#E2125B]">#{i + 1}</span>
+                                      <span className="text-xs font-mono font-medium text-zinc-800 dark:text-zinc-200">{acc.number}</span>
                                    </div>
                                    <div className="flex items-center gap-1.5">
                                       {(["Personal", "Payment", "Agent"] as const).map((t) => (
@@ -2909,7 +2909,7 @@ const SellerDashboard: React.FC = () => {
                                                setBkashAccounts(nextAccs);
                                                saveStoreSettings({ bkashAccounts: nextAccs });
                                             }}
-                                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition whitespace-nowrap cursor-pointer ${
                                                acc.type === t
                                                   ? "bg-[#E2125B] text-white"
                                                   : "bg-pink-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
@@ -2932,7 +2932,7 @@ const SellerDashboard: React.FC = () => {
                                                bkashNumber: nextNums[0] || "",
                                             });
                                          }}
-                                         className="text-zinc-400 hover:text-red-500 font-bold ml-1.5 text-xs px-1 cursor-pointer"
+                                         className="text-zinc-400 hover:text-red-500 font-medium ml-1.5 text-xs px-1 cursor-pointer"
                                          title="Remove number"
                                       >
                                          ✕
@@ -2950,7 +2950,7 @@ const SellerDashboard: React.FC = () => {
                        <div className="p-4 bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-2xl space-y-3">
                           <div className="flex items-center justify-between gap-2">
                              <div>
-                                <Label className="text-xs font-bold text-[#F57C20] dark:text-orange-300 block">
+                                <Label className="text-xs font-medium text-[#F57C20] dark:text-orange-300 block">
                                    Multiple Nagad Numbers (Personal / Payment / Agent)
                                 </Label>
                                 <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -2969,7 +2969,7 @@ const SellerDashboard: React.FC = () => {
                                    key={accType}
                                    type="button"
                                    onClick={() => setNewNagadType(accType)}
-                                   className={`px-3 py-1 rounded-full text-[11px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                   className={`px-3 py-1 rounded-full text-[11px] font-semibold transition whitespace-nowrap cursor-pointer ${
                                       newNagadType === accType
                                          ? "bg-[#F57C20] text-white shadow-xs"
                                          : "bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 border border-orange-200 dark:border-orange-900/40"
@@ -3038,7 +3038,7 @@ const SellerDashboard: React.FC = () => {
                                       nagadNumber: nextNums[0] || "",
                                    });
                                 }}
-                                className="h-11 bg-[#F57C20] hover:bg-[#d96714] text-white rounded-xl text-xs font-bold px-4 whitespace-nowrap shrink-0"
+                                className="h-11 bg-[#F57C20] hover:bg-[#d96714] text-white rounded-xl text-xs font-medium px-4 whitespace-nowrap shrink-0"
                              >
                                 + Add Nagad ({newNagadType})
                              </Button>
@@ -3051,8 +3051,8 @@ const SellerDashboard: React.FC = () => {
                                    className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-800 border border-orange-200 dark:border-orange-800/60 px-3 py-2 rounded-xl shadow-xs flex-wrap"
                                 >
                                    <div className="flex items-center gap-2 min-w-0">
-                                      <span className="text-[11px] font-black text-[#F57C20]">#{i + 1}</span>
-                                      <span className="text-xs font-mono font-bold text-zinc-800 dark:text-zinc-200">{acc.number}</span>
+                                      <span className="text-[11px] font-semibold text-[#F57C20]">#{i + 1}</span>
+                                      <span className="text-xs font-mono font-medium text-zinc-800 dark:text-zinc-200">{acc.number}</span>
                                    </div>
                                    <div className="flex items-center gap-1.5">
                                       {(["Personal", "Payment", "Agent"] as const).map((t) => (
@@ -3066,7 +3066,7 @@ const SellerDashboard: React.FC = () => {
                                                setNagadAccounts(nextAccs);
                                                saveStoreSettings({ nagadAccounts: nextAccs });
                                             }}
-                                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold transition whitespace-nowrap cursor-pointer ${
+                                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold transition whitespace-nowrap cursor-pointer ${
                                                acc.type === t
                                                   ? "bg-[#F57C20] text-white"
                                                   : "bg-orange-50 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300"
@@ -3089,7 +3089,7 @@ const SellerDashboard: React.FC = () => {
                                                nagadNumber: nextNums[0] || "",
                                             });
                                          }}
-                                         className="text-zinc-400 hover:text-red-500 font-bold ml-1.5 text-xs px-1 cursor-pointer"
+                                         className="text-zinc-400 hover:text-red-500 font-medium ml-1.5 text-xs px-1 cursor-pointer"
                                          title="Remove number"
                                       >
                                          ✕

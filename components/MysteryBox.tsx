@@ -145,18 +145,18 @@ const MysteryBox: React.FC<{ products: any[] }> = ({ products }) => {
                       alt={revealedProduct.name}
                       className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute -bottom-2.5 -right-2.5 bg-[#0071E3] dark:bg-[#0A84FF] text-white w-12 h-12 rounded-full flex flex-col items-center justify-center font-bold shadow-lg border-2 border-white dark:border-[#1C1C1E] tabular-nums">
+                    <div className="absolute -bottom-2.5 -right-2.5 bg-[#0071E3] dark:bg-[#0A84FF] text-white w-12 h-12 rounded-full flex flex-col items-center justify-center font-semibold shadow-lg border-2 border-white dark:border-[#1C1C1E] tabular-nums">
                       <span className="text-[9px] leading-none">EXTRA</span>
                       <span className="text-xs leading-none">{discount}%</span>
                     </div>
                   </div>
 
-                  <h3 className="text-[#1D1D1F] dark:text-[#F5F5F7] font-bold text-[19px] leading-[1.24] tracking-[-0.02em]">
+                  <h3 className="text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[19px] leading-[1.24] tracking-[-0.02em]">
                     {revealedProduct.name}
                   </h3>
 
                   <div className="flex items-center gap-2.5 mt-2 tabular-nums">
-                    <span className="text-lg font-bold text-[#0071E3] dark:text-[#0A84FF]">
+                    <span className="text-lg font-semibold text-[#0071E3] dark:text-[#0A84FF]">
                       {formatPrice(
                         Math.floor(revealedProduct.price * (1 - discount / 100))
                       )}
@@ -191,7 +191,7 @@ const MysteryBox: React.FC<{ products: any[] }> = ({ products }) => {
                 </>
               ) : (
                 <div>
-                  <h3 className="text-[#1D1D1F] dark:text-[#F5F5F7] font-bold text-[20px] leading-[1.24] tracking-[-0.02em]">
+                  <h3 className="text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold text-[20px] leading-[1.24] tracking-[-0.02em]">
                     Better luck next time
                   </h3>
                   <p className="text-[#6E6E73] dark:text-[#A1A1A6] text-[15px] leading-[1.45] mt-2">

@@ -1515,7 +1515,7 @@ export const NewsSharePage: React.FC = () => {
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-[19px] font-bold">Share Post</h1>
+            <h1 className="text-[19px] font-semibold">Share Post</h1>
           </div>
         </header>
 
@@ -1534,12 +1534,12 @@ export const NewsSharePage: React.FC = () => {
                       className="w-10 h-10 rounded-full object-cover"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200 shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-200 shrink-0">
                       {(post.reporterName || "M").slice(0, 1).toUpperCase()}
                     </div>
                   )}
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
                       {post.reporterName}
                     </p>
                     <p className="text-xs text-zinc-500 flex items-center gap-1">
@@ -1574,7 +1574,7 @@ export const NewsSharePage: React.FC = () => {
               </div>
 
               <div className="space-y-2">
-                <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Direct Post Link
                 </label>
                 <div className="flex items-center gap-2 p-2 rounded-2xl bg-[#F5F6F8] dark:bg-zinc-800">
@@ -1642,7 +1642,7 @@ export const NewsSharePage: React.FC = () => {
               {currentUser && (
                 <div className="pt-2 border-t border-slate-100 dark:border-zinc-800 space-y-3">
                   <div className="flex items-center justify-between gap-2">
-                    <label className="text-xs font-bold text-zinc-500 uppercase tracking-wider">
+                    <label className="text-xs font-medium text-zinc-500 uppercase tracking-wider">
                       Send in Message
                     </label>
                     {chatRecipients.length > 3 && (
@@ -1682,7 +1682,7 @@ export const NewsSharePage: React.FC = () => {
                                   className="w-9 h-9 rounded-full object-cover shrink-0"
                                 />
                               ) : (
-                                <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-700 dark:text-zinc-200 shrink-0">
+                                <div className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center text-xs font-medium text-zinc-700 dark:text-zinc-200 shrink-0">
                                   {(recipient.name || "M").slice(0, 1).toUpperCase()}
                                 </div>
                               )}
@@ -2201,7 +2201,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
               >
                 <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
               </button>
-              <h1 className="text-[22px] font-bold tracking-tight">Saved</h1>
+              <h1 className="text-[22px] font-semibold tracking-tight">Saved</h1>
             </div>
 
             <button
@@ -2370,7 +2370,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
               >
                 <ChevronLeft className="w-6 h-6 stroke-[2.2]" />
               </button>
-              <h1 className="text-[28px] font-bold tracking-tight leading-none">
+              <h1 className="text-[28px] font-semibold tracking-tight leading-none">
                 Search
               </h1>
             </div>
@@ -2697,13 +2697,13 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                                       className="w-full h-full object-cover"
                                     />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-xs font-bold">
+                                    <div className="w-full h-full flex items-center justify-center text-xs font-medium">
                                       {primaryLabel.charAt(0).toUpperCase()}
                                     </div>
                                   )}
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                  <p className="text-xs font-bold truncate">
+                                  <p className="text-xs font-medium truncate">
                                     {primaryLabel}
                                   </p>
                                   {secondaryLabel && (
@@ -2776,7 +2776,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center font-bold text-zinc-600 dark:text-zinc-300">
+                          <div className="w-full h-full flex items-center justify-center font-semibold text-zinc-600 dark:text-zinc-300">
                             {name.charAt(0).toUpperCase()}
                           </div>
                         )}
@@ -2855,7 +2855,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                       <span className="text-[16px] text-zinc-950 dark:text-zinc-100 truncate">
                         {startsWithTyped ? (
                           <>
-                            <strong className="font-bold">
+                            <strong className="font-semibold">
                               {phrase.slice(0, rawTyped.length)}
                             </strong>
                             <span className="font-normal">
@@ -2891,7 +2891,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                       </svg>
                     </div>
                     <span className="text-[16px] text-[#0095F6] truncate">
-                      <strong className="font-bold">
+                      <strong className="font-semibold">
                         {queryText.trim().replace(/^#/, "").toUpperCase()}
                       </strong>{" "}
                       <span className="font-normal">Loops</span>
@@ -2944,7 +2944,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center font-bold text-zinc-600 dark:text-zinc-300">
+                          <div className="w-full h-full flex items-center justify-center font-semibold text-zinc-600 dark:text-zinc-300">
                             {name.charAt(0).toUpperCase()}
                           </div>
                         )}
@@ -3015,7 +3015,7 @@ export const NewsSavedAndSearchPage: React.FC = () => {
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center font-bold">
+                            <div className="w-full h-full flex items-center justify-center font-semibold">
                               {name.charAt(0).toUpperCase()}
                             </div>
                           )}
@@ -4450,13 +4450,13 @@ export const NewsStoryViewerPage: React.FC = () => {
             key={stk.id}
             className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2"
           >
-            <p className="text-xs font-extrabold text-center text-zinc-900">
+            <p className="text-xs font-semibold text-center text-zinc-900">
               {stk.title}
             </p>
             <button
               type="button"
               onClick={() => handleVotePoll(stk.id, "A")}
-              className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-colors ${
+              className={`w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between cursor-pointer transition-colors ${
                 myVote === "A"
                   ? "bg-[#1877F2] text-white"
                   : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
@@ -4468,7 +4468,7 @@ export const NewsStoryViewerPage: React.FC = () => {
             <button
               type="button"
               onClick={() => handleVotePoll(stk.id, "B")}
-              className={`w-full py-2 px-3 rounded-xl text-xs font-bold flex items-center justify-between cursor-pointer transition-colors ${
+              className={`w-full py-2 px-3 rounded-xl text-xs font-medium flex items-center justify-between cursor-pointer transition-colors ${
                 myVote === "B"
                   ? "bg-[#1877F2] text-white"
                   : "bg-zinc-100 hover:bg-zinc-200 text-zinc-900"
@@ -4487,7 +4487,7 @@ export const NewsStoryViewerPage: React.FC = () => {
             key={stk.id}
             className="w-64 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2"
           >
-            <p className="text-xs font-extrabold text-center text-zinc-900">
+            <p className="text-xs font-semibold text-center text-zinc-900">
               {stk.title}
             </p>
             <div className="flex items-center gap-1.5">
@@ -4506,7 +4506,7 @@ export const NewsStoryViewerPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleSubmitQuestion(stk)}
-                className="px-3 h-8 rounded-lg bg-[#1877F2] text-white text-xs font-bold cursor-pointer"
+                className="px-3 h-8 rounded-lg bg-[#1877F2] text-white text-xs font-medium cursor-pointer"
               >
                 Send
               </button>
@@ -4523,7 +4523,7 @@ export const NewsStoryViewerPage: React.FC = () => {
             key={stk.id}
             className="w-60 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2 text-center"
           >
-            <p className="text-xs font-extrabold text-zinc-900">{stk.title}</p>
+            <p className="text-xs font-semibold text-zinc-900">{stk.title}</p>
             <div className="flex items-center justify-between gap-1 pt-1">
               {[1, 2, 3, 4, 5].map((lv) => (
                 <button
@@ -4550,7 +4550,7 @@ export const NewsStoryViewerPage: React.FC = () => {
             key={stk.id}
             className="w-56 rounded-2xl bg-white text-zinc-900 p-3.5 shadow-xl space-y-2.5 text-center"
           >
-            <p className="text-xs font-bold text-zinc-900">{stk.title}</p>
+            <p className="text-xs font-medium text-zinc-900">{stk.title}</p>
             <button
               type="button"
               onClick={() =>
@@ -4562,7 +4562,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                     : "/signin"
                 )
               }
-              className="py-1.5 px-3.5 rounded-full bg-[#1877F2] text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+              className="py-1.5 px-3.5 rounded-full bg-[#1877F2] text-white text-xs font-medium inline-flex items-center gap-1.5 cursor-pointer"
             >
               <Camera className="w-3.5 h-3.5" />
               <span>Add yours</span>
@@ -4582,7 +4582,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                   : `/loops/search?q=${encodeURIComponent(stk.title)}`
               )
             }
-            className="px-3.5 py-2 rounded-xl bg-white/95 text-[#1877F2] shadow-lg inline-flex items-center gap-1 font-extrabold text-sm cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-white/95 text-[#1877F2] shadow-lg inline-flex items-center gap-1 font-semibold text-sm cursor-pointer"
           >
             <AtSign className="w-4 h-4" />
             <span>{stk.title.replace(/^@/, "")}</span>
@@ -4601,7 +4601,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                 )}`
               )
             }
-            className="px-3.5 py-2 rounded-xl bg-zinc-900/90 text-white border border-white/20 shadow-lg inline-flex items-center gap-1 font-bold text-sm cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-zinc-900/90 text-white border border-white/20 shadow-lg inline-flex items-center gap-1 font-semibold text-sm cursor-pointer"
           >
             <Hash className="w-4 h-4 text-[#1877F2]" />
             <span>{stk.title.replace(/^#/, "")}</span>
@@ -4612,7 +4612,7 @@ export const NewsStoryViewerPage: React.FC = () => {
         return (
           <div
             key={stk.id}
-            className="px-3.5 py-2 rounded-xl bg-white/95 text-zinc-900 shadow-lg inline-flex items-center gap-1.5 font-bold text-xs"
+            className="px-3.5 py-2 rounded-xl bg-white/95 text-zinc-900 shadow-lg inline-flex items-center gap-1.5 font-medium text-xs"
           >
             <MapPin className="w-3.5 h-3.5 text-[#1877F2]" />
             <span>{stk.title}</span>
@@ -4645,10 +4645,10 @@ export const NewsStoryViewerPage: React.FC = () => {
               </div>
             )}
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-extrabold truncate text-zinc-900">
+              <p className="text-xs font-semibold truncate text-zinc-900">
                 {stk.title}
               </p>
-              <p className="text-[11px] font-bold text-[#1877F2] tabular-nums">
+              <p className="text-[11px] font-semibold text-[#1877F2] tabular-nums">
                 {stk.priceLabel || "Shop on Deep Shop →"}
               </p>
             </div>
@@ -4663,7 +4663,7 @@ export const NewsStoryViewerPage: React.FC = () => {
               key={stk.id}
               type="button"
               onClick={() => navigate(href)}
-              className="px-4 py-2 rounded-full bg-white text-[#1877F2] shadow-xl inline-flex items-center gap-1.5 font-bold text-xs cursor-pointer"
+              className="px-4 py-2 rounded-full bg-white text-[#1877F2] shadow-xl inline-flex items-center gap-1.5 font-medium text-xs cursor-pointer"
             >
               <Link2 className="w-3.5 h-3.5" />
               <span>{stk.subtitle || "Visit Link"}</span>
@@ -4676,7 +4676,7 @@ export const NewsStoryViewerPage: React.FC = () => {
             href={/^https?:\/\//i.test(href) ? href : `https://${href}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-4 py-2 rounded-full bg-white text-[#1877F2] shadow-xl inline-flex items-center gap-1.5 font-bold text-xs"
+            className="px-4 py-2 rounded-full bg-white text-[#1877F2] shadow-xl inline-flex items-center gap-1.5 font-medium text-xs"
           >
             <Link2 className="w-3.5 h-3.5" />
             <span>{stk.subtitle || "Visit Link"}</span>
@@ -4692,7 +4692,7 @@ export const NewsStoryViewerPage: React.FC = () => {
             onClick={() =>
               notify("Reminder turned on for this creator!", "success")
             }
-            className="px-4 py-2.5 rounded-2xl bg-white text-zinc-900 shadow-xl inline-flex items-center gap-2 text-xs font-extrabold cursor-pointer"
+            className="px-4 py-2.5 rounded-2xl bg-white text-zinc-900 shadow-xl inline-flex items-center gap-2 text-xs font-semibold cursor-pointer"
           >
             <Bell className="w-4 h-4 text-[#1877F2] fill-[#1877F2]" />
             <span>{stk.title || "Notify me"}</span>
@@ -4709,7 +4709,7 @@ export const NewsStoryViewerPage: React.FC = () => {
               <Clock className="w-3.5 h-3.5" />
               <span>{stk.subtitle || "Upcoming"}</span>
             </div>
-            <p className="text-sm font-extrabold">{stk.title}</p>
+            <p className="text-sm font-semibold">{stk.title}</p>
           </div>
         );
 
@@ -4741,7 +4741,7 @@ export const NewsStoryViewerPage: React.FC = () => {
         return stk.title ? (
           <div
             key={stk.id}
-            className="px-3.5 py-1.5 rounded-xl bg-black/75 border border-white/20 backdrop-blur-md text-xs font-extrabold text-white"
+            className="px-3.5 py-1.5 rounded-xl bg-black/75 border border-white/20 backdrop-blur-md text-xs font-semibold text-white"
           >
             {stk.title}
           </div>
@@ -4869,7 +4869,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                       onClick={() =>
                         navigate(`/loops/profile/${currentUser?.uid || ""}`)
                       }
-                      className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-xs font-bold text-white cursor-pointer"
+                      className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 flex items-center justify-center text-xs font-medium text-white cursor-pointer"
                     >
                       {(story.avatar || currentUser?.photoURL || "").trim() ? (
                         <img
@@ -4904,7 +4904,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                         navigate(`/loops/profile/${story.userId}`);
                       }
                     }}
-                    className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center text-xs font-bold text-white cursor-pointer"
+                    className="w-9 h-9 rounded-full overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center text-xs font-medium text-white cursor-pointer"
                   >
                     {(
                       authorProfile?.photoURL ||
@@ -5070,7 +5070,7 @@ export const NewsStoryViewerPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleCloseViewer}
-                className="px-5 py-2.5 rounded-full bg-white text-zinc-900 text-xs font-bold cursor-pointer"
+                className="px-5 py-2.5 rounded-full bg-white text-zinc-900 text-xs font-medium cursor-pointer"
               >
                 Back to Loops
               </button>
@@ -5160,7 +5160,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-sm font-extrabold text-white truncate">
+                        <p className="text-sm font-semibold text-white truncate">
                           {story.music.title}
                         </p>
                         {story.music.artist && (
@@ -5229,7 +5229,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                           story.linkUrl.startsWith("/") ? "_self" : "_blank"
                         }
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-zinc-900 text-xs font-bold shadow"
+                        className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-white text-zinc-900 text-xs font-medium shadow"
                       >
                         <span>Visit Link</span>
                         <ExternalLink className="w-3.5 h-3.5" />
@@ -5322,7 +5322,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                           return (
                             <div
                               key={vp.uid || i}
-                              className="w-7 h-7 rounded-full overflow-hidden border-2 border-black bg-zinc-700 flex items-center justify-center text-[10px] font-bold text-white"
+                              className="w-7 h-7 rounded-full overflow-hidden border-2 border-black bg-zinc-700 flex items-center justify-center text-[10px] font-semibold text-white"
                             >
                               {av ? (
                                 <img
@@ -5434,7 +5434,7 @@ export const NewsStoryViewerPage: React.FC = () => {
                   {replyText.trim() && (
                     <button
                       type="submit"
-                      className="text-xs font-bold text-[#0095f6] cursor-pointer"
+                      className="text-xs font-medium text-[#0095f6] cursor-pointer"
                     >
                       Send
                     </button>
@@ -5605,7 +5605,7 @@ export const NewsStoryViewerPage: React.FC = () => {
               <div className="h-1.5 w-12 bg-zinc-700 rounded-full mx-auto my-3 shrink-0" />
 
               <div className="px-6 py-2 flex items-center justify-between border-b border-zinc-800 shrink-0">
-                <h2 className="text-base font-bold text-white">
+                <h2 className="text-base font-semibold text-white">
                   Story activity
                 </h2>
                 <button
@@ -5622,22 +5622,22 @@ export const NewsStoryViewerPage: React.FC = () => {
                   <div className="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-800">
                     <div className="flex items-center gap-2 text-zinc-400 mb-1">
                       <Eye className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                      <span className="text-[10px] font-medium uppercase tracking-wider">
                         Views
                       </span>
                     </div>
-                    <p className="text-2xl font-black text-white tabular-nums">
+                    <p className="text-2xl font-semibold text-white tabular-nums">
                       {formatCompactNumber(story?.viewedBy?.length || 0)}
                     </p>
                   </div>
                   <div className="bg-zinc-800/50 p-4 rounded-2xl border border-zinc-800">
                     <div className="flex items-center gap-2 text-zinc-400 mb-1">
                       <Heart className="w-4 h-4" />
-                      <span className="text-[10px] font-bold uppercase tracking-wider">
+                      <span className="text-[10px] font-medium uppercase tracking-wider">
                         Reactions
                       </span>
                     </div>
-                    <p className="text-2xl font-black text-white tabular-nums">
+                    <p className="text-2xl font-semibold text-white tabular-nums">
                       {story?.likedBy?.length || 0}
                     </p>
                   </div>
@@ -5645,7 +5645,7 @@ export const NewsStoryViewerPage: React.FC = () => {
 
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-widest">
+                    <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">
                       Viewers
                     </h3>
                     <span className="text-[11px] font-medium text-zinc-400">
@@ -5686,14 +5686,14 @@ export const NewsStoryViewerPage: React.FC = () => {
                                   className="w-10 h-10 rounded-full object-cover bg-zinc-800 border border-zinc-700"
                                 />
                               ) : (
-                                <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-bold text-zinc-200">
+                                <div className="w-10 h-10 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-medium text-zinc-200">
                                   {(getSafeDisplayName(prof, "M") || "M")
                                     .slice(0, 1)
                                     .toUpperCase()}
                                 </div>
                               )}
                               <div>
-                                <p className="text-sm font-bold text-white leading-none mb-1">
+                                <p className="text-sm font-semibold text-white leading-none mb-1">
                                   {getSafeDisplayName(prof, "Member")}
                                 </p>
                                 <p className="text-[11px] text-zinc-400">

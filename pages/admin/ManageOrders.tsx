@@ -494,7 +494,7 @@ const ManageOrders: React.FC = () => {
     <div className="max-w-[1440px] mx-auto px-6 py-10 min-h-screen bg-zinc-50 dark:bg-zinc-800">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5">
             Orders Overview
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold">
@@ -504,7 +504,7 @@ const ManageOrders: React.FC = () => {
         <button
           type="button"
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-bold text-xs shadow-md transition active:scale-95 self-start sm:self-auto cursor-pointer"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 text-white font-medium text-xs shadow-md transition active:scale-95 self-start sm:self-auto cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           <span>Add New Order</span>
@@ -536,7 +536,7 @@ const ManageOrders: React.FC = () => {
                           {order.customerName}
                         </span>
                         <span
-                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${order.status === OrderStatus.DELIVERED ? "bg-zinc-200 dark:bg-zinc-700/50 text-emerald-800 dark:text-emerald-300" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold ${order.status === OrderStatus.DELIVERED ? "bg-zinc-200 dark:bg-zinc-700/50 text-emerald-800 dark:text-emerald-300" : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"}`}
                         >
                           {order.status}
                         </span>
@@ -622,16 +622,16 @@ const ManageOrders: React.FC = () => {
                       <div className="p-4 bg-zinc-50 dark:bg-zinc-950/50 space-y-4">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Customer & Shipping Information</h4>
+                            <h4 className="text-xs font-semibold text-zinc-500 uppercase mb-2">Customer & Shipping Information</h4>
                             <div className="text-sm bg-white dark:bg-zinc-900 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-2">
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
                                 <div>
                                   <span className="text-[11px] font-medium text-zinc-400 block">Customer Name:</span>
-                                  <span className="font-bold text-zinc-900 dark:text-zinc-100">{order.customerName || "N/A"}</span>
+                                  <span className="font-semibold text-zinc-900 dark:text-zinc-100">{order.customerName || "N/A"}</span>
                                 </div>
                                 <div>
                                   <span className="text-[11px] font-medium text-zinc-400 block">Primary Contact:</span>
-                                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{order.contactNumber || "N/A"}</span>
+                                  <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400">{order.contactNumber || "N/A"}</span>
                                 </div>
                                 {order.altNumber && (
                                   <div>
@@ -642,7 +642,7 @@ const ManageOrders: React.FC = () => {
                                 {order.productClassification && (
                                   <div>
                                     <span className="text-[11px] font-medium text-zinc-400 block">Classification:</span>
-                                    <span className="inline-block text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
+                                    <span className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300">
                                       {order.productClassification}
                                     </span>
                                   </div>
@@ -659,9 +659,9 @@ const ManageOrders: React.FC = () => {
                               {/* Bypass Verification details if any */}
                               {(order.guardianNumber || order.nidCardUrl) && (
                                 <div className="p-2.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-lg border border-amber-200/60 dark:border-amber-900/40 text-xs space-y-1">
-                                  <span className="font-bold text-amber-800 dark:text-amber-300 block">⚠️ Bypass Verification Data:</span>
+                                  <span className="font-semibold text-amber-800 dark:text-amber-300 block">⚠️ Bypass Verification Data:</span>
                                   {order.guardianNumber && (
-                                    <p><span className="text-zinc-500">Guardian Phone:</span> <span className="font-mono font-bold text-amber-900 dark:text-amber-200">{order.guardianNumber}</span></p>
+                                    <p><span className="text-zinc-500">Guardian Phone:</span> <span className="font-mono font-normal text-amber-900 dark:text-amber-200">{order.guardianNumber}</span></p>
                                   )}
                                   {order.nidCardUrl && (
                                     <p>
@@ -676,42 +676,42 @@ const ManageOrders: React.FC = () => {
 
                               {order.isGift && order.giftNote && (
                                 <div className="p-2 bg-pink-50 dark:bg-pink-950/30 rounded-lg border border-pink-200 dark:border-pink-900 text-xs">
-                                  <span className="font-bold text-pink-700 dark:text-pink-300">🎁 Gift Order Note:</span> {order.giftNote}
+                                  <span className="font-semibold text-pink-700 dark:text-pink-300">🎁 Gift Order Note:</span> {order.giftNote}
                                 </div>
                               )}
                               
                               <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 text-xs space-y-1.5">
                                 <div className="flex justify-between items-center">
                                   <span className="text-zinc-400">Payment Option:</span>
-                                  <span className="font-bold text-zinc-800 dark:text-zinc-200">{order.paymentOption || order.paymentMethod || "COD"}</span>
+                                  <span className="font-semibold text-zinc-800 dark:text-zinc-200">{order.paymentOption || order.paymentMethod || "COD"}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-zinc-400">Advance Paid:</span>
-                                  <span className="font-black text-emerald-600 dark:text-emerald-400">৳{order.advanceAmount || order.advancePaid || 0}</span>
+                                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">৳{order.advanceAmount || order.advancePaid || 0}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-zinc-400">Due On Delivery (COD):</span>
-                                  <span className="font-black text-rose-600 dark:text-rose-400">৳{order.dueAmount ?? Math.max(0, (order.total || 0) - (order.advanceAmount || 0))}</span>
+                                  <span className="font-semibold text-rose-600 dark:text-rose-400">৳{order.dueAmount ?? Math.max(0, (order.total || 0) - (order.advanceAmount || 0))}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-zinc-400">Sender Number:</span>
-                                  <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{order.accountNameSender || order.senderNumber || order.contactNumber || "N/A"}</span>
+                                  <span className="font-mono font-semibold text-blue-600 dark:text-blue-400">{order.accountNameSender || order.senderNumber || order.contactNumber || "N/A"}</span>
                                 </div>
                                 <div className="flex justify-between items-center">
                                   <span className="text-zinc-400">Store Receiver:</span>
-                                  <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{order.receiverNumber || "Store Fallback Number"}</span>
+                                  <span className="font-mono font-semibold text-purple-600 dark:text-purple-400">{order.receiverNumber || "Store Fallback Number"}</span>
                                 </div>
                                 {(order.transactionId || order.trxId) && (
                                   <div className="flex justify-between items-center">
                                     <span className="text-zinc-400">TrxID / Reference:</span>
-                                    <span className="font-mono font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">{order.transactionId || order.trxId}</span>
+                                    <span className="font-mono font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">{order.transactionId || order.trxId}</span>
                                   </div>
                                 )}
                               </div>
                             </div>
                           </div>
                           <div>
-                            <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Order Items</h4>
+                            <h4 className="text-xs font-semibold text-zinc-500 uppercase mb-2">Order Items</h4>
                             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 divide-y divide-zinc-100 dark:divide-zinc-800">
                               {order.items.map((item: any, idx) => (
                                 <div key={idx} className="p-3 flex items-center gap-3 text-sm">
@@ -725,10 +725,10 @@ const ManageOrders: React.FC = () => {
                                       ))}
                                     </div>
                                   </div>
-                                  <div className="font-bold">৳{item.quantity * (item.priceAtPurchase || item.price)}</div>
+                                  <div className="font-semibold">৳{item.quantity * (item.priceAtPurchase || item.price)}</div>
                                 </div>
                               ))}
-                              <div className="p-3 text-sm font-bold flex justify-between bg-zinc-50 dark:bg-zinc-900/50 rounded-b-xl">
+                              <div className="p-3 text-sm font-semibold flex justify-between bg-zinc-50 dark:bg-zinc-900/50 rounded-b-xl">
                                 <span>Total (inc. shipping, less discount)</span>
                                 <span>৳{order.total}</span>
                               </div>
@@ -739,7 +739,7 @@ const ManageOrders: React.FC = () => {
                         {/* Tracker Details */}
                         {order.status === OrderStatus.ON_THE_WAY && (
                           <div className="pt-2">
-                            <h4 className="text-xs font-bold text-zinc-500 uppercase mb-2">Fulfillment Details</h4>
+                            <h4 className="text-xs font-semibold text-zinc-500 uppercase mb-2">Fulfillment Details</h4>
                             <div className="flex items-center gap-3 flex-wrap">
                               <input
                                 type="text"
@@ -777,7 +777,7 @@ const ManageOrders: React.FC = () => {
               </div>
             ))}
         {!loading && orders.length === 0 && (
-          <div className="py-32 text-center text-zinc-400 font-bold  tracking-normal text-[11px]">
+          <div className="py-32 text-center text-zinc-400 font-semibold  tracking-normal text-[11px]">
             No log found in database
           </div>
         )}
@@ -796,7 +796,7 @@ const ManageOrders: React.FC = () => {
               {/* Header */}
               <div className="flex items-center justify-between pb-4 border-b border-zinc-150 dark:border-zinc-800">
                 <div>
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white">Create Order for User</h3>
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white">Create Order for User</h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Automatically populates details and links to user's My Orders</p>
                 </div>
                 <button
@@ -811,7 +811,7 @@ const ManageOrders: React.FC = () => {
               <form onSubmit={handleCreateOrderSubmit} className="space-y-5 pt-4">
                 {/* 1. Select User */}
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
                     1. Select User Account (Auto-fill)
                   </label>
                   <div className="relative">
@@ -838,7 +838,7 @@ const ManageOrders: React.FC = () => {
                 {/* 2. Customer Details */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Customer Name *
                     </label>
                     <input
@@ -851,7 +851,7 @@ const ManageOrders: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Contact Number *
                     </label>
                     <input
@@ -866,7 +866,7 @@ const ManageOrders: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     Shipping Address *
                   </label>
                   <textarea
@@ -881,13 +881,13 @@ const ManageOrders: React.FC = () => {
                 {/* 2. Add Products to Order */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                       2. Add Products to Order
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowCustomProductForm(!showCustomProductForm)}
-                      className="text-xs font-bold text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-medium text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       {showCustomProductForm ? "Hide Custom Product Form" : "+ Add Custom Product"}
@@ -925,7 +925,7 @@ const ManageOrders: React.FC = () => {
                         className="mt-3 p-3.5 rounded-2xl bg-pink-50/60 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/40 space-y-3"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-pink-700 dark:text-pink-300 flex items-center gap-1.5">
+                          <span className="text-xs font-medium text-pink-700 dark:text-pink-300 flex items-center gap-1.5">
                             <Layers className="w-3.5 h-3.5" /> Custom Product Details
                           </span>
                           <span className="text-[10px] text-zinc-500">Add any unlisted or custom phone/gadget</span>
@@ -977,7 +977,7 @@ const ManageOrders: React.FC = () => {
                             <button
                               type="button"
                               onClick={handleAddCustomProduct}
-                              className="w-full py-1.5 px-3 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold shadow-xs transition"
+                              className="w-full py-1.5 px-3 rounded-lg bg-pink-600 hover:bg-pink-700 text-white text-xs font-medium shadow-xs transition"
                             >
                               + Add Item
                             </button>
@@ -999,7 +999,7 @@ const ManageOrders: React.FC = () => {
                           <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <img src={item.image} alt="" className="w-9 h-9 rounded-lg object-cover bg-zinc-200 shrink-0" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold truncate">{item.name}</p>
+                              <p className="text-xs font-medium truncate">{item.name}</p>
                               <p className="text-[11px] text-zinc-500">৳{item.price} each</p>
                             </div>
                           </div>
@@ -1015,22 +1015,22 @@ const ManageOrders: React.FC = () => {
                                     handleRemoveProductFromOrder(item.id);
                                   }
                                 }}
-                                className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-bold"
+                                className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-medium"
                               >
                                 -
                               </button>
-                              <span className="px-2.5 text-xs font-bold">{item.quantity}</span>
+                              <span className="px-2.5 text-xs font-medium">{item.quantity}</span>
                               <button
                                 type="button"
                                 onClick={() => {
                                   setOrderItems(orderItems.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i));
                                 }}
-                                className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-bold"
+                                className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-medium"
                               >
                                 +
                               </button>
                             </div>
-                            <span className="text-xs font-bold w-16 text-right">৳{item.price * item.quantity}</span>
+                            <span className="text-xs font-semibold w-16 text-right">৳{item.price * item.quantity}</span>
                             <button
                               type="button"
                               onClick={() => handleRemoveProductFromOrder(item.id)}
@@ -1048,7 +1048,7 @@ const ManageOrders: React.FC = () => {
                 {/* 4. Payment, Advance Paid, Status & Delivery Info */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Payment Method
                     </label>
                     <select
@@ -1064,7 +1064,7 @@ const ManageOrders: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Advance Paid Amount (৳)
                     </label>
                     <input
@@ -1076,7 +1076,7 @@ const ManageOrders: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Order Status
                     </label>
                     <select
@@ -1092,7 +1092,7 @@ const ManageOrders: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Delivery Fee (৳)
                     </label>
                     <input
@@ -1105,7 +1105,7 @@ const ManageOrders: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     Estimated Delivery Time
                   </label>
                   <input
@@ -1127,15 +1127,15 @@ const ManageOrders: React.FC = () => {
                     <span>Delivery Fee:</span>
                     <span>৳{shippingFee}</span>
                   </div>
-                  <div className="flex justify-between text-zinc-900 dark:text-white font-bold pt-1 border-t border-zinc-200 dark:border-zinc-700">
+                  <div className="flex justify-between text-zinc-900 dark:text-white font-semibold pt-1 border-t border-zinc-200 dark:border-zinc-700">
                     <span>Grand Total:</span>
                     <span>৳{calculateTotal()}</span>
                   </div>
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
                     <span>Advance / Already Paid:</span>
                     <span>- ৳{Number(advancePaid) || 0}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-extrabold text-rose-600 dark:text-rose-400 pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
+                  <div className="flex justify-between text-sm font-semibold text-rose-600 dark:text-rose-400 pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
                     <span className="flex items-center gap-1.5">
                       <AlertCircle className="w-3.5 h-3.5" />
                       Remaining Due (To Collect on Delivery):
@@ -1149,14 +1149,14 @@ const ManageOrders: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                    className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isCreatingOrder}
-                    className="px-6 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition cursor-pointer"
+                    className="px-6 py-2.5 rounded-xl bg-pink-600 hover:bg-pink-700 disabled:opacity-50 text-white text-xs font-medium shadow-md transition cursor-pointer"
                   >
                     {isCreatingOrder ? "Creating Order..." : "Create & Place Order"}
                   </button>
@@ -1180,7 +1180,7 @@ const ManageOrders: React.FC = () => {
               {/* Header */}
               <div className="flex items-center justify-between pb-4 border-b border-zinc-150 dark:border-zinc-800">
                 <div>
-                  <h3 className="text-lg font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <h3 className="text-lg font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
                     <Edit3 className="w-5 h-5 text-blue-500" />
                     Edit Order #{editingOrder.id.slice(0, 8)}
                   </h3>
@@ -1201,7 +1201,7 @@ const ManageOrders: React.FC = () => {
                 {/* 1. Customer & Phone */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Customer Name *
                     </label>
                     <input
@@ -1213,7 +1213,7 @@ const ManageOrders: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Primary Contact *
                     </label>
                     <input
@@ -1225,7 +1225,7 @@ const ManageOrders: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Alternative Phone
                     </label>
                     <input
@@ -1240,7 +1240,7 @@ const ManageOrders: React.FC = () => {
 
                 {/* 2. Shipping Address */}
                 <div>
-                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                     Shipping Address *
                   </label>
                   <textarea
@@ -1255,13 +1255,13 @@ const ManageOrders: React.FC = () => {
                 {/* 3. Items Editor */}
                 <div>
                   <div className="flex items-center justify-between mb-2">
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
                       Order Items & Products ({editItems.length})
                     </label>
                     <button
                       type="button"
                       onClick={() => setEditShowCustomProduct(!editShowCustomProduct)}
-                      className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
+                      className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       {editShowCustomProduct ? "Close Custom Form" : "+ Add Custom Item"}
@@ -1310,7 +1310,7 @@ const ManageOrders: React.FC = () => {
                         exit={{ opacity: 0, height: 0 }}
                         className="mb-3 p-3 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 space-y-2.5"
                       >
-                        <span className="text-xs font-bold text-blue-700 dark:text-blue-300 block">
+                        <span className="text-xs font-medium text-blue-700 dark:text-blue-300 block">
                           Add Custom Product to this Order
                         </span>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -1348,7 +1348,7 @@ const ManageOrders: React.FC = () => {
                           <button
                             type="button"
                             onClick={handleEditAddCustomProduct}
-                            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-xs transition"
+                            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium shadow-xs transition"
                           >
                             Add
                           </button>
@@ -1372,7 +1372,7 @@ const ManageOrders: React.FC = () => {
                                 newItems[idx].name = e.target.value;
                                 setEditItems(newItems);
                               }}
-                              className="text-xs font-bold w-full bg-transparent border-b border-transparent focus:border-blue-400 outline-none"
+                              className="text-xs font-medium w-full bg-transparent border-b border-transparent focus:border-blue-400 outline-none"
                             />
                             <div className="flex items-center gap-2 mt-0.5">
                               <span className="text-[11px] text-zinc-500">Unit: ৳</span>
@@ -1403,11 +1403,11 @@ const ManageOrders: React.FC = () => {
                                   setEditItems(editItems.filter((_, i) => i !== idx));
                                 }
                               }}
-                              className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-bold"
+                              className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-medium"
                             >
                               -
                             </button>
-                            <span className="px-2.5 text-xs font-bold">{item.quantity}</span>
+                            <span className="px-2.5 text-xs font-medium">{item.quantity}</span>
                             <button
                               type="button"
                               onClick={() => {
@@ -1415,12 +1415,12 @@ const ManageOrders: React.FC = () => {
                                 newItems[idx].quantity += 1;
                                 setEditItems(newItems);
                               }}
-                              className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-bold"
+                              className="px-2 py-0.5 bg-zinc-100 dark:bg-zinc-700 hover:bg-zinc-200 text-xs font-medium"
                             >
                               +
                             </button>
                           </div>
-                          <span className="text-xs font-bold w-16 text-right">৳{item.price * item.quantity}</span>
+                          <span className="text-xs font-semibold w-16 text-right">৳{item.price * item.quantity}</span>
                           <button
                             type="button"
                             onClick={() => setEditItems(editItems.filter((_, i) => i !== idx))}
@@ -1437,7 +1437,7 @@ const ManageOrders: React.FC = () => {
                 {/* 4. Status, Payment & Financials */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Order Status
                     </label>
                     <select
@@ -1453,7 +1453,7 @@ const ManageOrders: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Payment Method
                     </label>
                     <select
@@ -1469,7 +1469,7 @@ const ManageOrders: React.FC = () => {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Delivery Fee (৳)
                     </label>
                     <input
@@ -1480,7 +1480,7 @@ const ManageOrders: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Advance Paid (৳)
                     </label>
                     <input
@@ -1495,7 +1495,7 @@ const ManageOrders: React.FC = () => {
                 {/* 5. Logistics / Fulfillment */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Tracking ID
                     </label>
                     <input
@@ -1507,7 +1507,7 @@ const ManageOrders: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Courier Name
                     </label>
                     <input
@@ -1519,7 +1519,7 @@ const ManageOrders: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
                       Rider Contact Phone
                     </label>
                     <input
@@ -1542,15 +1542,15 @@ const ManageOrders: React.FC = () => {
                     <span>Delivery Fee:</span>
                     <span>৳{editShippingFee}</span>
                   </div>
-                  <div className="flex justify-between text-zinc-900 dark:text-white font-bold pt-1 border-t border-zinc-200 dark:border-zinc-700">
+                  <div className="flex justify-between text-zinc-900 dark:text-white font-semibold pt-1 border-t border-zinc-200 dark:border-zinc-700">
                     <span>Calculated Total:</span>
                     <span>৳{calculateEditTotal()}</span>
                   </div>
-                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-bold">
+                  <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-semibold">
                     <span>Advance Already Paid:</span>
                     <span>- ৳{Number(editAdvanceAmount) || 0}</span>
                   </div>
-                  <div className="flex justify-between text-sm font-extrabold text-rose-600 dark:text-rose-400 pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
+                  <div className="flex justify-between text-sm font-semibold text-rose-600 dark:text-rose-400 pt-1.5 border-t border-zinc-200 dark:border-zinc-700">
                     <span className="flex items-center gap-1.5">
                       <AlertCircle className="w-3.5 h-3.5" />
                       Due On Delivery (COD Balance):
@@ -1564,14 +1564,14 @@ const ManageOrders: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowEditModal(false)}
-                    className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                    className="px-5 py-2.5 rounded-xl border border-zinc-200 dark:border-zinc-700 text-xs font-medium hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isSavingEdit}
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-bold shadow-md transition cursor-pointer"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-medium shadow-md transition cursor-pointer"
                   >
                     {isSavingEdit ? "Saving Changes..." : "Save Order Changes"}
                   </button>

@@ -50,10 +50,10 @@ export function FlashSaleCarousel({ items, onItemClick, onSeeAll, timeStatus = "
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2">
             <div className="relative">
-              <span className="text-yellow-400 font-black text-2xl relative z-10">⚡</span>
-              <span className="absolute -bottom-1 -right-1 text-white bg-black/50 text-[8px] font-black italic px-0.5 leading-none rounded">SALE</span>
+              <span className="text-yellow-400 font-semibold text-2xl relative z-10">⚡</span>
+              <span className="absolute -bottom-1 -right-1 text-white bg-black/50 text-[8px] font-semibold italic px-0.5 leading-none rounded">SALE</span>
             </div>
-            <h2 className="text-white font-bold text-xl flex items-center gap-3" style={{ fontFamily: "'Comfortaa', cursive", letterSpacing: '-0.02em' }}>
+            <h2 className="text-white font-semibold text-xl flex items-center gap-3" style={{ fontFamily: "'Comfortaa', cursive", letterSpacing: '-0.02em' }}>
               Flash Sale
               <span className="text-white/90 text-sm font-sans font-normal hidden sm:inline-block tracking-normal">{timeStatus}</span>
             </h2>
@@ -88,12 +88,12 @@ export function FlashSaleCarousel({ items, onItemClick, onSeeAll, timeStatus = "
                 </div>
                 <div className="w-full relative overflow-hidden bg-[#ea580c] flex items-center h-[52px]">
                   <div className="absolute inset-0 bg-[#ea580c] flex items-center justify-end px-3">
-                    <span className="text-white font-black text-base md:text-lg tracking-tight">
+                    <span className="text-white font-semibold text-base md:text-lg tracking-tight">
                       -{item.discountPercentage || 0}%
                     </span>
                   </div>
                   <div className="absolute inset-y-0 left-0 w-[70%] bg-[#fff2e6] flex items-center px-3" style={{ clipPath: 'polygon(0 0, 100% 0, 80% 100%, 0 100%)' }}>
-                    <span className="text-[#ea580c] font-black text-lg md:text-xl">{formatPrice(item.price)}</span>
+                    <span className="text-[#ea580c] font-semibold text-lg md:text-xl">{formatPrice(item.price)}</span>
                   </div>
                 </div>
               </div>

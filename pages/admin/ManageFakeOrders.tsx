@@ -79,7 +79,7 @@ const ManageFakeOrders: React.FC = () => {
           <h1 className="text-xl md:text-lg font-semibold tracking-tight text-red-600 mb-1.5">
             Risk Review
           </h1>
-          <p className="text-zinc-500 text-[10px] md:text-xs font-bold tracking-normal ">
+          <p className="text-zinc-500 text-[10px] md:text-xs font-normal tracking-normal ">
             Auto-detected Fake/Suspicious Orders
           </p>
         </div>
@@ -97,7 +97,7 @@ const ManageFakeOrders: React.FC = () => {
               className="text-lg text-zinc-900 dark:text-zinc-100"
             />
           </div>
-          <p className="text-[10px] font-bold text-zinc-400  tracking-normal">
+          <p className="text-[10px] font-normal text-zinc-400  tracking-normal">
             No suspicious orders detected.
           </p>
         </div>
@@ -118,7 +118,7 @@ const ManageFakeOrders: React.FC = () => {
                 <h3 className="text-sm font-semibold text-red-600  tracking-normal">
                   {order.customerName}
                 </h3>
-                <p className="text-[10px] font-bold text-red-400 mt-1  max-w-sm leading-relaxed">
+                <p className="text-[10px] font-normal text-red-400 mt-1  max-w-sm leading-relaxed">
                   <Icon name="exclamation-triangle" className="mr-2" />
                   {order.riskReason}
                 </p>
@@ -126,36 +126,36 @@ const ManageFakeOrders: React.FC = () => {
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 pt-6 border-t border-red-100/50">
                 <div>
-                  <p className="text-[8px]  tracking-normal font-bold text-zinc-400 mb-1">
+                  <p className="text-[8px]  tracking-normal font-normal text-zinc-400 mb-1">
                     Phone
                   </p>
-                  <p className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">
+                  <p className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100">
                     {order.contactNumber}
                   </p>
                 </div>
                 <div className="md:col-span-2">
-                  <p className="text-[8px]  tracking-normal font-bold text-zinc-400 mb-1">
+                  <p className="text-[8px]  tracking-normal font-normal text-zinc-400 mb-1">
                     Shipping Address
                   </p>
-                  <p className="text-[10px] font-bold text-zinc-700 dark:text-zinc-300 leading-relaxed max-w-[200px] truncate">
+                  <p className="text-[10px] font-normal text-zinc-700 dark:text-zinc-300 leading-relaxed max-w-[200px] truncate">
                     {order.shippingAddress}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-[8px]  tracking-normal font-bold text-zinc-400 mb-1">
+                  <p className="text-[8px]  tracking-normal font-normal text-zinc-400 mb-1">
                     Total
                   </p>
                   <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                     ৳{order.total}
                   </p>
-                  <p className="text-[9px] font-bold text-blue-500 mt-0.5  tracking-normal">
+                  <p className="text-[9px] font-semibold text-blue-500 mt-0.5  tracking-normal">
                     {order.paymentMethod}
                   </p>
                 </div>
               </div>
 
               <div className="flex flex-col space-y-4">
-                <p className="text-[9px] font-bold text-zinc-400  tracking-normal">
+                <p className="text-[9px] font-normal text-zinc-400  tracking-normal">
                   Ordered Items ({order.items.length})
                 </p>
                 <div className="flex space-x-2 overflow-x-auto pb-4 no-scrollbar">
@@ -172,10 +172,10 @@ const ManageFakeOrders: React.FC = () => {
                         />
                       </div>
                       <div className="min-w-0 pr-4">
-                        <p className="text-[9px] font-bold text-zinc-800 dark:text-zinc-200  tracking-tight truncate">
+                        <p className="text-[9px] font-semibold text-zinc-800 dark:text-zinc-200  tracking-tight truncate">
                           {item.name}
                         </p>
-                        <p className="text-[8px] font-bold text-zinc-400">
+                        <p className="text-[8px] font-normal text-zinc-400">
                           Qty: {item.quantity}
                         </p>
                       </div>

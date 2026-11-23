@@ -197,8 +197,8 @@ export const ManageEngagement: React.FC = () => {
           ...existingReactionsCount,
           [field]: nextVal,
         };
-        const nextVotes = Object.values(nextReactionsCount).reduce(
-          (acc: number, v: any) => acc + (Number(v) || 0),
+        const nextVotes: number = Object.values(nextReactionsCount).reduce<number>(
+          (acc, v) => acc + (Number(v) || 0),
           0
         );
 
@@ -226,7 +226,7 @@ export const ManageEngagement: React.FC = () => {
             "news_hub_notifications",
             `milestone_reactions_${postId}`
           );
-          if (nextVotes > 0) {
+          if (Number(nextVotes) > 0) {
             await setDoc(
               notifRef,
               {
@@ -428,7 +428,7 @@ export const ManageEngagement: React.FC = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+          <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
             <TrendingUp className="w-6 h-6 text-[#1877F2]" />
             <span>Engagement Management</span>
           </h1>
@@ -445,7 +445,7 @@ export const ManageEngagement: React.FC = () => {
                 setSearchType("post");
                 setSelectedItem(null);
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
                 searchType === "post"
                   ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -459,7 +459,7 @@ export const ManageEngagement: React.FC = () => {
                 setSearchType("user");
                 setSelectedItem(null);
               }}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition cursor-pointer ${
                 searchType === "user"
                   ? "bg-[#1877F2] text-white shadow-md"
                   : "text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -473,7 +473,7 @@ export const ManageEngagement: React.FC = () => {
             type="button"
             onClick={loadPostsAndUsers}
             disabled={loading}
-            className="h-10 px-3.5 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-bold flex items-center gap-1.5 shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition cursor-pointer disabled:opacity-50"
+            className="h-10 px-3.5 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-medium flex items-center gap-1.5 shadow-sm hover:bg-zinc-50 dark:hover:bg-zinc-700 transition cursor-pointer disabled:opacity-50"
             title="Refresh list"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -504,7 +504,7 @@ export const ManageEngagement: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setSearchTerm("")}
-                className="px-5 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-2xl font-bold text-xs transition cursor-pointer"
+                className="px-5 py-3 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-200 rounded-2xl font-medium text-xs transition cursor-pointer"
               >
                 Clear
               </button>
@@ -521,7 +521,7 @@ export const ManageEngagement: React.FC = () => {
           ) : filteredItems.length === 0 ? (
             <div className="py-14 text-center space-y-2">
               <FileText className="w-8 h-8 text-zinc-300 dark:text-zinc-600 mx-auto" />
-              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+              <p className="text-sm font-semibold text-zinc-700 dark:text-zinc-300">
                 No {searchType === "post" ? "posts" : "users"} found
               </p>
               <p className="text-xs text-zinc-400">
@@ -565,7 +565,7 @@ export const ManageEngagement: React.FC = () => {
                           )}
                         </div>
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-bold text-zinc-900 dark:text-white line-clamp-2 leading-snug">
+                          <p className="text-sm font-semibold text-zinc-900 dark:text-white line-clamp-2 leading-snug">
                             {postHeadline}
                           </p>
                           <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-1">
@@ -623,7 +623,7 @@ export const ManageEngagement: React.FC = () => {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-bold text-zinc-900 dark:text-white truncate">
+                        <p className="text-sm font-semibold text-zinc-900 dark:text-white truncate">
                           {userDisplayName}
                         </p>
                         {safeUsername ? (
@@ -664,7 +664,7 @@ export const ManageEngagement: React.FC = () => {
             <button
               type="button"
               onClick={() => setSelectedItem(null)}
-              className="flex items-center gap-2 text-sm font-bold text-[#1877F2] hover:underline cursor-pointer"
+              className="flex items-center gap-2 text-sm font-semibold text-[#1877F2] hover:underline cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
               <span>Back to {selectedItem.type === "post" ? "posts" : "users"}</span>
@@ -684,7 +684,7 @@ export const ManageEngagement: React.FC = () => {
                         />
                       </div>
                     )}
-                  <h3 className="font-bold text-base text-zinc-900 dark:text-white">
+                  <h3 className="font-semibold text-base text-zinc-900 dark:text-white">
                     {selectedItem.title || selectedItem.reporterName || "Feed Post"}
                   </h3>
                   {selectedItem.description && (
@@ -696,7 +696,7 @@ export const ManageEngagement: React.FC = () => {
                     Author: {selectedItem.reporterName || "Member"} · ID:{" "}
                     {selectedItem.id}
                   </p>
-                  <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-around text-xs font-bold">
+                  <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-around text-xs font-medium">
                     <span className="text-zinc-600 dark:text-zinc-300">
                       Total Reactions:{" "}
                       <strong className="text-rose-500">
@@ -725,7 +725,7 @@ export const ManageEngagement: React.FC = () => {
                       <User className="w-10 h-10 text-zinc-400" />
                     )}
                   </div>
-                  <h3 className="font-bold text-lg text-zinc-900 dark:text-white">
+                  <h3 className="font-semibold text-lg text-zinc-900 dark:text-white">
                     {getSafeDisplayName(selectedItem, "User")}
                   </h3>
                   {getSafePublicUsername(selectedItem) && (
@@ -896,7 +896,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
             {icon}
           </div>
           <div>
-            <h4 className="font-bold text-sm text-zinc-800 dark:text-zinc-200">
+            <h4 className="font-semibold text-sm text-zinc-800 dark:text-zinc-200">
               {title}
             </h4>
             <p className="text-[11px] text-zinc-400 tabular-nums">
@@ -904,7 +904,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
             </p>
           </div>
         </div>
-        <span className="text-xl font-black text-[#1877F2] tabular-nums">
+        <span className="text-xl font-semibold text-[#1877F2] tabular-nums">
           {formatCompactNumber(value)}
         </span>
       </div>
@@ -920,14 +920,14 @@ const MetricCard: React.FC<MetricCardProps> = ({
         <button
           type="button"
           onClick={() => onAdjust(Math.abs(parseInt(inputVal, 10) || 0))}
-          className="flex-1 py-2 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-xl font-bold text-xs shadow-sm transition cursor-pointer"
+          className="flex-1 py-2 bg-[#1877F2] hover:bg-[#166fe5] text-white rounded-xl font-medium text-xs shadow-sm transition cursor-pointer"
         >
           + Add
         </button>
         <button
           type="button"
           onClick={() => onAdjust(-Math.abs(parseInt(inputVal, 10) || 0))}
-          className="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-bold text-xs shadow-sm transition cursor-pointer"
+          className="flex-1 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl font-medium text-xs shadow-sm transition cursor-pointer"
         >
           - Subtract
         </button>

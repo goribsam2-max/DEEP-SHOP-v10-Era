@@ -286,7 +286,7 @@ export const LiquidGlassHeaderCapsule: React.FC<{
         >
           <DraftsDocIcon className="w-[19px] h-[19px]" />
           {draftsCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#1877F2] text-white text-[10px] font-bold flex items-center justify-center shadow-xs">
+            <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-[#1877F2] text-white text-[10px] font-semibold flex items-center justify-center shadow-xs">
               {draftsCount}
             </span>
           )}
@@ -672,7 +672,7 @@ export const DraftsBottomSheet: React.FC<{
                 Cancel
               </button>
 
-              <h2 className="text-center text-[16px] font-bold text-zinc-900 dark:text-white">
+              <h2 className="text-center text-[16px] font-semibold text-zinc-900 dark:text-white">
                 Drafts
               </h2>
 
@@ -993,13 +993,13 @@ export const ScheduleDrumWheelModal: React.FC<{
               >
                 Cancel
               </button>
-              <span className="text-sm font-bold text-zinc-900 dark:text-white">
+              <span className="text-sm font-semibold text-zinc-900 dark:text-white">
                 Schedule
               </span>
               <button
                 type="button"
                 onClick={handleApply}
-                className="text-sm font-bold text-[#1877F2] hover:opacity-80 cursor-pointer"
+                className="text-sm font-semibold text-[#1877F2] hover:opacity-80 cursor-pointer"
               >
                 Done
               </button>
@@ -1048,7 +1048,7 @@ export const ScheduleDrumWheelModal: React.FC<{
                   onConfirmSchedule(null);
                   onClose();
                 }}
-                className="w-full py-2.5 rounded-2xl bg-white/80 dark:bg-zinc-800 text-rose-600 text-xs font-bold hover:bg-white transition cursor-pointer"
+                className="w-full py-2.5 rounded-2xl bg-white/80 dark:bg-zinc-800 text-rose-600 text-xs font-medium hover:bg-white transition cursor-pointer"
               >
                 Clear schedule
               </button>
@@ -1259,7 +1259,7 @@ export const StickersBottomSheet: React.FC<{
                   <button
                     type="button"
                     onClick={() => toggleCollapse("kaomoji")}
-                    className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-bold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                    className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-semibold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
                   >
                     <span>Kaomoji</span>
                     <ChevronDown
@@ -1295,7 +1295,7 @@ export const StickersBottomSheet: React.FC<{
                 <button
                   type="button"
                   onClick={() => toggleCollapse("hit0m0")}
-                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-bold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-semibold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Alphabet by hit0m0</span>
                   <ChevronDown
@@ -1339,7 +1339,7 @@ export const StickersBottomSheet: React.FC<{
                 <button
                   type="button"
                   onClick={() => toggleCollapse("emojis")}
-                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-bold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-semibold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Emojis</span>
                   <ChevronDown
@@ -1387,7 +1387,7 @@ export const StickersBottomSheet: React.FC<{
                 <button
                   type="button"
                   onClick={() => toggleCollapse("cats")}
-                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-bold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-semibold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Meme Cat</span>
                   <ChevronDown
@@ -1437,7 +1437,7 @@ export const StickersBottomSheet: React.FC<{
                 <button
                   type="button"
                   onClick={() => toggleCollapse("ruby")}
-                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-bold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-semibold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>Alphabet by irlrubyph</span>
                   <ChevronDown
@@ -1478,7 +1478,7 @@ export const StickersBottomSheet: React.FC<{
                 <button
                   type="button"
                   onClick={() => toggleCollapse("emojihub")}
-                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-bold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 shadow-[0_2px_10px_rgba(15,23,42,0.06)] border border-slate-100 dark:border-zinc-800 text-[13px] font-semibold text-zinc-900 dark:text-white inline-flex items-center gap-1.5 cursor-pointer"
                 >
                   <span>EmojiHub Stickers</span>
                   <ChevronDown
@@ -1539,7 +1539,7 @@ export const StickersBottomSheet: React.FC<{
                   className="relative w-10 h-10 rounded-full flex flex-col items-center justify-center active:scale-90 transition cursor-pointer"
                   title="Alphabet"
                 >
-                  <span className="text-[19px] font-black text-zinc-900 dark:text-white leading-none">
+                  <span className="text-[19px] font-semibold text-zinc-900 dark:text-white leading-none">
                     A
                   </span>
                   {activeDockTab === "hit0m0" && (
@@ -1577,7 +1577,7 @@ export const StickersBottomSheet: React.FC<{
                   className="relative w-10 h-10 rounded-full flex flex-col items-center justify-center active:scale-90 transition cursor-pointer"
                   title="Pop Stickers"
                 >
-                  <span className="text-[19px] font-black text-pink-500 leading-none">
+                  <span className="text-[19px] font-semibold text-pink-500 leading-none">
                     a
                   </span>
                   {activeDockTab === "ruby" && (
@@ -1591,7 +1591,7 @@ export const StickersBottomSheet: React.FC<{
                   className="relative px-2 h-10 rounded-full flex flex-col items-center justify-center active:scale-90 transition cursor-pointer"
                   title="Kaomoji"
                 >
-                  <span className="text-[12px] font-extrabold text-amber-600 dark:text-amber-400 leading-none">
+                  <span className="text-[12px] font-semibold text-amber-600 dark:text-amber-400 leading-none">
                     (◕‿◕)
                   </span>
                   {activeDockTab === "kaomoji" && (
@@ -1986,7 +1986,7 @@ export const PostOptionsBottomSheet: React.FC<{
                     triggerHaptic();
                     onClose();
                   }}
-                  className="w-full h-13 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold text-[15.5px] active:scale-[0.985] transition cursor-pointer mt-2"
+                  className="w-full h-13 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-semibold text-[15.5px] active:scale-[0.985] transition cursor-pointer mt-2"
                 >
                   Done
                 </button>
@@ -2001,7 +2001,7 @@ export const PostOptionsBottomSheet: React.FC<{
                   >
                     ‹ Back
                   </button>
-                  <span className="text-sm font-bold text-zinc-900 dark:text-white">
+                  <span className="text-sm font-semibold text-zinc-900 dark:text-white">
                     Also share on...
                   </span>
                   <span className="w-10" />
@@ -2037,7 +2037,7 @@ export const PostOptionsBottomSheet: React.FC<{
                 <button
                   type="button"
                   onClick={() => setShowShareSubmenu(false)}
-                  className="w-full h-12 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-bold text-sm cursor-pointer"
+                  className="w-full h-12 rounded-2xl bg-black dark:bg-white text-white dark:text-black font-semibold text-sm cursor-pointer"
                 >
                   Save
                 </button>
@@ -2142,7 +2142,7 @@ export const LiveCameraCaptureModal: React.FC<{
             >
               <X className="w-5 h-5" />
             </button>
-            <span className="text-sm font-bold">Take Photo</span>
+            <span className="text-sm font-semibold">Take Photo</span>
             <button
               type="button"
               onClick={() =>
@@ -2168,7 +2168,7 @@ export const LiveCameraCaptureModal: React.FC<{
                     onClose();
                     onFallbackInput();
                   }}
-                  className="px-5 py-2.5 rounded-full bg-white text-black font-bold text-xs cursor-pointer"
+                  className="px-5 py-2.5 rounded-full bg-white text-black font-medium text-xs cursor-pointer"
                 >
                   Open Device Camera / Gallery
                 </button>
@@ -2289,7 +2289,7 @@ export const LocationPickerModal: React.FC<{
               >
                 Cancel
               </button>
-              <span className="text-base font-bold text-zinc-900 dark:text-white">
+              <span className="text-base font-semibold text-zinc-900 dark:text-white">
                 Add location
               </span>
               <button
@@ -2299,7 +2299,7 @@ export const LocationPickerModal: React.FC<{
                   onSelectLocation(query.trim());
                   onClose();
                 }}
-                className="text-sm font-bold text-[#1877F2] cursor-pointer"
+                className="text-sm font-semibold text-[#1877F2] cursor-pointer"
               >
                 Done
               </button>
@@ -2329,7 +2329,7 @@ export const LocationPickerModal: React.FC<{
               type="button"
               onClick={detectBrowserLocation}
               disabled={detecting}
-              className="w-full px-4 py-3 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 text-[#1877F2] text-xs font-bold flex items-center gap-2 cursor-pointer"
+              className="w-full px-4 py-3 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 text-[#1877F2] text-xs font-medium flex items-center gap-2 cursor-pointer"
             >
               {detecting ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

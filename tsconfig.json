@@ -27,5 +27,11 @@
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "exclude": [
+    "dist",
+    "dev-dist",
+    "node_modules",
+    "public"
+  ]
 }

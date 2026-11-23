@@ -157,7 +157,7 @@ export function OnboardingDialog({
               )}
               transition={{ duration: 0.2, ease: "easeOut" }}
             >
-              <h2 className="ds-liquid-popup-title ds-apple-display text-[20px] font-bold leading-[1.24] tracking-[-0.025em]">
+              <h2 className="ds-liquid-popup-title ds-apple-display text-[20px] font-semibold leading-[1.24] tracking-[-0.025em]">
                 {slide.title}
               </h2>
               {slide.description && (

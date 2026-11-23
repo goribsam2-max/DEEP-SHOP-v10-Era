@@ -70,7 +70,7 @@ const AuthPage: React.FC = () => {
         className="ds-apple-surface w-full max-w-md rounded-[28px] p-6 sm:p-8"
       >
         <div className="mb-8 text-center">
-          <h1 className="ds-apple-display text-[26px] font-bold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+          <h1 className="ds-apple-display text-[26px] font-semibold tracking-[-0.025em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
             {isLogin ? "Welcome Back" : "Create Account"}
           </h1>
           <p className="ds-apple-muted text-[14.5px]">

@@ -158,12 +158,12 @@ export default function AccountMenu({
                   alt={displayName}
                   className="object-cover rounded-full"
                 />
-                <AvatarFallback className="text-[10px] font-bold bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] rounded-full">
+                <AvatarFallback className="text-[10px] font-semibold bg-[#F2F2F7] dark:bg-[#2C2C2E] text-[#1D1D1F] dark:text-[#F5F5F7] rounded-full">
                   {initials}
                 </AvatarFallback>
               </Avatar>
               {unreadCount > 0 ? (
-                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[15px] h-3.5 text-[9px] font-bold text-white bg-[#FF3B30] rounded-full ring-2 ring-white dark:ring-[#1C1C1E] px-1 z-10 tabular-nums">
+                <span className="absolute -top-0.5 -right-0.5 inline-flex items-center justify-center min-w-[15px] h-3.5 text-[9px] font-semibold text-white bg-[#FF3B30] rounded-full ring-2 ring-white dark:ring-[#1C1C1E] px-1 z-10 tabular-nums">
                   {unreadCount > 9 ? "9+" : unreadCount}
                 </span>
               ) : (
@@ -229,9 +229,9 @@ export default function AccountMenu({
               >
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 shrink-0" />
-                  <span className="text-xs font-bold">Admin Console</span>
+                  <span className="text-xs font-medium">Admin Console</span>
                 </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white">
                   Admin
                 </span>
               </DropdownMenuItem>
@@ -296,7 +296,7 @@ export default function AccountMenu({
               />
               <span className="flex-1 text-[13.5px] font-medium">Notifications</span>
               {unreadCount > 0 && (
-                <span className="bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold px-2 py-0.5 rounded-full tabular-nums">
+                <span className="bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-semibold px-2 py-0.5 rounded-full tabular-nums">
                   {unreadCount}
                 </span>
               )}

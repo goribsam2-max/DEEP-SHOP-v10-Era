@@ -827,7 +827,7 @@ export default function ManageGroups() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#090A0F] text-white font-bold text-sm">
+      <div className="min-h-screen flex items-center justify-center bg-[#090A0F] text-white font-semibold text-sm">
         <div className="flex flex-col items-center gap-3">
           <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin" />
           <span>Verifying Super Admin Authorization...</span>
@@ -844,7 +844,7 @@ export default function ManageGroups() {
           <div className="w-16 h-16 rounded-full bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
             <Lock className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-extrabold text-white">Access Restricted</h2>
+          <h2 className="text-xl font-semibold text-white">Access Restricted</h2>
           <p className="text-xs text-zinc-400 leading-relaxed">
             This Group Management & Word Filter Inspector is strictly reserved for the Main Site Administrator (<span className="text-emerald-400 font-mono">deepshop@gmail.com</span>). Regular users and group admins do not have access.
           </p>
@@ -865,7 +865,7 @@ export default function ManageGroups() {
             <button
               type="button"
               onClick={() => setSelectedGroup(null)}
-              className="px-3 py-2 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-white text-xs font-bold transition flex items-center gap-2 cursor-pointer shadow-xs border border-zinc-700/60 shrink-0"
+              className="px-3 py-2 rounded-xl bg-zinc-800/90 hover:bg-zinc-700 text-white text-xs font-medium transition flex items-center gap-2 cursor-pointer shadow-xs border border-zinc-700/60 shrink-0"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Back to Groups</span>
@@ -876,15 +876,15 @@ export default function ManageGroups() {
                 {selectedGroup.photoURL || selectedGroup.imageUrl ? (
                   <img src={selectedGroup.photoURL || selectedGroup.imageUrl} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center font-black text-emerald-400 text-lg bg-emerald-950/50">
+                  <div className="w-full h-full flex items-center justify-center font-semibold text-emerald-400 text-lg bg-emerald-950/50">
                     {(selectedGroup.name || 'G')[0]?.toUpperCase()}
                   </div>
                 )}
               </div>
               <div className="min-w-0">
-                <h1 className="text-base sm:text-lg font-black text-white flex items-center gap-2 truncate">
+                <h1 className="text-base sm:text-lg font-semibold text-white flex items-center gap-2 truncate">
                   <span className="truncate">{selectedGroup.name || 'Unnamed Group'}</span>
-                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider shrink-0 flex items-center gap-1">
+                  <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider shrink-0 flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3" /> Super Admin
                   </span>
                 </h1>
@@ -902,7 +902,7 @@ export default function ManageGroups() {
                 type="button"
                 onClick={() => setInspectorSubTab('messages')}
                 className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer",
+                  "px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 cursor-pointer",
                   inspectorSubTab === 'messages'
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "text-zinc-400 hover:text-white"
@@ -916,7 +916,7 @@ export default function ManageGroups() {
                 type="button"
                 onClick={() => setInspectorSubTab('members')}
                 className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer",
+                  "px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 cursor-pointer",
                   inspectorSubTab === 'members'
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "text-zinc-400 hover:text-white"
@@ -938,7 +938,7 @@ export default function ManageGroups() {
                   setInspectorSubTab('settings');
                 }}
                 className={cn(
-                  "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer",
+                  "px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1.5 cursor-pointer",
                   inspectorSubTab === 'settings'
                     ? "bg-emerald-600 text-white shadow-sm"
                     : "text-zinc-400 hover:text-white"
@@ -952,7 +952,7 @@ export default function ManageGroups() {
             <button
               type="button"
               onClick={() => handleDeleteGroup(selectedGroup)}
-              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-bold transition flex items-center gap-1.5 cursor-pointer"
+              className="p-2 sm:px-3 sm:py-1.5 rounded-xl bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white border border-rose-500/30 text-xs font-medium transition flex items-center gap-1.5 cursor-pointer"
               title="Delete Entire Group"
             >
               <Trash2 className="w-4 h-4" />
@@ -986,7 +986,7 @@ export default function ManageGroups() {
                     type="button"
                     onClick={() => setMessageTypeFilter('all')}
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer",
+                      "px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer",
                       messageTypeFilter === 'all' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:bg-zinc-800"
                     )}
                   >
@@ -996,7 +996,7 @@ export default function ManageGroups() {
                     type="button"
                     onClick={() => setMessageTypeFilter('text')}
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer",
+                      "px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer",
                       messageTypeFilter === 'text' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:bg-zinc-800"
                     )}
                   >
@@ -1006,7 +1006,7 @@ export default function ManageGroups() {
                     type="button"
                     onClick={() => setMessageTypeFilter('media')}
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer",
+                      "px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer",
                       messageTypeFilter === 'media' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:bg-zinc-800"
                     )}
                   >
@@ -1016,7 +1016,7 @@ export default function ManageGroups() {
                     type="button"
                     onClick={() => setMessageTypeFilter('audio')}
                     className={cn(
-                      "px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer",
+                      "px-3 py-1.5 rounded-xl text-xs font-medium transition cursor-pointer",
                       messageTypeFilter === 'audio' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:bg-zinc-800"
                     )}
                   >
@@ -1029,7 +1029,7 @@ export default function ManageGroups() {
               <form onSubmit={handleSendAdminBroadcast} className="p-4 rounded-3xl bg-gradient-to-r from-emerald-950/30 to-indigo-950/30 border border-emerald-500/30 space-y-3">
                 <div className="flex items-center gap-2">
                   <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
-                  <span className="text-xs font-black text-emerald-400 uppercase tracking-wider">Send Super Admin Announcement / Notice to this Group</span>
+                  <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">Send Super Admin Announcement / Notice to this Group</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <input
@@ -1042,7 +1042,7 @@ export default function ManageGroups() {
                   <button
                     type="submit"
                     disabled={isSendingBroadcast || !adminBroadcastText.trim()}
-                    className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold transition flex items-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer shrink-0"
+                    className="px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-medium transition flex items-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer shrink-0"
                   >
                     <Send className="w-3.5 h-3.5" />
                     <span>Broadcast</span>
@@ -1053,7 +1053,7 @@ export default function ManageGroups() {
               {/* Message Feed */}
               <div className="space-y-3">
                 {loadingMessages ? (
-                  <div className="py-20 text-center text-xs text-zinc-400 font-bold flex flex-col items-center gap-2">
+                  <div className="py-20 text-center text-xs text-zinc-400 font-medium flex flex-col items-center gap-2">
                     <RefreshCw className="w-6 h-6 text-emerald-500 animate-spin" />
                     <span>Connecting live message stream...</span>
                   </div>
@@ -1073,7 +1073,7 @@ export default function ManageGroups() {
                       )}
                     >
                       <div className="flex items-start gap-3.5 flex-1 min-w-0">
-                        <div className="w-10 h-10 rounded-full bg-zinc-800 text-emerald-400 font-bold text-xs flex items-center justify-center shrink-0 border border-zinc-700/60 overflow-hidden">
+                        <div className="w-10 h-10 rounded-full bg-zinc-800 text-emerald-400 font-medium text-xs flex items-center justify-center shrink-0 border border-zinc-700/60 overflow-hidden">
                           {msg.senderAvatar ? (
                             <img src={msg.senderAvatar} alt="" className="w-full h-full object-cover" />
                           ) : (
@@ -1082,9 +1082,9 @@ export default function ManageGroups() {
                         </div>
                         <div className="min-w-0 flex-1 space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-extrabold text-zinc-200">{msg.senderName || msg.senderId || 'User'}</span>
+                            <span className="text-xs font-semibold text-zinc-200">{msg.senderName || msg.senderId || 'User'}</span>
                             {msg.isAdminBroadcast && (
-                              <span className="text-[9px] font-black uppercase px-2 py-0.5 rounded-md bg-emerald-500 text-black">Official Admin</span>
+                              <span className="text-[9px] font-medium uppercase px-2 py-0.5 rounded-md bg-emerald-500 text-black">Official Admin</span>
                             )}
                             <span className="text-[10px] text-zinc-500">
                               {msg.timestamp?.seconds 
@@ -1171,7 +1171,7 @@ export default function ManageGroups() {
                       type="button"
                       onClick={() => setMemberRoleFilter('all')}
                       className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer",
+                        "px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer",
                         memberRoleFilter === 'all' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
                       )}
                     >
@@ -1181,7 +1181,7 @@ export default function ManageGroups() {
                       type="button"
                       onClick={() => setMemberRoleFilter('admin')}
                       className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer",
+                        "px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer",
                         memberRoleFilter === 'admin' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
                       )}
                     >
@@ -1191,7 +1191,7 @@ export default function ManageGroups() {
                       type="button"
                       onClick={() => setMemberRoleFilter('added_by_admin')}
                       className={cn(
-                        "px-2.5 py-1 rounded-lg text-xs font-bold transition cursor-pointer",
+                        "px-2.5 py-1 rounded-lg text-xs font-medium transition cursor-pointer",
                         memberRoleFilter === 'added_by_admin' ? "bg-zinc-700 text-white" : "text-zinc-400 hover:text-white"
                       )}
                     >
@@ -1206,7 +1206,7 @@ export default function ManageGroups() {
                       setUserSearchQuery('');
                       setSearchResults([]);
                     }}
-                    className="px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs shadow-lg shadow-emerald-600/20 transition flex items-center gap-2 cursor-pointer shrink-0"
+                    className="px-4 py-2 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-xs shadow-lg shadow-emerald-600/20 transition flex items-center gap-2 cursor-pointer shrink-0"
                   >
                     <Plus className="w-4 h-4" />
                     <span>Search & Add Member</span>
@@ -1216,7 +1216,7 @@ export default function ManageGroups() {
 
               {/* Members Grid / List */}
               {loadingMembers ? (
-                <div className="py-20 text-center text-xs text-zinc-400 font-bold flex flex-col items-center gap-2">
+                <div className="py-20 text-center text-xs text-zinc-400 font-medium flex flex-col items-center gap-2">
                   <RefreshCw className="w-6 h-6 text-emerald-500 animate-spin" />
                   <span>Loading full group member registry...</span>
                 </div>
@@ -1236,22 +1236,22 @@ export default function ManageGroups() {
                           {m.photoURL ? (
                             <img src={m.photoURL} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center font-bold text-xs text-zinc-300">
+                            <div className="w-full h-full flex items-center justify-center font-medium text-xs text-zinc-300">
                               {(m.displayName || 'U')[0]?.toUpperCase()}
                             </div>
                           )}
                         </div>
 
                         <div className="min-w-0 flex-1 space-y-0.5">
-                          <p className="text-xs font-extrabold text-zinc-100 truncate flex items-center gap-1.5">
+                          <p className="text-xs font-semibold text-zinc-100 truncate flex items-center gap-1.5">
                             <span className="truncate">{m.displayName}</span>
                             {m.role === 'owner' && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-black uppercase rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 shrink-0">
+                              <span className="px-1.5 py-0.2 text-[9px] font-medium uppercase rounded bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1 shrink-0">
                                 <Crown className="w-2.5 h-2.5" /> Owner
                               </span>
                             )}
                             {m.role === 'admin' && (
-                              <span className="px-1.5 py-0.2 text-[9px] font-black uppercase rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1 shrink-0">
+                              <span className="px-1.5 py-0.2 text-[9px] font-medium uppercase rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center gap-1 shrink-0">
                                 <ShieldCheck className="w-2.5 h-2.5" /> Admin
                               </span>
                             )}
@@ -1259,7 +1259,7 @@ export default function ManageGroups() {
                           <p className="text-[10px] text-zinc-400 truncate font-mono">{m.email || m.phone || `#${m.id.slice(0, 10)}`}</p>
                           <div className="flex items-center gap-1.5 pt-0.5">
                             <span className={cn(
-                              "text-[9px] font-bold px-2 py-0.2 rounded-full",
+                              "text-[9px] font-semibold px-2 py-0.2 rounded-full",
                               m.joinedSource?.includes('Admin')
                                 ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
                                 : m.joinedSource?.includes('Creator')
@@ -1278,7 +1278,7 @@ export default function ManageGroups() {
                           <button
                             type="button"
                             onClick={() => handleDemoteAdmin(m.id, m.displayName)}
-                            className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-extrabold transition cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 text-[10px] font-semibold transition cursor-pointer"
                             title="Demote to Member"
                           >
                             Demote
@@ -1287,7 +1287,7 @@ export default function ManageGroups() {
                           <button
                             type="button"
                             onClick={() => handlePromoteAdmin(m.id, m.displayName)}
-                            className="px-2.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-extrabold transition cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 text-[10px] font-semibold transition cursor-pointer"
                             title="Make Group Admin"
                           >
                             Make Admin
@@ -1319,7 +1319,7 @@ export default function ManageGroups() {
               <div className="p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-6 shadow-xl">
                 <div className="flex items-center justify-between pb-4 border-b border-zinc-800">
                   <div>
-                    <h2 className="text-base font-black text-white flex items-center gap-2">
+                    <h2 className="text-base font-semibold text-white flex items-center gap-2">
                       <Settings className="w-5 h-5 text-emerald-400" />
                       <span>Group Identity & Configuration</span>
                     </h2>
@@ -1329,21 +1329,21 @@ export default function ManageGroups() {
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 mb-1.5">Group Title / Name</label>
+                    <label className="block text-xs font-medium text-zinc-300 mb-1.5">Group Title / Name</label>
                     <input
                       type="text"
                       value={editGroupName}
                       onChange={(e) => setEditGroupName(e.target.value)}
                       placeholder="Group Title"
-                      className="w-full p-3 rounded-2xl bg-zinc-900 border border-zinc-700 text-xs font-bold text-white outline-none focus:border-emerald-500"
+                      className="w-full p-3 rounded-2xl bg-zinc-900 border border-zinc-700 text-xs font-medium text-white outline-none focus:border-emerald-500"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-bold text-zinc-300 mb-1.5">Group Handle / Custom Link</label>
+                      <label className="block text-xs font-medium text-zinc-300 mb-1.5">Group Handle / Custom Link</label>
                       <div className="relative">
-                        <span className="absolute left-3 top-3 text-zinc-500 text-xs font-bold">@</span>
+                        <span className="absolute left-3 top-3 text-zinc-500 text-xs font-medium">@</span>
                         <input
                           type="text"
                           value={editGroupLink}
@@ -1355,7 +1355,7 @@ export default function ManageGroups() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-zinc-300 mb-1.5">Category</label>
+                      <label className="block text-xs font-medium text-zinc-300 mb-1.5">Category</label>
                       <input
                         type="text"
                         value={editGroupCategory}
@@ -1367,7 +1367,7 @@ export default function ManageGroups() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 mb-1.5">Group Avatar / Image URL</label>
+                    <label className="block text-xs font-medium text-zinc-300 mb-1.5">Group Avatar / Image URL</label>
                     <div className="flex items-center gap-3">
                       <input
                         type="text"
@@ -1385,7 +1385,7 @@ export default function ManageGroups() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-zinc-300 mb-1.5">Description & Guidelines</label>
+                    <label className="block text-xs font-medium text-zinc-300 mb-1.5">Description & Guidelines</label>
                     <textarea
                       rows={4}
                       value={editGroupDesc}
@@ -1397,7 +1397,7 @@ export default function ManageGroups() {
 
                   <div className="flex items-center justify-between p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800">
                     <div>
-                      <p className="text-xs font-bold text-white">Private Group Mode</p>
+                      <p className="text-xs font-medium text-white">Private Group Mode</p>
                       <p className="text-[10px] text-zinc-400">Require invitation or approval to join</p>
                     </div>
                     <button
@@ -1418,7 +1418,7 @@ export default function ManageGroups() {
                     type="button"
                     disabled={isSavingGroupInfo}
                     onClick={handleSaveGroupSettings}
-                    className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-black shadow-lg shadow-emerald-600/20 transition cursor-pointer flex items-center gap-2"
+                    className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-semibold shadow-lg shadow-emerald-600/20 transition cursor-pointer flex items-center gap-2"
                   >
                     {isSavingGroupInfo ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
                     <span>Save All Changes</span>
@@ -1428,23 +1428,23 @@ export default function ManageGroups() {
 
               {/* Group Technical Stats */}
               <div className="p-6 rounded-3xl bg-[#11131A] border border-zinc-800 space-y-4">
-                <h3 className="text-xs font-black uppercase text-zinc-400 tracking-wider">Group Technical Metadata</h3>
+                <h3 className="text-xs font-medium uppercase text-zinc-400 tracking-wider">Group Technical Metadata</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800">
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase">Total Members</p>
-                    <p className="text-lg font-black text-emerald-400">{groupMembersList.length}</p>
+                    <p className="text-[10px] text-zinc-500 font-medium uppercase">Total Members</p>
+                    <p className="text-lg font-semibold text-emerald-400">{groupMembersList.length}</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800">
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase">Total Messages</p>
-                    <p className="text-lg font-black text-indigo-400">{groupMessages.length}</p>
+                    <p className="text-[10px] text-zinc-500 font-medium uppercase">Total Messages</p>
+                    <p className="text-lg font-semibold text-indigo-400">{groupMessages.length}</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800">
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase">Admins</p>
-                    <p className="text-lg font-black text-amber-400">{selectedGroup.admins?.length || 1}</p>
+                    <p className="text-[10px] text-zinc-500 font-normal uppercase">Admins</p>
+                    <p className="text-lg font-semibold text-amber-400">{selectedGroup.admins?.length || 1}</p>
                   </div>
                   <div className="p-3 rounded-2xl bg-zinc-900 border border-zinc-800">
-                    <p className="text-[10px] text-zinc-500 font-bold uppercase">Type</p>
-                    <p className="text-xs font-bold text-white uppercase mt-1">{selectedGroup.type}</p>
+                    <p className="text-[10px] text-zinc-500 font-normal uppercase">Type</p>
+                    <p className="text-xs font-medium text-white uppercase mt-1">{selectedGroup.type}</p>
                   </div>
                 </div>
               </div>
@@ -1463,7 +1463,7 @@ export default function ManageGroups() {
                 className="bg-[#141722] border border-zinc-800 rounded-3xl w-full max-w-md p-6 shadow-2xl space-y-4 text-white"
               >
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
-                  <h3 className="font-black text-sm text-white flex items-center gap-2">
+                  <h3 className="font-semibold text-sm text-white flex items-center gap-2">
                     <Edit3 className="w-4 h-4 text-emerald-400" />
                     <span>Stealth Edit Message (Super Admin)</span>
                   </h3>
@@ -1477,7 +1477,7 @@ export default function ManageGroups() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-400 mb-1.5">Message Content</label>
+                  <label className="block text-xs font-medium text-zinc-400 mb-1.5">Message Content</label>
                   <textarea
                     rows={4}
                     value={editedText}
@@ -1493,14 +1493,14 @@ export default function ManageGroups() {
                   <button
                     type="button"
                     onClick={() => setEditingMessage(null)}
-                    className="px-4 py-2 rounded-xl border border-zinc-700 text-xs font-bold text-zinc-300 hover:bg-zinc-800 transition"
+                    className="px-4 py-2 rounded-xl border border-zinc-700 text-xs font-medium text-zinc-300 hover:bg-zinc-800 transition"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleSaveEditedMessage}
-                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-bold shadow-md transition cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white text-xs font-medium shadow-md transition cursor-pointer"
                   >
                     Save Stealth Edit
                   </button>
@@ -1522,7 +1522,7 @@ export default function ManageGroups() {
               >
                 <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
                   <div>
-                    <h3 className="font-black text-sm text-white flex items-center gap-2">
+                    <h3 className="font-semibold text-sm text-white flex items-center gap-2">
                       <Plus className="w-4 h-4 text-emerald-400" />
                       <span>Add Member to "{selectedGroup.name}"</span>
                     </h3>
@@ -1538,7 +1538,7 @@ export default function ManageGroups() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-zinc-400 mb-2">
+                  <label className="block text-xs font-medium text-zinc-400 mb-2">
                     Search Platform Users by Name, Email, or Phone
                   </label>
                   <div className="relative">
@@ -1577,13 +1577,13 @@ export default function ManageGroups() {
                               {u.photoURL ? (
                                 <img src={u.photoURL} alt="" className="w-full h-full object-cover" />
                               ) : (
-                                <div className="w-full h-full flex items-center justify-center font-bold text-xs text-zinc-300">
+                                <div className="w-full h-full flex items-center justify-center font-medium text-xs text-zinc-300">
                                   {(u.displayName || u.name || 'U')[0]?.toUpperCase()}
                                 </div>
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-xs font-bold text-white truncate">{u.displayName || u.name || 'User'}</p>
+                              <p className="text-xs font-medium text-white truncate">{u.displayName || u.name || 'User'}</p>
                               <p className="text-[10px] text-zinc-400 truncate">{u.email || u.phone || `#${u.id.slice(0, 8)}`}</p>
                             </div>
                           </div>
@@ -1593,7 +1593,7 @@ export default function ManageGroups() {
                             disabled={isAlreadyIn}
                             onClick={() => handleAddUserToGroup(u)}
                             className={cn(
-                              "px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1 cursor-pointer shrink-0",
+                              "px-3 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1 cursor-pointer shrink-0",
                               isAlreadyIn 
                                 ? "bg-zinc-800 text-zinc-500 cursor-not-allowed" 
                                 : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-600/20"
@@ -1623,12 +1623,12 @@ export default function ManageGroups() {
       {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
-          <h1 className="text-xl md:text-2xl font-black tracking-tight text-zinc-900 dark:text-white mb-1.5 flex items-center gap-2.5">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white mb-1.5 flex items-center gap-2.5">
             <ShieldCheck className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
             <span>Group Management & Content Moderation</span>
           </h1>
           <p className="text-zinc-500 dark:text-zinc-400 text-xs font-semibold">
-            Main Site Administrator Panel (<span className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">deepshop@gmail.com</span>) • Inspect all group live message streams without joining • Full member and message moderation
+            Main Site Administrator Panel (<span className="text-emerald-600 dark:text-emerald-400 font-mono font-semibold">deepshop@gmail.com</span>) • Inspect all group live message streams without joining • Full member and message moderation
           </p>
         </div>
 
@@ -1638,7 +1638,7 @@ export default function ManageGroups() {
             type="button"
             onClick={() => setActiveTab('groups')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer",
+              "px-4 py-2 rounded-xl text-xs font-medium transition cursor-pointer",
               activeTab === 'groups'
                 ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
                 : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -1650,7 +1650,7 @@ export default function ManageGroups() {
             type="button"
             onClick={() => setActiveTab('word_filter')}
             className={cn(
-              "px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer",
+              "px-4 py-2 rounded-xl text-xs font-medium transition flex items-center gap-1.5 cursor-pointer",
               activeTab === 'word_filter'
                 ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs"
                 : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -1677,7 +1677,7 @@ export default function ManageGroups() {
           </div>
 
           {loading ? (
-            <div className="p-20 text-center text-xs text-zinc-400 font-bold flex flex-col items-center gap-2">
+            <div className="p-20 text-center text-xs text-zinc-400 font-medium flex flex-col items-center gap-2">
               <RefreshCw className="w-6 h-6 text-emerald-500 animate-spin" />
               <span>Loading all platform groups...</span>
             </div>
@@ -1699,14 +1699,14 @@ export default function ManageGroups() {
                           {g.photoURL || g.imageUrl ? (
                             <img src={g.photoURL || g.imageUrl} alt="" className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center font-black text-emerald-600 dark:text-emerald-400 text-base bg-emerald-50 dark:bg-emerald-950/40">
+                            <div className="w-full h-full flex items-center justify-center font-semibold text-emerald-600 dark:text-emerald-400 text-base bg-emerald-50 dark:bg-emerald-950/40">
                               {(g.name || 'G')[0]?.toUpperCase()}
                             </div>
                           )}
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <h3 className="font-extrabold text-sm text-zinc-900 dark:text-white truncate group-hover:text-emerald-500 transition">
+                          <h3 className="font-semibold text-sm text-zinc-900 dark:text-white truncate group-hover:text-emerald-500 transition">
                             {g.name || 'Unnamed Group'}
                           </h3>
                           <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
@@ -1715,7 +1715,7 @@ export default function ManageGroups() {
                         </div>
                       </div>
 
-                      <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                      <span className="text-[10px] font-medium uppercase px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                         {g.type === 'community' ? 'Channel' : 'Group'}
                       </span>
                     </div>
@@ -1745,7 +1745,7 @@ export default function ManageGroups() {
                         setSelectedGroup(g);
                         setInspectorSubTab('messages');
                       }}
-                      className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
+                      className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-xs transition shadow-md shadow-emerald-600/20 flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Inspect Group</span>
@@ -1780,7 +1780,7 @@ export default function ManageGroups() {
             ========================================================================= */
         <div className="max-w-4xl space-y-6">
           <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-xs">
-            <h2 className="text-base font-black text-zinc-900 dark:text-white flex items-center gap-2">
+            <h2 className="text-base font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
               <Filter className="w-5 h-5 text-emerald-500" />
               <span>Prohibited Words & Bad Word Filter</span>
             </h2>
@@ -1799,7 +1799,7 @@ export default function ManageGroups() {
               <button
                 type="submit"
                 disabled={isSavingWordFilter || !newBannedWord.trim()}
-                className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-xs shadow-md shadow-emerald-600/20 transition cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1.5"
+                className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold text-xs shadow-md shadow-emerald-600/20 transition cursor-pointer shrink-0 disabled:opacity-50 flex items-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />
                 <span>Add Prohibited Word</span>
@@ -1809,7 +1809,7 @@ export default function ManageGroups() {
 
           {/* Word Filter Testing Simulator */}
           <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-3 shadow-xs">
-            <h3 className="text-xs font-black uppercase text-zinc-400 tracking-wider">Test Word Filter Simulator</h3>
+            <h3 className="text-xs font-medium uppercase text-zinc-400 tracking-wider">Test Word Filter Simulator</h3>
             <input
               type="text"
               placeholder="Type any test sentence here to check if it contains banned words..."
@@ -1818,7 +1818,7 @@ export default function ManageGroups() {
               className="w-full p-3 rounded-2xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs text-zinc-900 dark:text-white outline-none focus:border-emerald-500"
             />
             {filterTestText.trim() && (
-              <div className="p-3 rounded-xl text-xs font-bold flex items-center gap-2">
+              <div className="p-3 rounded-xl text-xs font-medium flex items-center gap-2">
                 {bannedWords.some(w => filterTestText.toLowerCase().includes(w.toLowerCase())) ? (
                   <span className="text-rose-500 bg-rose-500/10 px-3 py-1.5 rounded-lg border border-rose-500/20 flex items-center gap-1.5">
                     <AlertTriangle className="w-4 h-4" />
@@ -1837,7 +1837,7 @@ export default function ManageGroups() {
           {/* Word List Chips */}
           <div className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-4 shadow-xs">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black uppercase text-zinc-400 tracking-wider">Active Prohibited Words ({bannedWords.length})</h3>
+              <h3 className="text-xs font-medium uppercase text-zinc-400 tracking-wider">Active Prohibited Words ({bannedWords.length})</h3>
             </div>
 
             {bannedWords.length === 0 ? (
@@ -1847,7 +1847,7 @@ export default function ManageGroups() {
                 {bannedWords.map((word) => (
                   <div
                     key={word}
-                    className="pl-3 pr-2 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-bold flex items-center gap-2"
+                    className="pl-3 pr-2 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 text-xs font-medium flex items-center gap-2"
                   >
                     <span>{word}</span>
                     <button

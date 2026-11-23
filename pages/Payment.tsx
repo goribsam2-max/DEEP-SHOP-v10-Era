@@ -624,7 +624,7 @@ const Payment: React.FC = () => {
           <div className="w-14 h-14 rounded-2xl bg-[#FF3B30]/10 dark:bg-[#FF453A]/15 flex items-center justify-center mx-auto">
             <AlertCircle className="w-7 h-7 text-[#FF3B30] dark:text-[#FF453A]" />
           </div>
-          <h2 className="ds-apple-display text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+          <h2 className="ds-apple-display text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
             Order Not Found
           </h2>
           <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
@@ -668,7 +668,7 @@ const Payment: React.FC = () => {
                 <p className="text-xs font-semibold text-[#FF9500] dark:text-[#FF9F0A]">
                   Verification in Progress · 1–7 Hours
                 </p>
-                <h2 className="ds-apple-display text-xl sm:text-2xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <h2 className="ds-apple-display text-xl sm:text-2xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                   Payment Details Submitted
                 </h2>
                 <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#98989D] leading-relaxed">
@@ -680,7 +680,7 @@ const Payment: React.FC = () => {
 
             {isGuest && (
               <div className="rounded-2xl bg-[#FF9500]/10 dark:bg-[#FF9F0A]/12 border border-[#FF9500]/20 p-4 space-y-1.5">
-                <p className="text-xs sm:text-sm font-bold text-[#9A5B00] dark:text-[#FFD60A]">
+                <p className="text-xs sm:text-sm font-medium text-[#9A5B00] dark:text-[#FFD60A]">
                   Create an Account to Track Your Order
                 </p>
                 <p className="text-xs text-[#7D4B00] dark:text-[#FFE57F] leading-relaxed">
@@ -741,7 +741,7 @@ const Payment: React.FC = () => {
           <div className="lg:col-span-5 ds-apple-surface rounded-[28px] p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08] pb-3.5">
               <div>
-                <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                   Payment Receipt Summary
                 </h3>
                 <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] font-mono tabular-nums mt-0.5">
@@ -760,7 +760,7 @@ const Payment: React.FC = () => {
               </div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[#6E6E73] dark:text-[#98989D]">Amount Paid</span>
-                <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {formatPrice(calculations.amountToPay)}
                 </span>
               </div>
@@ -839,10 +839,10 @@ const Payment: React.FC = () => {
       )}
 
       <div className="pt-3 border-t border-slate-900/[0.08] dark:border-white/[0.1] flex items-baseline justify-between gap-2">
-        <span className="text-sm font-bold text-zinc-900 dark:text-white">
+        <span className="text-sm font-semibold text-zinc-900 dark:text-white">
           Payable Now
         </span>
-        <span className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+        <span className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white tabular-nums">
           {formatPrice(calculations.amountToPay)}
         </span>
       </div>
@@ -873,7 +873,7 @@ const Payment: React.FC = () => {
            ===================================================================== */}
         <div className="hidden lg:flex items-center justify-between gap-6 ds-apple-topbar rounded-[22px] px-7 py-4">
           <div className="min-w-0">
-            <h1 className="ds-apple-display text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
+            <h1 className="ds-apple-display text-xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
               Secure Payment Gateway
             </h1>
             <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5 tabular-nums">
@@ -926,7 +926,7 @@ const Payment: React.FC = () => {
           {/* Mobile Title + Countdown + Voice Row */}
           <div className="flex items-center justify-between gap-2 px-1">
             <div className="min-w-0">
-              <h1 className="ds-apple-display text-lg sm:text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+              <h1 className="ds-apple-display text-lg sm:text-xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                 Payment Gateway
               </h1>
               <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] flex items-center gap-1.5 tabular-nums">
@@ -980,7 +980,7 @@ const Payment: React.FC = () => {
               className="w-full px-4 py-3.5 flex items-center justify-between gap-3 text-left cursor-pointer"
             >
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center font-bold text-xs text-[#1D1D1F] dark:text-[#F5F5F7] shrink-0 overflow-hidden">
+                <div className="w-9 h-9 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center font-medium text-xs text-[#1D1D1F] dark:text-[#F5F5F7] shrink-0 overflow-hidden">
                   {sellerProfile?.photoURL || sellerProfile?.avatarUrl ? (
                     <img
                       src={sellerProfile.photoURL || sellerProfile.avatarUrl}
@@ -993,7 +993,7 @@ const Payment: React.FC = () => {
                   )}
                 </div>
                 <div className="min-w-0">
-                  <div className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                  <div className="text-xs sm:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                     {storeName}
                   </div>
                   <div className="text-[11px] text-[#6E6E73] dark:text-[#98989D] font-mono tabular-nums truncate">
@@ -1003,7 +1003,7 @@ const Payment: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-sm sm:text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                <span className="text-sm sm:text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                   {formatPrice(calculations.amountToPay)}
                 </span>
                 {showAmountDropdown ? (
@@ -1031,7 +1031,7 @@ const Payment: React.FC = () => {
                             Qty: {item.quantity || 1}
                           </p>
                         </div>
-                        <span className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
+                        <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
                           {formatPrice((Number(item.price) || 0) * (Number(item.quantity) || 1))}
                         </span>
                       </div>
@@ -1067,7 +1067,7 @@ const Payment: React.FC = () => {
                 <div className="flex items-center gap-2.5 min-w-0">
                   <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
                   <div className="min-w-0">
-                    <span className="font-bold text-amber-900 dark:text-amber-200 block truncate">
+                    <span className="font-semibold text-amber-900 dark:text-amber-200 block truncate">
                       Border Stock Offer Special Advance
                     </span>
                     <span className="text-[11px] text-amber-800/80 dark:text-amber-300/80 tabular-nums">
@@ -1078,7 +1078,7 @@ const Payment: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <span className="font-extrabold text-amber-700 dark:text-amber-300 text-sm tabular-nums shrink-0 whitespace-nowrap">
+                <span className="font-semibold text-amber-700 dark:text-amber-300 text-sm tabular-nums shrink-0 whitespace-nowrap">
                   {formatPrice(calculations.amountToPay)}
                 </span>
               </div>
@@ -1099,7 +1099,7 @@ const Payment: React.FC = () => {
               >
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                   <div>
-                    <h2 className="ds-apple-display text-base sm:text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                    <h2 className="ds-apple-display text-base sm:text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                       Select Payment Method
                     </h2>
                     <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -1163,7 +1163,7 @@ const Payment: React.FC = () => {
                     <div className="flex items-start justify-between gap-2 w-full">
                       <BkashLogo className="h-8 w-auto" />
                       <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
                           hasBkashNumber && selectedMethod === "bkash"
                             ? "bg-[#E2125B] text-white shadow-sm"
                             : "border border-slate-900/15 dark:border-white/20 text-transparent"
@@ -1174,7 +1174,7 @@ const Payment: React.FC = () => {
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                         bKash Payment
                       </p>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -1210,7 +1210,7 @@ const Payment: React.FC = () => {
                     <div className="flex items-start justify-between gap-2 w-full">
                       <NagadLogo className="h-8 w-auto" />
                       <span
-                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
                           hasNagadNumber && selectedMethod === "nagad"
                             ? "bg-[#F57C20] text-white shadow-sm"
                             : "border border-slate-900/15 dark:border-white/20 text-transparent"
@@ -1221,7 +1221,7 @@ const Payment: React.FC = () => {
                     </div>
 
                     <div className="mt-4">
-                      <p className="text-sm font-extrabold text-zinc-900 dark:text-white">
+                      <p className="text-sm font-semibold text-zinc-900 dark:text-white">
                         Nagad Payment
                       </p>
                       <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -1304,7 +1304,7 @@ const Payment: React.FC = () => {
                       <NagadLogo className="h-7 w-auto" />
                     )}
                     <span className="text-xs text-[#86868B]">·</span>
-                    <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
+                    <span className="text-xs sm:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                       Verify Sender Number
                     </span>
                   </div>
@@ -1331,7 +1331,7 @@ const Payment: React.FC = () => {
                   <div className="space-y-1 text-center">
                     <label
                       htmlFor="sender-phone-input"
-                      className="text-xs font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D] block"
+                      className="text-xs font-medium uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D] block"
                     >
                       Your Sender Mobile Number
                     </label>
@@ -1353,7 +1353,7 @@ const Payment: React.FC = () => {
                       }
                     }}
                     placeholder="01XXXXXXXXX"
-                    className="ds-apple-input w-full h-13 px-4 rounded-2xl text-center text-lg sm:text-2xl font-bold font-mono tabular-nums tracking-wider outline-none"
+                    className="ds-apple-input w-full h-13 px-4 rounded-2xl text-center text-lg sm:text-2xl font-semibold font-mono tabular-nums tracking-wider outline-none"
                     autoFocus
                   />
 
@@ -1403,7 +1403,7 @@ const Payment: React.FC = () => {
                       <NagadLogo className="h-7 w-auto shrink-0" />
                     )}
                     <span className="text-xs text-[#86868B]">·</span>
-                    <span className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                    <span className="text-xs sm:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       Send Money &amp; Confirm TrxID
                     </span>
                   </div>
@@ -1436,12 +1436,12 @@ const Payment: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {/* Receiver Number Card */}
                   <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#6E6E73] dark:text-[#98989D]">
+                    <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
                       <span>{currentActionLabel} Number</span>
                       <span>{currentAccountTypeLabel}</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-lg sm:text-xl font-bold font-mono tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7] tracking-wide">
+                      <span className="text-lg sm:text-xl font-semibold font-mono tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7] tracking-wide">
                         {currentReceiverNumber}
                       </span>
                       <button
@@ -1462,12 +1462,12 @@ const Payment: React.FC = () => {
 
                   {/* Exact Amount Card */}
                   <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] p-4 flex flex-col justify-between gap-2.5">
-                    <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-[#6E6E73] dark:text-[#98989D]">
+                    <div className="flex items-center justify-between gap-2 text-[11px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
                       <span>Amount to Send</span>
                       <span>Exact Amount</span>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-lg sm:text-xl font-bold tabular-nums text-[#0071E3] dark:text-[#0A84FF] tracking-tight">
+                      <span className="text-lg sm:text-xl font-semibold tabular-nums text-[#0071E3] dark:text-[#0A84FF] tracking-tight">
                         {formatPrice(calculations.amountToPay)}
                       </span>
                       <button
@@ -1512,7 +1512,7 @@ const Payment: React.FC = () => {
                   <div className="flex items-center justify-between gap-2">
                     <label
                       htmlFor="trx-id-input"
-                      className="text-xs sm:text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]"
+                      className="text-xs sm:text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7]"
                     >
                       Transaction ID (TrxID)
                     </label>
@@ -1594,7 +1594,7 @@ const Payment: React.FC = () => {
               {/* Recipient Store Identity */}
               <div className="flex items-center justify-between gap-3 border-b border-black/[0.06] dark:border-white/[0.08] pb-4">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-11 h-11 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center font-bold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] shrink-0 overflow-hidden">
+                  <div className="w-11 h-11 rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] border border-black/[0.06] dark:border-white/[0.08] flex items-center justify-center font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] shrink-0 overflow-hidden">
                     {sellerProfile?.photoURL || sellerProfile?.avatarUrl ? (
                       <img
                         src={sellerProfile.photoURL || sellerProfile.avatarUrl}
@@ -1610,7 +1610,7 @@ const Payment: React.FC = () => {
                     <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D] block">
                       Recipient Store
                     </span>
-                    <h3 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                    <h3 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       {storeName}
                     </h3>
                   </div>
@@ -1620,7 +1620,7 @@ const Payment: React.FC = () => {
                   <span className="text-[11px] text-[#6E6E73] dark:text-[#98989D] block">
                     Reference
                   </span>
-                  <span className="text-xs font-mono font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
+                  <span className="text-xs font-mono font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums">
                     {displayTrxRef}
                   </span>
                 </div>
@@ -1630,14 +1630,14 @@ const Payment: React.FC = () => {
               {order.type === "subscription" ? (
                 <div className="rounded-2xl bg-[#F5F5F7] dark:bg-[#2C2C2E] p-3.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                    <p className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                       {order.planName || "VIP Pass Subscription"}
                     </p>
                     <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums">
                       Duration: {order.durationDays || 30} days
                     </p>
                   </div>
-                  <span className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
+                  <span className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
                     {formatPrice(calculations.amountToPay)}
                   </span>
                 </div>
@@ -1669,14 +1669,14 @@ const Payment: React.FC = () => {
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] line-clamp-1">
+                          <p className="text-xs font-medium text-[#1D1D1F] dark:text-[#F5F5F7] line-clamp-1">
                             {item.name || item.title || "Item"}
                           </p>
                           <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] tabular-nums mt-0.5">
                             {item.quantity || 1} × {formatPrice(Number(item.price) || 0)}
                           </p>
                         </div>
-                        <span className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
+                        <span className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums shrink-0">
                           {formatPrice((Number(item.price) || 0) * (Number(item.quantity) || 1))}
                         </span>
                       </div>

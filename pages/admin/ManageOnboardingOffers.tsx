@@ -120,7 +120,7 @@ export default function ManageOnboardingOffers() {
   return (
     <div className="max-w-[1440px] mx-auto px-6 md:px-12 py-10 min-h-screen bg-zinc-50 dark:bg-zinc-800 animate-fade-in relative overflow-hidden">
       <div className="flex justify-between items-center mb-6 relative z-10">
-        <h2 className="text-xl font-bold text-zinc-900 dark:text-white">Full-Screen Offers</h2>
+        <h2 className="text-xl font-semibold text-zinc-900 dark:text-white">Full-Screen Offers</h2>
         <Button onClick={() => setEditOffer(defaultNewOffer)} className="flex items-center gap-2 bg-zinc-900 text-white dark:bg-white dark:text-zinc-900">
           <Plus size={16} /> Add Offer
         </Button>
@@ -131,7 +131,7 @@ export default function ManageOnboardingOffers() {
           <Button onClick={() => setEditOffer(null)} variant="ghost" size="icon" className="absolute top-4 right-4">
             <X size={20} />
           </Button>
-          <h3 className="text-lg font-bold mb-4">{editOffer.id ? "Edit" : "New"} Offer</h3>
+          <h3 className="text-lg font-semibold mb-4">{editOffer.id ? "Edit" : "New"} Offer</h3>
           <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
                <div>
@@ -186,7 +186,7 @@ export default function ManageOnboardingOffers() {
           <div key={offer.id} className="flex items-center gap-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-4 rounded-2xl">
              <img src={offer.imageUrl} alt="Offer" className="w-20 h-20 bg-zinc-100 object-cover rounded-xl" />
              <div className="flex-1">
-               <h4 className="font-bold text-zinc-900 dark:text-zinc-100">{offer.title1} {offer.title2}</h4>
+               <h4 className="font-semibold text-zinc-900 dark:text-zinc-100">{offer.title1} {offer.title2}</h4>
                <p className="text-sm text-zinc-500">{offer.highlightedWord} - {offer.glassDiscount}</p>
              </div>
              <div className="flex items-center gap-2">

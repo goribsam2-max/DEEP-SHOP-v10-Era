@@ -110,30 +110,6 @@ const BottomNav: React.FC = () => {
     return () => window.removeEventListener("deepshop:bottom-nav-visibility", syncVisibility);
   }, []);
 
-  if (
-    hideForModal ||
-    location.pathname.startsWith("/product/") ||
-    location.pathname.startsWith("/messages") ||
-    location.pathname.startsWith("/seller") ||
-    location.pathname.startsWith("/admin") ||
-    location.pathname.startsWith("/checkout") ||
-    location.pathname.startsWith("/payment/")
-  ) {
-    return null;
-  }
-
-  const navItems = [
-    { to: "/", label: "Home", icon: Home, customSvg: customSvgs.home },
-    { to: "/orders", label: "Activity", icon: Activity, customSvg: customSvgs.doc },
-    { to: "/loops/create", label: "Create", icon: Plus, isCreate: true },
-    { to: "/loops", label: "Loops", icon: Compass, customSvg: customSvgs.search },
-    { to: "/profile", label: "Profile", icon: User, customSvg: customSvgs.profile },
-  ];
-
-  const springTransition = shouldReduceMotion
-    ? { duration: 0.14, ease: "easeOut" as const }
-    : { type: "spring" as const, stiffness: 520, damping: 36, mass: 0.8 };
-
   const swipeableRoutes = ["/", "/orders", "/loops", "/profile"];
   const navTouchStartRef = React.useRef<{ x: number; y: number; at: number } | null>(null);
 
@@ -171,6 +147,30 @@ const BottomNav: React.FC = () => {
       navigate(swipeableRoutes[nextIdx]);
     }
   };
+
+  if (
+    hideForModal ||
+    location.pathname.startsWith("/product/") ||
+    location.pathname.startsWith("/messages") ||
+    location.pathname.startsWith("/seller") ||
+    location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/checkout") ||
+    location.pathname.startsWith("/payment/")
+  ) {
+    return null;
+  }
+
+  const navItems = [
+    { to: "/", label: "Home", icon: Home, customSvg: customSvgs.home },
+    { to: "/orders", label: "Activity", icon: Activity, customSvg: customSvgs.doc },
+    { to: "/loops/create", label: "Create", icon: Plus, isCreate: true },
+    { to: "/loops", label: "Loops", icon: Compass, customSvg: customSvgs.search },
+    { to: "/profile", label: "Profile", icon: User, customSvg: customSvgs.profile },
+  ];
+
+  const springTransition = shouldReduceMotion
+    ? { duration: 0.14, ease: "easeOut" as const }
+    : { type: "spring" as const, stiffness: 520, damping: 36, mass: 0.8 };
 
   return (
     <div className="fixed bottom-[max(14px,env(safe-area-inset-bottom))] inset-x-0 z-[100] md:hidden px-4 pointer-events-none flex justify-center">
@@ -263,7 +263,7 @@ const BottomNav: React.FC = () => {
                   );
                 })()}
                 {item.to === "/orders" && cartCount > 0 && (
-                  <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 rounded-full bg-[#0071E3] text-white text-[9px] font-bold flex items-center justify-center tabular-nums">
+                  <span className="absolute -top-1 -right-2 min-w-[14px] h-[14px] px-1 rounded-full bg-[#0071E3] text-white text-[9px] font-semibold flex items-center justify-center tabular-nums">
                     {cartCount > 9 ? "9+" : cartCount}
                   </span>
                 )}

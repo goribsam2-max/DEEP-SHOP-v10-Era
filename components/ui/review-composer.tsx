@@ -227,7 +227,7 @@ export function ReviewComposer({
     >
       <div className="flex items-center justify-between gap-3 mb-4">
         <div>
-          <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+          <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
             Write a Customer Review
           </h3>
           <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -282,7 +282,7 @@ export function ReviewComposer({
           })}
         </div>
         {activeStars > 0 && (
-          <span className="text-xs font-bold text-[#FF9500] dark:text-[#FF9F0A]">
+          <span className="text-xs font-medium text-[#FF9500] dark:text-[#FF9F0A]">
             {RATING_LABELS[activeStars]}
           </span>
         )}

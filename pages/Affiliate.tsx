@@ -263,7 +263,7 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
             <div>
-              <h2 className="ds-apple-display text-2xl md:text-3xl font-bold mb-3 text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2">
+              <h2 className="ds-apple-display text-2xl md:text-3xl font-semibold mb-3 text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2">
                 Earn with DEEP SHOP
               </h2>
               <p className="text-sm ds-apple-muted max-w-xl leading-relaxed">
@@ -322,7 +322,7 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
                  ></div>
                  
                  <div className="flex-1 flex flex-col justify-end w-full">
-                   <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm md:text-base mb-1">{st.title}</h3>
+                   <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm md:text-base mb-1">{st.title}</h3>
                    <p className="text-xs ds-apple-muted mb-4 px-2 line-clamp-2 leading-snug">
                      {st.desc}
                    </p>
@@ -352,7 +352,7 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
                 <Icon name="info-circle" className="text-xl" />
               </div>
               <div>
-                <h4 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-base mb-2">How to claim your reward</h4>
+                <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-base mb-2">How to claim your reward</h4>
                 <p className="text-sm ds-apple-muted leading-relaxed mb-4">
                   Once your video reaches at least <strong className="text-[#1D1D1F] dark:text-[#F5F5F7]">1,000 views</strong>, submit its link in the form. Our team verifies the view count and link placement, then credits your Wallet.
                 </p>
@@ -363,7 +363,7 @@ const SmallCreatorsHub: React.FC<{ userData: UserProfile }> = ({ userData }) => 
             </div>
 
             <div className="ds-apple-surface-subtle rounded-[24px] p-6">
-               <h4 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-4 flex items-center gap-2">
+               <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-4 flex items-center gap-2">
                  <Icon name="video" className="text-[#0071E3] dark:text-[#0A84FF]" />
                  Submit Your Video
                </h4>
@@ -551,7 +551,7 @@ const CreatorHub: React.FC<{ userData: UserProfile }> = ({ userData }) => {
   return (
     <div className="space-y-6">
       <div className="ds-apple-surface rounded-[28px] p-6 md:p-8">
-        <h2 className="text-xl font-bold tracking-tight mb-4 flex items-center gap-2.5 text-[#1D1D1F] dark:text-[#F5F5F7]">
+        <h2 className="text-xl font-semibold tracking-tight mb-4 flex items-center gap-2.5 text-[#1D1D1F] dark:text-[#F5F5F7]">
           <Icon name="video" className="text-[#0071E3] dark:text-[#0A84FF]" /> Content Creator Hub
         </h2>
         <div className="ds-apple-surface-subtle p-5 rounded-2xl mb-6">
@@ -846,7 +846,7 @@ const AffiliatePage: React.FC = () => {
         <div className="max-w-lg mx-auto px-4 pt-10 sm:pt-14 text-center">
           <div className="mb-6">
             <p className="ds-apple-eyebrow mb-1">Application Status</p>
-            <h1 className="ds-apple-display text-[22px] sm:text-[26px] leading-tight font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="ds-apple-display text-[22px] sm:text-[26px] leading-tight font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
               Partner Program
             </h1>
           </div>
@@ -854,7 +854,7 @@ const AffiliatePage: React.FC = () => {
             <div className="w-14 h-14 rounded-2xl bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center mx-auto">
               <Clock className="w-7 h-7" />
             </div>
-            <h2 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h2 className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
               Your request is under review
             </h2>
             <p className="text-sm ds-apple-muted leading-relaxed">
@@ -872,7 +872,7 @@ const AffiliatePage: React.FC = () => {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8">
           <div className="mb-8 text-center md:text-left">
             <p className="ds-apple-eyebrow mb-1.5">Partner Program</p>
-            <h1 className="ds-apple-display text-[24px] sm:text-[30px] leading-tight font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">
+            <h1 className="ds-apple-display text-[24px] sm:text-[30px] leading-tight font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-3">
               Partner &amp; Earn
             </h1>
             <p className="ds-apple-muted text-sm font-medium leading-relaxed max-w-xl">
@@ -1110,7 +1110,7 @@ const AffiliatePage: React.FC = () => {
             <p className="ds-apple-eyebrow">
               {activeTab === "menu" ? "Partner Portal" : "Affiliate Portal"}
             </p>
-            <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.02em] leading-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+            <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold tracking-[-0.02em] leading-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
               {activeTab === "menu"
                 ? "Partners"
                 : activeTab === "dashboard"
@@ -1153,7 +1153,7 @@ const AffiliatePage: React.FC = () => {
                       <IconCmp className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-[17px] text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <h3 className="font-semibold text-[17px] text-[#1D1D1F] dark:text-[#F5F5F7]">
                         {itemTab.title}
                       </h3>
                       <p className="text-xs sm:text-sm ds-apple-muted">
@@ -1196,7 +1196,7 @@ const AffiliatePage: React.FC = () => {
                   <p className="text-white/65 font-medium text-xs uppercase tracking-wider mb-1">
                     Total Earned
                   </p>
-                  <h2 className="text-4xl sm:text-[3.25rem] font-bold tracking-[-0.03em] leading-none">
+                  <h2 className="text-4xl sm:text-[3.25rem] font-semibold tracking-[-0.03em] leading-none">
                     {formatPrice(
                       (userData.walletBalance || 0) +
                         logs.reduce(
@@ -1210,7 +1210,7 @@ const AffiliatePage: React.FC = () => {
                   <p className="text-white/65 font-medium text-xs uppercase tracking-wider mb-1">
                     Available Balance
                   </p>
-                  <p className="text-2xl sm:text-3xl font-bold tracking-tight text-[#30D158]">
+                  <p className="text-2xl sm:text-3xl font-semibold tracking-tight text-[#30D158]">
                     {formatPrice(userData.walletBalance || 0)}
                   </p>
                 </div>
@@ -1236,7 +1236,7 @@ const AffiliatePage: React.FC = () => {
             {/* Partner Tracker Card */}
             <div className="ds-apple-surface rounded-[24px] p-6">
               <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <h3 className="text-lg font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                   Partner Tracker
                 </h3>
                 <span className="text-xs font-semibold ds-apple-muted tabular-nums">
@@ -1251,7 +1251,7 @@ const AffiliatePage: React.FC = () => {
                       Total Sales Record
                     </h4>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-lg text-[#248A3D] dark:text-[#30D158]">
+                      <span className="font-semibold text-lg text-[#248A3D] dark:text-[#30D158]">
                         {salesCount}
                       </span>
                       <span className="text-xs ds-apple-muted font-medium">
@@ -1275,7 +1275,7 @@ const AffiliatePage: React.FC = () => {
                       Sales Progress
                     </h4>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <span className="font-semibold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
                         {progressPercent.toFixed(0)}%
                       </span>
                       <span className="text-xs ds-apple-muted font-medium">
@@ -1296,7 +1296,7 @@ const AffiliatePage: React.FC = () => {
                     <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm sm:text-base mb-1">
                       Next Cap Target
                     </h4>
-                    <span className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <span className="font-semibold text-lg text-[#1D1D1F] dark:text-[#F5F5F7]">
                       {formatPrice(nextCommission)}
                     </span>
                   </div>
@@ -1317,7 +1317,7 @@ const AffiliatePage: React.FC = () => {
             {/* Performance Chart */}
             <div className="ds-apple-surface p-6 sm:p-8 rounded-[24px] overflow-hidden relative hidden md:block">
               <div className="flex justify-between items-center mb-6">
-                <h2 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <h2 className="text-lg font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                   Performance Over Time
                 </h2>
                 <div className="flex items-center gap-1.5 text-xs font-semibold ds-apple-muted">
@@ -1397,16 +1397,16 @@ const AffiliatePage: React.FC = () => {
 
             {/* Promotion Hub */}
             <div className="ds-apple-surface rounded-[24px] p-6 sm:p-8">
-              <h3 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 tracking-tight">
+              <h3 className="text-lg sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2 tracking-tight">
                 Your Promotion Hub
               </h3>
               <p className="text-sm font-medium ds-apple-muted mb-6 max-w-md tabular-nums">
                 Share your code everywhere. Customers get{" "}
-                <span className="text-[#1D1D1F] dark:text-[#F5F5F7] font-bold">
+                <span className="text-[#1D1D1F] dark:text-[#F5F5F7] font-semibold">
                   5% OFF
                 </span>{" "}
                 instantly, and you earn{" "}
-                <span className="text-[#248A3D] dark:text-[#30D158] font-bold">
+                <span className="text-[#248A3D] dark:text-[#30D158] font-semibold">
                   {formatPrice(currentCommission)}
                 </span>{" "}
                 immediately upon delivery.
@@ -1426,7 +1426,7 @@ const AffiliatePage: React.FC = () => {
                         onChange={(e) =>
                           setTempCode(e.target.value.toUpperCase())
                         }
-                        className="flex-1 bg-transparent px-3.5 text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-w-0"
+                        className="flex-1 bg-transparent px-3.5 text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-w-0"
                         placeholder="e.g. VIBE"
                       />
                       <div className="flex gap-1.5 shrink-0">
@@ -1464,7 +1464,7 @@ const AffiliatePage: React.FC = () => {
                         type="text"
                         readOnly
                         value={affiliateCode}
-                        className="flex-1 bg-transparent px-3.5 text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-w-0"
+                        className="flex-1 bg-transparent px-3.5 text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] outline-none min-w-0"
                       />
                       <div className="flex gap-1.5 shrink-0">
                         <button
@@ -1536,11 +1536,11 @@ const AffiliatePage: React.FC = () => {
                   <Crown className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="inline-flex items-center gap-1.5 text-[11px] font-bold text-[#B26A00] dark:text-[#FFD60A] uppercase tracking-wider mb-0.5">
+                  <div className="inline-flex items-center gap-1.5 text-[11px] font-medium text-[#B26A00] dark:text-[#FFD60A] uppercase tracking-wider mb-0.5">
                     <GraduationCap className="w-3.5 h-3.5" />
                     <span>Reseller Guide &amp; VIP Membership</span>
                   </div>
-                  <h4 className="text-sm font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <h4 className="text-sm font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     Resell products with unlimited 100% Cash on Delivery at ৳0 advance
                   </h4>
                   <p className="text-xs ds-apple-muted mt-0.5">
@@ -1557,7 +1557,7 @@ const AffiliatePage: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2">
                 <div className="flex items-center justify-between mb-3 px-1">
-                  <h3 className="text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <h3 className="text-lg font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                     Recent Transactions
                   </h3>
                   <span className="text-xs font-semibold text-[#248A3D] dark:text-[#30D158] uppercase tracking-wider tabular-nums">
@@ -1570,7 +1570,7 @@ const AffiliatePage: React.FC = () => {
                     <div className="w-14 h-14 ds-apple-surface-subtle rounded-full flex items-center justify-center mx-auto mb-3 ds-apple-muted">
                       <Icon name="receipt" className="text-2xl" />
                     </div>
-                    <h4 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">
+                    <h4 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1">
                       No transactions yet
                     </h4>
                     <p className="text-sm ds-apple-muted max-w-[220px] mx-auto">
@@ -1586,7 +1586,7 @@ const AffiliatePage: React.FC = () => {
                       >
                         <div className="flex items-center gap-3.5">
                           <div className="w-10 h-10 rounded-full bg-[#248A3D]/12 dark:bg-[#30D158]/16 text-[#248A3D] dark:text-[#30D158] flex items-center justify-center shrink-0">
-                            <Icon name="arrow-down-left" className="text-sm font-bold" />
+                            <Icon name="arrow-down-left" className="text-sm font-semibold" />
                           </div>
                           <div>
                             <p className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-sm mb-0.5">
@@ -1604,7 +1604,7 @@ const AffiliatePage: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                        <p className="font-bold text-[#248A3D] dark:text-[#30D158] text-base">
+                        <p className="font-semibold text-[#248A3D] dark:text-[#30D158] text-base">
                           +{formatPrice(log.commission)}
                         </p>
                       </div>
@@ -1618,7 +1618,7 @@ const AffiliatePage: React.FC = () => {
                   <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center mb-5">
                     <Icon name="bolt" className="text-[#30D158]" />
                   </div>
-                  <h3 className="text-lg font-bold tracking-tight mb-5">
+                  <h3 className="text-lg font-semibold tracking-tight mb-5">
                     Marketing Tips
                   </h3>
 
@@ -1629,7 +1629,7 @@ const AffiliatePage: React.FC = () => {
                       </h4>
                       <p className="text-xs text-white/75 leading-relaxed">
                         Add your link to Instagram, TikTok, and bio. Mention &ldquo;Use code{" "}
-                        <span className="font-bold text-[#30D158] uppercase">
+                        <span className="font-medium text-[#30D158] uppercase">
                           {userData.affiliateCode || "VIBE"}
                         </span>{" "}
                         for 5% off&rdquo;.

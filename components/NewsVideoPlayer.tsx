@@ -35,6 +35,7 @@ export interface FeedVideoEndScreenMeta {
 
 interface NewsVideoPlayerProps {
   videoSource: ParsedVideoEmbed;
+  posterUrl?: string;
   autoPlayInView?: boolean;
   overlayBadge?: React.ReactNode;
   bgMusicUrl?: string;
@@ -67,6 +68,7 @@ const formatVideoClock = (seconds: number): string => {
 
 export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
   videoSource,
+  posterUrl,
   autoPlayInView = true,
   overlayBadge,
   bgMusicUrl,
@@ -372,7 +374,7 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
           preloadObserver.disconnect();
         }
       },
-      { rootMargin: "900px 0px" }
+      { rootMargin: "1400px 0px" }
     );
 
     const playObserver = new IntersectionObserver(
@@ -409,7 +411,21 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
       setHasLoadedFrame(true);
       setIsBuffering(false);
     }
-  });
+  }, [resolvedEmbed.canonicalUrl, useRawOriginFallback]);
+
+  // Stall watchdog: if direct CDN stream stalls silently without firing onError, switch to /api/stream-media proxy
+  useEffect(() => {
+    if (!isInView || !usesNativeStream || hasLoadedFrame || useRawOriginFallback || streamError) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      const v = nativeVideoRef.current;
+      if (!v || v.readyState < 2) {
+        setUseRawOriginFallback(true);
+      }
+    }, 2800);
+    return () => window.clearTimeout(timer);
+  }, [isInView, usesNativeStream, hasLoadedFrame, useRawOriginFallback, streamError]);
 
   // React to viewport visibility changes to autoplay or pause cleanly
   useEffect(() => {
@@ -784,14 +800,14 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <span className="text-xs font-bold text-white">
+                <span className="text-xs font-medium text-white">
                   {creatorName.charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
 
             <div className="min-w-0 leading-tight">
-              <p className="text-[14px] font-bold text-white truncate">
+              <p className="text-[14px] font-semibold text-white truncate">
                 {creatorName}
               </p>
               <p className="text-[12px] text-white/90 truncate flex items-center gap-1 mt-0.5">
@@ -890,6 +906,11 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
       return null;
     }
 
+    const effectivePoster =
+      (posterUrl && posterUrl.trim()) ||
+      (resolvedEmbed.thumbnailUrl && resolvedEmbed.thumbnailUrl.trim()) ||
+      "";
+
     return (
       <div
         ref={containerRef}
@@ -900,12 +921,33 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
         <div
           onClick={handleVideoSurfaceClick}
           onDoubleClick={handleVideoSurfaceDoubleClick}
-          className="relative w-full bg-zinc-950 flex items-center justify-center cursor-pointer overflow-hidden"
+          className="relative w-full min-h-[220px] bg-zinc-950 flex items-center justify-center cursor-pointer overflow-hidden"
         >
+          {/* Ambient poster or shimmer backdrop while first video frame decodes */}
+          {!hasLoadedFrame && !streamError && (
+            effectivePoster ? (
+              <div aria-hidden="true" className="absolute inset-0 z-0 overflow-hidden bg-zinc-950 pointer-events-none">
+                <img
+                  src={effectivePoster}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover opacity-85"
+                />
+              </div>
+            ) : (
+              <div
+                aria-hidden="true"
+                className="absolute inset-0 z-0 bg-gradient-to-br from-zinc-900 via-zinc-950 to-zinc-900 pointer-events-none"
+              >
+                <div className="absolute inset-0 ds-skeleton opacity-35" />
+              </div>
+            )
+          )}
+
           <video
             ref={nativeVideoRef}
             src={streamSrc}
-            poster={resolvedEmbed.thumbnailUrl?.trim() || undefined}
+            poster={effectivePoster || undefined}
             preload={hasEnteredView || isInView ? "auto" : "metadata"}
             playsInline
             loop={!enableFeedEndScreen}
@@ -982,14 +1024,14 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
               if (v.videoHeight > 0 && v.videoWidth > 0) {
                 setDetectedVertical(v.videoHeight >= v.videoWidth);
               }
-              if (!resolvedEmbed.thumbnailUrl && v.currentTime === 0 && v.paused) {
+              if (!effectivePoster && v.currentTime === 0 && v.paused) {
                 try {
                   v.currentTime = 0.001;
                 } catch {}
               }
             }}
             onTimeUpdate={(e) => {
-              if (!hasLoadedFrame && e.currentTarget.currentTime > 0) {
+              if (!hasLoadedFrame && (e.currentTarget.currentTime > 0 || e.currentTarget.readyState >= 2)) {
                 setHasLoadedFrame(true);
               }
               setCurrentTime(e.currentTarget.currentTime);
@@ -1010,14 +1052,14 @@ export const NewsVideoPlayer: React.FC<NewsVideoPlayerProps> = ({
                 setStreamError(true);
               }
             }}
-            className="w-full max-h-[680px] h-auto object-contain block mx-auto pointer-events-none"
+            className="relative z-[1] w-full max-h-[680px] h-auto object-contain block mx-auto pointer-events-none"
           />
 
-          {/* Loading / Buffering Spinner */}
-          {(!hasLoadedFrame || isBuffering) && !streamError && (
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/25">
-              <div className="w-11 h-11 rounded-full bg-black/55 backdrop-blur-md border border-white/15 flex items-center justify-center text-white">
-                <Loader2 className="w-5 h-5 animate-spin" />
+          {/* Compact Buffering Spinner (only shown when actively stalling after entering view) */}
+          {isBuffering && !streamError && (
+            <div className="pointer-events-none absolute inset-0 z-[2] flex items-center justify-center bg-black/20">
+              <div className="w-9 h-9 rounded-full bg-black/55 backdrop-blur-md border border-white/15 flex items-center justify-center text-white">
+                <Loader2 className="w-4 h-4 animate-spin" />
               </div>
             </div>
           )}

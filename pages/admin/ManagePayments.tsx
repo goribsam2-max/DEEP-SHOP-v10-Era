@@ -347,12 +347,12 @@ const ManagePayments: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-4 md:p-6 space-y-8">
       <div>
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-white">Social & Payment Settings</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-white">Social & Payment Settings</h1>
         <p className="text-zinc-500 text-sm mt-1">Manage Footer links, active mobile banking payment options, and fallback numbers.</p>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-4">
-        <h2 className="text-lg font-bold text-zinc-900 dark:text-white border-b border-zinc-100 dark:border-zinc-800 pb-2">Social Links (Footer)</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white border-b border-zinc-100 dark:border-zinc-800 pb-2">Social Links (Footer)</h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Instagram URL (@deep.shop.official)</label>
@@ -410,7 +410,7 @@ const ManagePayments: React.FC = () => {
                       }
                     }
                   }}
-                  className="text-xs w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
+                  className="text-xs w-full file:mr-3 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-medium file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100 cursor-pointer"
                 />
                 <input
                   type="text"
@@ -426,7 +426,7 @@ const ManagePayments: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-4">
-        <h2 className="text-lg font-bold text-zinc-900 dark:text-white border-b border-zinc-100 dark:border-zinc-800 pb-2">Mobile Banking & Fallback Payment Settings</h2>
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-white border-b border-zinc-100 dark:border-zinc-800 pb-2">Mobile Banking & Fallback Payment Settings</h2>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Scan to Pay QR Image (Optional)</label>
@@ -453,7 +453,7 @@ const ManagePayments: React.FC = () => {
                 className="w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#1cdb5e]/10 file:text-[#1cdb5e] hover:file:bg-[#1cdb5e]/20 disabled:opacity-50"
               />
               <div className="flex items-center gap-2">
-                <span className="text-xs text-zinc-500 font-bold uppercase">OR</span>
+                <span className="text-xs text-zinc-500 font-medium uppercase">OR</span>
               </div>
               <input
                 type="text"
@@ -471,7 +471,7 @@ const ManagePayments: React.FC = () => {
           <div className="p-4 bg-pink-50/50 dark:bg-pink-950/20 border border-pink-200 dark:border-pink-900/30 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label className="block text-sm font-bold text-pink-700 dark:text-pink-300">
+                <label className="block text-sm font-medium text-pink-700 dark:text-pink-300">
                   Multiple bKash Numbers (Personal, Payment, Cash Out)
                 </label>
                 <p className="text-xs text-zinc-500">
@@ -484,7 +484,7 @@ const ManagePayments: React.FC = () => {
               <select
                 value={newBkashType}
                 onChange={(e) => setNewBkashType(e.target.value as any)}
-                className="bg-white dark:bg-zinc-800 border border-pink-200 dark:border-pink-800/50 rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 dark:text-white"
+                className="bg-white dark:bg-zinc-800 border border-pink-200 dark:border-pink-800/50 rounded-xl px-3 py-2.5 text-xs font-medium text-zinc-900 dark:text-white"
               >
                 <option value="personal">Personal (Send Money)</option>
                 <option value="payment">Payment / Merchant (Make Payment)</option>
@@ -554,7 +554,7 @@ const ManagePayments: React.FC = () => {
                   setNewBkashInput("");
                   handleSave(nextData);
                 }}
-                className="bg-[#E2125B] hover:bg-[#c20e4d] text-white rounded-xl px-5 text-sm font-bold"
+                className="bg-[#E2125B] hover:bg-[#c20e4d] text-white rounded-xl px-5 text-sm font-semibold"
               >
                 + Add bKash
               </Button>
@@ -568,8 +568,8 @@ const ManagePayments: React.FC = () => {
                     key={`${acc?.number}-${normType}-${i}`}
                     className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-pink-300 dark:border-pink-800 px-3 py-1.5 rounded-xl shadow-xs"
                   >
-                    <span className="text-xs font-bold text-[#E2125B]">#{i + 1}</span>
-                    <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
+                    <span className="text-xs font-medium text-[#E2125B]">#{i + 1}</span>
+                    <span className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
                     <select
                       value={normType}
                       onChange={(e) => {
@@ -586,7 +586,7 @@ const ManagePayments: React.FC = () => {
                         handleSave(nextData);
                       }}
                       className={cn(
-                        "text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase cursor-pointer border-0 outline-none",
+                        "text-[10px] font-medium px-2 py-0.5 rounded-lg uppercase cursor-pointer border-0 outline-none",
                         normType === "payment"
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                           : normType === "cashout"
@@ -613,7 +613,7 @@ const ManagePayments: React.FC = () => {
                         setData(nextData);
                         handleSave(nextData);
                       }}
-                      className="text-zinc-400 hover:text-red-500 text-xs font-bold ml-1 cursor-pointer"
+                      className="text-zinc-400 hover:text-red-500 text-xs font-medium ml-1 cursor-pointer"
                     >
                       ✕
                     </button>
@@ -630,7 +630,7 @@ const ManagePayments: React.FC = () => {
           <div className="p-4 bg-orange-50/50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <label className="block text-sm font-bold text-orange-700 dark:text-orange-300">
+                <label className="block text-sm font-medium text-orange-700 dark:text-orange-300">
                   Multiple Nagad Numbers (Personal, Payment, Cash Out)
                 </label>
                 <p className="text-xs text-zinc-500">
@@ -643,7 +643,7 @@ const ManagePayments: React.FC = () => {
               <select
                 value={newNagadType}
                 onChange={(e) => setNewNagadType(e.target.value as any)}
-                className="bg-white dark:bg-zinc-800 border border-orange-200 dark:border-orange-800/50 rounded-xl px-3 py-2.5 text-xs font-bold text-zinc-900 dark:text-white"
+                className="bg-white dark:bg-zinc-800 border border-orange-200 dark:border-orange-800/50 rounded-xl px-3 py-2.5 text-xs font-medium text-zinc-900 dark:text-white"
               >
                 <option value="personal">Personal (Send Money)</option>
                 <option value="payment">Payment / Merchant (Make Payment)</option>
@@ -713,7 +713,7 @@ const ManagePayments: React.FC = () => {
                   setNewNagadInput("");
                   handleSave(nextData);
                 }}
-                className="bg-[#F57C20] hover:bg-[#d96714] text-white rounded-xl px-5 text-sm font-bold"
+                className="bg-[#F57C20] hover:bg-[#d96714] text-white rounded-xl px-5 text-sm font-semibold"
               >
                 + Add Nagad
               </Button>
@@ -727,8 +727,8 @@ const ManagePayments: React.FC = () => {
                     key={`${acc?.number}-${normType}-${i}`}
                     className="flex items-center gap-2 bg-white dark:bg-zinc-800 border border-orange-300 dark:border-orange-800 px-3 py-1.5 rounded-xl shadow-xs"
                   >
-                    <span className="text-xs font-bold text-[#F57C20]">#{i + 1}</span>
-                    <span className="text-xs font-mono font-bold text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
+                    <span className="text-xs font-medium text-[#F57C20]">#{i + 1}</span>
+                    <span className="text-xs font-mono font-medium text-zinc-900 dark:text-zinc-100">{acc?.number}</span>
                     <select
                       value={normType}
                       onChange={(e) => {
@@ -745,7 +745,7 @@ const ManagePayments: React.FC = () => {
                         handleSave(nextData);
                       }}
                       className={cn(
-                        "text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase cursor-pointer border-0 outline-none",
+                        "text-[10px] font-medium px-2 py-0.5 rounded-lg uppercase cursor-pointer border-0 outline-none",
                         normType === "payment"
                           ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                           : normType === "cashout"
@@ -772,7 +772,7 @@ const ManagePayments: React.FC = () => {
                         setData(nextData);
                         handleSave(nextData);
                       }}
-                      className="text-zinc-400 hover:text-red-500 text-xs font-bold ml-1 cursor-pointer"
+                      className="text-zinc-400 hover:text-red-500 text-xs font-medium ml-1 cursor-pointer"
                     >
                       ✕
                     </button>
@@ -789,7 +789,7 @@ const ManagePayments: React.FC = () => {
 
       <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl shadow-sm border border-zinc-100 dark:border-zinc-800 space-y-4">
         <div className="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-2">
-           <h2 className="text-lg font-bold text-zinc-900 dark:text-white">Footer Payment Logos</h2>
+           <h2 className="text-lg font-semibold text-zinc-900 dark:text-white">Footer Payment Logos</h2>
            <Button onClick={handleAddFooterLogo} className="bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-white hover:bg-zinc-200">Add Logo</Button>
         </div>
         <div className="space-y-4">
@@ -816,7 +816,7 @@ const ManagePayments: React.FC = () => {
                            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#1cdb5e]"
                            placeholder="https://..."
                         />
-                        <label className="bg-zinc-200 dark:bg-zinc-700 px-3 py-2 rounded-xl cursor-pointer flex-shrink-0 text-xs font-bold flex items-center justify-center">
+                        <label className="bg-zinc-200 dark:bg-zinc-700 px-3 py-2 rounded-xl cursor-pointer flex-shrink-0 text-xs font-medium flex items-center justify-center">
                           Upload
                           <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
                              const file = e.target.files?.[0];
@@ -855,7 +855,7 @@ const ManagePayments: React.FC = () => {
         <Button
           onClick={() => handleSave()}
           disabled={saving}
-          className="bg-[#1cdb5e] hover:bg-[#17ba4f] text-white px-8 py-3 rounded-xl font-bold transition-all shadow-md active:scale-95"
+          className="bg-[#1cdb5e] hover:bg-[#17ba4f] text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-md active:scale-95"
         >
           {saving ? "Saving..." : "Save Settings"}
         </Button>

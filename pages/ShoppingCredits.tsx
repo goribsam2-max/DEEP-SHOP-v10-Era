@@ -13,7 +13,7 @@ const ShoppingCredits: React.FC = () => {
           <div className="mx-auto w-16 h-16 bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] rounded-[20px] flex items-center justify-center mb-5">
             <Sparkles className="w-8 h-8" />
           </div>
-          <h1 className="text-[26px] sm:text-[34px] md:text-[38px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.028em] leading-[1.12] mb-3">
+          <h1 className="text-[26px] sm:text-[34px] md:text-[38px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.028em] leading-[1.12] mb-3">
             Shopping Credits
             <br />
             Coming Soon
@@ -26,7 +26,7 @@ const ShoppingCredits: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
           <div className="ds-apple-surface p-6 rounded-[24px] flex flex-col items-start">
             <div className="w-11 h-11 bg-[#FF9500]/12 text-[#FF9500] rounded-full flex items-center justify-center mb-5">
-              <span className="font-bold text-[17px]">DP</span>
+              <span className="font-semibold text-[17px]">DP</span>
             </div>
             <h3 className="font-semibold text-[18px] tracking-[-0.015em] mb-1.5 text-[#1D1D1F] dark:text-[#F5F5F7]">
               Earn DP Coins

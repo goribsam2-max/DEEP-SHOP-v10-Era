@@ -91,7 +91,7 @@ If you don't know something, ask the user to wait for a human team member.`,
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white flex items-center gap-3">
             <div className="p-2 bg-emerald-500/10 rounded-xl">
               <Bot className="w-6 h-6 text-emerald-500" />
             </div>
@@ -102,7 +102,7 @@ If you don't know something, ask the user to wait for a human team member.`,
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
+          className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all disabled:opacity-50"
         >
           {saving ? <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div> : <Save className="w-4 h-4" />}
           Save Changes
@@ -119,7 +119,7 @@ If you don't know something, ask the user to wait for a human team member.`,
                   <Bot className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-zinc-900 dark:text-white">Assistant Activation</h3>
+                  <h3 className="font-semibold text-zinc-900 dark:text-white">Assistant Activation</h3>
                   <p className="text-xs text-zinc-500">Toggle stealth AI agent</p>
                 </div>
               </div>
@@ -136,7 +136,7 @@ If you don't know something, ask the user to wait for a human team member.`,
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Target Account Email</label>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Target Account Email</label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
                     <Shield className="h-4 w-4 text-zinc-400" />
@@ -156,7 +156,7 @@ If you don't know something, ask the user to wait for a human team member.`,
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Human Behavior Prompt</label>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Human Behavior Prompt</label>
                 <textarea
                   value={settings.systemPrompt}
                   onChange={(e) => setSettings({...settings, systemPrompt: e.target.value})}
@@ -167,7 +167,7 @@ If you don't know something, ask the user to wait for a human team member.`,
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Knowledge Base & Store FAQs</label>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Knowledge Base & Store FAQs</label>
                 <textarea
                   value={settings.knowledgeBase}
                   onChange={(e) => setSettings({...settings, knowledgeBase: e.target.value})}
@@ -181,13 +181,13 @@ If you don't know something, ask the user to wait for a human team member.`,
 
           {/* Response Settings */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px] p-6 shadow-sm">
-            <h3 className="font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
+            <h3 className="font-semibold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
               <Zap className="w-4 h-4 text-amber-500" />
               Response Dynamics
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-xs font-bold text-zinc-500 uppercase tracking-wider mb-2">Simulated Typing Delay</label>
+                <label className="block text-xs font-medium text-zinc-500 uppercase tracking-wider mb-2">Simulated Typing Delay</label>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
                     <input 
@@ -203,7 +203,7 @@ If you don't know something, ask the user to wait for a human team member.`,
                       <span>10s</span>
                     </div>
                   </div>
-                  <div className="w-12 h-9 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-center font-bold text-xs text-zinc-900 dark:text-white">
+                  <div className="w-12 h-9 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg flex items-center justify-center font-medium text-xs text-zinc-900 dark:text-white">
                     {settings.minDelay}s
                   </div>
                 </div>
@@ -211,7 +211,7 @@ If you don't know something, ask the user to wait for a human team member.`,
 
               <div className="flex items-center justify-between p-4 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl">
                 <div>
-                  <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Show Typing Indicator</h4>
+                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-white">Show Typing Indicator</h4>
                   <p className="text-[10px] text-zinc-500">Enable 'Admin is typing...' in chat</p>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
@@ -231,14 +231,14 @@ If you don't know something, ask the user to wait for a human team member.`,
         <div className="space-y-6">
           {/* Test Sandbox */}
           <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[24px] p-6 shadow-sm sticky top-6">
-            <h3 className="font-bold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
+            <h3 className="font-semibold text-zinc-900 dark:text-white mb-4 flex items-center gap-2">
               <Terminal className="w-4 h-4 text-emerald-500" />
               Test Sandbox
             </h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Send a Message</label>
+                <label className="block text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-1.5 ml-1">Send a Message</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -260,7 +260,7 @@ If you don't know something, ask the user to wait for a human team member.`,
 
               {testResponse && (
                 <div className="space-y-2">
-                  <label className="block text-[10px] font-bold text-zinc-500 uppercase tracking-wider ml-1">AI Response</label>
+                  <label className="block text-[10px] font-medium text-zinc-500 uppercase tracking-wider ml-1">AI Response</label>
                   <div className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl">
                     <p className="text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed italic">
                       "{testResponse}"
@@ -270,7 +270,7 @@ If you don't know something, ask the user to wait for a human team member.`,
               )}
 
               <div className="p-4 bg-zinc-100 dark:bg-zinc-800/40 rounded-2xl border border-zinc-200/50 dark:border-zinc-700/50">
-                <h4 className="text-[10px] font-bold text-zinc-500 uppercase mb-2">Platform Tips</h4>
+                <h4 className="text-[10px] font-semibold text-zinc-500 uppercase mb-2">Platform Tips</h4>
                 <ul className="space-y-2">
                   <li className="flex gap-2 text-[10px] text-zinc-500">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1 shrink-0"></div>

@@ -64,7 +64,7 @@ export const LanguageSwitcher = ({ className }: { className?: string }) => {
             transition={{ duration: 0.15 }}
             className="absolute right-0 top-full mt-2 w-48 bg-[#fffdfc] dark:bg-[#2d2d30] border border-[#e6e6e6] dark:border-white/15 rounded-xl shadow-[0_5px_35px_rgba(0,0,0,0.07)] dark:shadow-[0_10px_40px_rgba(0,0,0,0.2)] overflow-hidden z-50 p-2 text-left"
           >
-            <div className="text-[11px] font-bold tracking-wider text-zinc-400 dark:text-zinc-400 px-3 py-1 uppercase border-b border-zinc-100 dark:border-zinc-800 mb-1">
+            <div className="text-[11px] font-medium tracking-wider text-zinc-400 dark:text-zinc-400 px-3 py-1 uppercase border-b border-zinc-100 dark:border-zinc-800 mb-1">
               Select Language
             </div>
             <div className="max-h-60 overflow-y-auto space-y-0.5">

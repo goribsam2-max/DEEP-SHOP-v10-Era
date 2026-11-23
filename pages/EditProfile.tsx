@@ -267,7 +267,7 @@ export default function EditProfile() {
         className="max-w-4xl mx-auto px-4 sm:px-6 pt-6 space-y-6"
       >
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
+          <h1 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
             Edit Profile
           </h1>
           <div className="flex items-center gap-2 shrink-0">

@@ -149,10 +149,10 @@ export default function ManageCashOnCampaign() {
       <div className="bg-white dark:bg-[#141720] rounded-[28px] p-5 sm:p-6 border border-zinc-200/80 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-zinc-900 dark:text-white">
+            <h1 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
               Cash on Campaign Management
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 text-xs font-bold">
+            <span className="px-2.5 py-0.5 rounded-full bg-pink-500/10 text-pink-600 dark:text-pink-400 text-xs font-medium">
               Admin & Seller Dashboard
             </span>
           </div>
@@ -167,7 +167,7 @@ export default function ManageCashOnCampaign() {
             type="button"
             onClick={toggleCampaign}
             disabled={toggling}
-            className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2.5 transition active:scale-95 cursor-pointer ${
+            className={`px-5 py-3 rounded-2xl font-medium text-xs sm:text-sm flex items-center gap-2.5 transition active:scale-95 cursor-pointer ${
               isEnabled
                 ? "bg-emerald-600 text-white shadow-xs"
                 : "bg-rose-600 text-white shadow-xs"
@@ -190,7 +190,7 @@ export default function ManageCashOnCampaign() {
           <button
             type="button"
             onClick={() => navigate("/admin/cash-on-campaign/draw")}
-            className="px-5 py-3 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-bold text-xs sm:text-sm flex items-center gap-2 hover:bg-zinc-800 dark:hover:bg-zinc-100 active:scale-95 transition cursor-pointer shadow-xs"
+            className="px-5 py-3 rounded-2xl bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 font-medium text-xs sm:text-sm flex items-center gap-2 hover:bg-zinc-800 dark:hover:bg-zinc-100 active:scale-95 transition cursor-pointer shadow-xs"
           >
             <RefreshCw className="w-4 h-4" />
             <span>Select Random Winner</span>
@@ -203,7 +203,7 @@ export default function ManageCashOnCampaign() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Users className="w-5 h-5 text-pink-500" />
-            <h2 className="text-lg font-bold">Total Applications ({applications.length})</h2>
+            <h2 className="text-lg font-semibold">Total Applications ({applications.length})</h2>
           </div>
 
           {/* Search Box */}
@@ -243,7 +243,7 @@ export default function ManageCashOnCampaign() {
               <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
                 {filtered.map((app) => (
                   <tr key={app.id} className="hover:bg-zinc-50/70 dark:hover:bg-zinc-900/40 transition">
-                    <td className="py-3 px-3 font-bold text-zinc-900 dark:text-white">
+                    <td className="py-3 px-3 font-semibold text-zinc-900 dark:text-white">
                       {app.applicantName}
                     </td>
                     <td className="py-3 px-3">
@@ -309,7 +309,7 @@ export default function ManageCashOnCampaign() {
               <X className="w-5 h-5" />
             </button>
 
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-white">
+            <h3 className="text-xl font-semibold text-zinc-900 dark:text-white">
               {selectedApp.applicantName} - Application Details
             </h3>
 
@@ -355,7 +355,7 @@ export default function ManageCashOnCampaign() {
             </div>
 
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
                 Uploaded Screenshots (Click to View Full Screen)
               </h4>
               <div className="grid grid-cols-2 gap-3">
@@ -370,7 +370,7 @@ export default function ManageCashOnCampaign() {
                       className="w-full aspect-video rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 relative group cursor-pointer block"
                     >
                       <img src={imgUrl} alt="" className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-bold gap-1">
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xs font-medium gap-1">
                         <Eye className="w-4 h-4" />
                         <span>View Full Screen 🔍</span>
                       </div>

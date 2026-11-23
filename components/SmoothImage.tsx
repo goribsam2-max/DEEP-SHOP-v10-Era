@@ -158,10 +158,11 @@ export const SmoothImage: React.FC<SmoothImageProps> = ({
         fetchPriority={eager ? "high" : "auto"}
         decoding="async"
         referrerPolicy={referrerPolicy}
+        data-ds-managed="true"
         onLoad={handleLoad}
         onError={handleError}
-        className={`${className} transition-opacity duration-150 ease-out ${
-          loaded ? "opacity-100" : "opacity-0"
+        className={`${className} transition-all duration-300 ease-out ${
+          loaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-[0.98] blur-[1px]"
         }`}
         {...rest}
       />

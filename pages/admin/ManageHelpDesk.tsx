@@ -110,10 +110,10 @@ const ManageHelpDesk: React.FC = () => {
                   <div className="flex-1 min-w-0 w-full">
                     <div className="flex justify-between items-start mb-3">
                       <div>
-                        <span className="font-mono text-[10px] uppercase font-bold text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-md mb-2 inline-block">
+                        <span className="font-mono text-[10px] uppercase font-medium text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-2.5 py-1 rounded-md mb-2 inline-block">
                           #{t.id.slice(0, 8)}
                         </span>
-                        <h3 className="text-xl font-bold text-zinc-900 dark:text-white tracking-tight mb-1">
+                        <h3 className="text-xl font-semibold text-zinc-900 dark:text-white tracking-tight mb-1">
                           {t.subject}
                         </h3>
                         <div className="flex items-center gap-2 text-xs font-medium text-zinc-500">
@@ -125,7 +125,7 @@ const ManageHelpDesk: React.FC = () => {
                         </div>
                       </div>
                       <span
-                        className={`px-4 py-1.5 rounded-full text-xs font-bold shrink-0 ${t.status === "Open" ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400" : t.status === "Replied" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400" : t.status === "Resolved" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"}`}
+                        className={`px-4 py-1.5 rounded-full text-xs font-medium shrink-0 ${t.status === "Open" ? "bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400" : t.status === "Replied" ? "bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400" : t.status === "Resolved" ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"}`}
                       >
                         {t.status || "Open"}
                       </span>
@@ -141,7 +141,7 @@ const ManageHelpDesk: React.FC = () => {
                         onChange={(e) =>
                           handleUpdateStatus(t.id, e.target.value)
                         }
-                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-bold py-2.5 px-4 rounded-full cursor-pointer hover:border-zinc-300 focus:outline-none"
+                        className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 text-xs font-medium py-2.5 px-4 rounded-full cursor-pointer hover:border-zinc-300 focus:outline-none"
                       >
                         <option value="Open">Status: Open</option>
                         <option value="In Progress">Status: In Progress</option>
@@ -155,7 +155,7 @@ const ManageHelpDesk: React.FC = () => {
                           setReplyingTo(replyingTo === t.id ? null : t.id);
                           setReplyText(replyingTo === t.id ? "" : (t.adminReply || ""));
                         }}
-                        className={`px-6 py-2.5 text-xs font-bold rounded-full transition-colors border ${replyingTo === t.id ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-md" : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white"}`}
+                        className={`px-6 py-2.5 text-xs font-medium rounded-full transition-colors border ${replyingTo === t.id ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 border-zinc-900 dark:border-white shadow-md" : "bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800 hover:text-zinc-900 dark:hover:text-white"}`}
                       >
                         {replyingTo === t.id
                           ? "Cancel Reply"
@@ -165,7 +165,7 @@ const ManageHelpDesk: React.FC = () => {
                       </button>
 
                       {t.adminReply && (
-                         <div className="flex items-center gap-2 text-xs font-bold ml-auto">
+                         <div className="flex items-center gap-2 text-xs font-medium ml-auto">
                             {t.viewedByUser ? (
                               <span className="flex items-center text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 rounded-full">
                                 <Icon name="eye" className="mr-1.5 text-[10px]" /> User Viewed
@@ -195,7 +195,7 @@ const ManageHelpDesk: React.FC = () => {
                 {/* Existing Admin Reply View (If not editing right now) */}
                 {t.adminReply && replyingTo !== t.id && (
                    <div className="bg-emerald-50 dark:bg-emerald-500/5 px-6 md:px-8 py-5 border-t border-emerald-100 dark:border-emerald-500/10">
-                      <div className="text-[10px] uppercase tracking-widest font-bold text-emerald-600 dark:text-emerald-500 mb-2">Our Reply</div>
+                      <div className="text-[10px] uppercase tracking-widest font-medium text-emerald-600 dark:text-emerald-500 mb-2">Our Reply</div>
                       <div className="text-sm font-medium text-emerald-900 dark:text-emerald-100 whitespace-pre-wrap leading-relaxed">
                          {t.adminReply}
                       </div>
@@ -206,7 +206,7 @@ const ManageHelpDesk: React.FC = () => {
                 {replyingTo === t.id && (
                   <div className="bg-zinc-50 dark:bg-zinc-900/50 p-6 md:p-8 border-t border-zinc-200 dark:border-zinc-800">
                     <div className="w-full">
-                      <label className="block text-[11px] uppercase tracking-widest font-black text-zinc-500 mb-3">
+                      <label className="block text-[11px] uppercase tracking-widest font-medium text-zinc-500 mb-3">
                         {t.adminReply ? "Edit your response" : "Write your response"}
                       </label>
                       <textarea
@@ -219,7 +219,7 @@ const ManageHelpDesk: React.FC = () => {
                       <div className="flex justify-end">
                         <button
                           onClick={() => handleSendReply(t)}
-                          className="px-8 py-3.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-full font-bold text-sm tracking-wide shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
+                          className="px-8 py-3.5 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-full font-semibold text-sm tracking-wide shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all"
                         >
                           Send Response
                         </button>
@@ -233,7 +233,7 @@ const ManageHelpDesk: React.FC = () => {
         ) : (
           <div className="py-24 text-center text-zinc-400 bg-white dark:bg-zinc-900 rounded-[2rem] border border-zinc-200 dark:border-zinc-800 shadow-sm">
             <Icon name="inbox" className="text-4xl mb-4 text-zinc-300 dark:text-zinc-700" />
-            <p className="font-bold text-lg tracking-tight text-zinc-900 dark:text-white">
+            <p className="font-semibold text-lg tracking-tight text-zinc-900 dark:text-white">
               No support tickets
             </p>
             <p className="text-sm mt-1">When users need help, they'll appear here.</p>

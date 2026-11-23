@@ -469,7 +469,7 @@ export const StoryCommentSheet: React.FC<StoryCommentSheetProps> = ({
                           onNavigateProfile(rep.uid);
                         }
                       }}
-                      className="w-8 h-8 rounded-full overflow-hidden bg-white/15 shrink-0 flex items-center justify-center text-xs font-bold text-white cursor-pointer"
+                      className="w-8 h-8 rounded-full overflow-hidden bg-white/15 shrink-0 flex items-center justify-center text-xs font-medium text-white cursor-pointer"
                     >
                       {rep.avatar ? (
                         <img
@@ -519,7 +519,7 @@ export const StoryCommentSheet: React.FC<StoryCommentSheetProps> = ({
                   onSubmit={handleSend}
                   className="flex items-center gap-3"
                 >
-                  <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center text-xs font-bold text-white">
+                  <div className="w-10 h-10 rounded-full overflow-hidden bg-zinc-800 shrink-0 flex items-center justify-center text-xs font-medium text-white">
                     {currentUserAvatar ? (
                       <img
                         src={currentUserAvatar}
@@ -698,7 +698,7 @@ export const StoryMentionSheet: React.FC<StoryMentionSheetProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-100 shrink-0 flex items-center justify-center font-bold text-zinc-600">
+                        <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-100 shrink-0 flex items-center justify-center font-semibold text-zinc-600">
                           {avatar ? (
                             <img
                               src={avatar}
@@ -830,7 +830,7 @@ export const StoryHighlightModal: React.FC<StoryHighlightModalProps> = ({
             <div className="w-11 h-1 bg-zinc-300 rounded-full mx-auto -mt-1" />
 
             <div className="flex items-center justify-between">
-              <h3 className="text-[17px] font-bold text-zinc-900">
+              <h3 className="text-[17px] font-semibold text-zinc-900">
                 {creatingNew ? "New Highlight" : "Add to Highlight"}
               </h3>
               <button
@@ -847,7 +847,7 @@ export const StoryHighlightModal: React.FC<StoryHighlightModalProps> = ({
                 <div className="flex flex-col items-center gap-2.5 py-2">
                   <div className="loops-highlight-ring w-[80px] h-[80px] rounded-full p-[3.5px] flex items-center justify-center">
                     <div className="loops-highlight-inner w-full h-full rounded-full flex items-center justify-center px-2 text-center overflow-hidden">
-                      <span className="text-[10px] font-extrabold tracking-[0.04em] uppercase leading-tight line-clamp-2 break-words">
+                      <span className="text-[10px] font-medium tracking-[0.04em] uppercase leading-tight line-clamp-2 break-words">
                         {(titleInput.trim() || "HIGHLIGHT").toUpperCase()}
                       </span>
                     </div>
@@ -923,7 +923,7 @@ export const StoryHighlightModal: React.FC<StoryHighlightModalProps> = ({
                       >
                         <div className="loops-highlight-ring w-[74px] h-[74px] rounded-full p-[3.5px] flex items-center justify-center">
                           <div className="loops-highlight-inner w-full h-full rounded-full flex items-center justify-center px-1.5 text-center overflow-hidden">
-                            <span className="text-[9.5px] font-extrabold tracking-[0.04em] uppercase leading-[1.15] line-clamp-2 break-words">
+                            <span className="text-[9.5px] font-medium tracking-[0.04em] uppercase leading-[1.15] line-clamp-2 break-words">
                               {hl.title}
                             </span>
                           </div>
@@ -1032,7 +1032,7 @@ export const StoryDirectSendSheet: React.FC<StoryDirectSendSheetProps> = ({
                     className="py-2.5 flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-100 shrink-0 flex items-center justify-center font-bold text-zinc-600">
+                      <div className="w-11 h-11 rounded-full overflow-hidden bg-zinc-100 shrink-0 flex items-center justify-center font-semibold text-zinc-600">
                         {avatar ? (
                           <img
                             src={avatar}
@@ -1132,12 +1132,12 @@ export const StoryAboutAccountModal: React.FC<StoryAboutAccountModalProps> = ({
             className="loops-mention-sheet w-full max-w-md rounded-t-[30px] p-6 pb-8 space-y-5"
           >
             <div className="w-11 h-1 bg-zinc-300 rounded-full mx-auto -mt-2" />
-            <h3 className="text-center text-[17px] font-bold text-zinc-900">
+            <h3 className="text-center text-[17px] font-semibold text-zinc-900">
               About this account
             </h3>
 
             <div className="flex flex-col items-center text-center gap-2">
-              <div className="w-18 h-18 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center text-xl font-bold text-zinc-700">
+              <div className="w-18 h-18 rounded-full overflow-hidden bg-zinc-100 flex items-center justify-center text-xl font-semibold text-zinc-700">
                 {avatar ? (
                   <img
                     src={avatar}
@@ -1150,7 +1150,7 @@ export const StoryAboutAccountModal: React.FC<StoryAboutAccountModalProps> = ({
                 )}
               </div>
               <div className="flex items-center gap-1.5">
-                <span className="text-[16px] font-bold text-zinc-900">
+                <span className="text-[16px] font-semibold text-zinc-900">
                   {handle}
                 </span>
                 {isVerified && <VerifiedLoopBadge className="w-4 h-4" />}
@@ -1238,7 +1238,7 @@ export const StorySettingsSheet: React.FC<StorySettingsSheetProps> = ({
           >
             <div className="w-11 h-1 bg-zinc-300 rounded-full mx-auto -mt-2" />
             <div className="flex items-center justify-between">
-              <h3 className="text-[17px] font-bold text-zinc-900">
+              <h3 className="text-[17px] font-semibold text-zinc-900">
                 Story settings
               </h3>
               <button

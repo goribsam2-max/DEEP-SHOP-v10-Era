@@ -236,7 +236,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
         </div>
 
         {/* Real User Name */}
-        <h2 className="text-xl sm:text-2xl font-bold text-zinc-950 dark:text-white mt-4 text-center tracking-tight">
+        <h2 className="text-xl sm:text-2xl font-semibold text-zinc-950 dark:text-white mt-4 text-center tracking-tight">
           {realName}
         </h2>
         {userNickname ? (
@@ -538,7 +538,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             className="bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-[28px] border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
           >
             <div>
-              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Set nickname</h3>
+              <h3 className="text-[20px] font-semibold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Set nickname</h3>
               <p className="text-zinc-500 dark:text-zinc-400 text-[14px] mt-1.5 leading-[1.44]">
                 Only you will see this nickname in your chats with this user.
               </p>
@@ -581,7 +581,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             className="w-full max-w-md bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-[28px] p-6 border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-zinc-950 dark:text-white">Disappearing Messages</h3>
+              <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">Disappearing Messages</h3>
               <button
                 type="button"
                 onClick={() => setShowDisappearingModal(false)}
@@ -633,7 +633,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             className="w-full max-w-md bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-t-[28px] sm:rounded-[28px] p-6 border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-zinc-950 dark:text-white">Chat Controls</h3>
+              <h3 className="text-lg font-semibold text-zinc-950 dark:text-white">Chat Controls</h3>
               <button
                 type="button"
                 onClick={() => setShowChatControlsModal(false)}
@@ -695,23 +695,23 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
               <div className="w-9 h-9 rounded-2xl bg-[#F246F5]/12 text-[#F246F5] flex items-center justify-center shrink-0">
                 <Icon name="shield" className="w-5 h-5" />
               </div>
-              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Privacy &amp; Safety</h3>
+              <h3 className="text-[20px] font-semibold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Privacy &amp; Safety</h3>
             </div>
             <div className="space-y-2.5 text-xs">
               <div className="p-3.5 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
-                <p className="font-bold text-zinc-950 dark:text-white">End-to-End Chat Encryption</p>
+                <p className="font-semibold text-zinc-950 dark:text-white">End-to-End Chat Encryption</p>
                 <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   Messages and calls are secured with transport encryption and private token validation.
                 </p>
               </div>
               <div className="p-3.5 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
-                <p className="font-bold text-zinc-950 dark:text-white">Scam Prevention Guarantee</p>
+                <p className="font-semibold text-zinc-950 dark:text-white">Scam Prevention Guarantee</p>
                 <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   DEEP SHOP automatically scans suspicious review fraud and protects consumer transactions.
                 </p>
               </div>
               <div className="p-3.5 bg-[#F5F3FA] dark:bg-white/[0.06] rounded-2xl border-0">
-                <p className="font-bold text-zinc-950 dark:text-white">Restrict &amp; Block Control</p>
+                <p className="font-semibold text-zinc-950 dark:text-white">Restrict &amp; Block Control</p>
                 <p className="text-[12px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                   You can restrict or block accounts at any time without alerting the other party.
                 </p>
@@ -743,7 +743,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             className="bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-[28px] border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
           >
             <div>
-              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em] flex items-center gap-2">
+              <h3 className="text-[20px] font-semibold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em] flex items-center gap-2">
                 <Icon name="message-square-warning" className="w-5 h-5 text-rose-500" />
                 <span>Report user</span>
               </h3>
@@ -792,7 +792,7 @@ export const ChatUserProfileModal: React.FC<ChatUserProfileModalProps> = ({
             className="bg-white/95 dark:bg-[#1C1A24]/95 backdrop-blur-xl rounded-[28px] border-0 shadow-[0_20px_50px_rgba(120,90,160,0.18)] w-full max-w-[356px] px-6 pt-7 pb-6 text-left space-y-4"
           >
             <div>
-              <h3 className="text-[20px] font-bold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Report a problem</h3>
+              <h3 className="text-[20px] font-semibold text-zinc-950 dark:text-white leading-[1.28] tracking-[-0.02em]">Report a problem</h3>
               <p className="text-zinc-500 dark:text-zinc-400 text-[14px] mt-1.5 leading-[1.44]">
                 Briefly explain what happened and what wasn&apos;t working as expected.
               </p>

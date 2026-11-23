@@ -113,7 +113,7 @@ export const ChatThemeModal: React.FC<ChatThemeModalProps> = ({
             >
               <X className="w-4 h-4" />
             </button>
-            <h3 className="font-bold text-base text-zinc-900 dark:text-white">Chat Themes</h3>
+            <h3 className="font-semibold text-base text-zinc-900 dark:text-white">Chat Themes</h3>
             <div className="w-9" />
           </div>
         </div>

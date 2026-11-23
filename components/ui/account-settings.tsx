@@ -468,7 +468,7 @@ export function AccountSettings() {
       )}
 
       <div className="max-w-md md:max-w-4xl lg:max-w-5xl mx-auto px-4 sm:px-5 pt-6">
-        <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+        <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
           Settings
         </h1>
       </div>

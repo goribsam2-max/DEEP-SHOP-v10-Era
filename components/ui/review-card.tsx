@@ -141,14 +141,14 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
                   className="w-10 h-10 rounded-full object-cover border border-black/[0.08] dark:border-white/[0.12] shrink-0 bg-[#F5F5F7] dark:bg-[#2C2C2E]"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-[#1D1D1F] dark:bg-[#2C2C2E] text-white flex items-center justify-center text-xs font-bold tracking-tight shrink-0 border border-white/10">
+                <div className="w-10 h-10 rounded-full bg-[#1D1D1F] dark:bg-[#2C2C2E] text-white flex items-center justify-center text-xs font-medium tracking-tight shrink-0 border border-white/10">
                   {getInitials(name)}
                 </div>
               )}
 
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className="text-sm sm:text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
+                  <h3 className="text-sm sm:text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
                     {name || "Verified Customer"}
                   </h3>
                   <CheckCircle2 className="w-3.5 h-3.5 text-[#248A3D] dark:text-[#30D158] shrink-0" />
@@ -176,7 +176,7 @@ const ReviewCard = React.forwardRef<HTMLDivElement, ReviewCardProps>(
                     />
                   ))}
                 </div>
-                <span className="text-xs font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums ml-1">
+                <span className="text-xs font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tabular-nums ml-1">
                   {safeRating.toFixed(1)}
                 </span>
               </div>

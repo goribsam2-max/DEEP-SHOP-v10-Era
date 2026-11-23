@@ -487,7 +487,7 @@ const ManageUsers: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               User List
             </h1>
-            <p className="text-[10px] text-zinc-400 font-bold tracking-normal mt-1">
+            <p className="text-[10px] text-zinc-400 font-normal tracking-normal mt-1">
               Manage Customer Access
             </p>
           </div>
@@ -522,7 +522,7 @@ const ManageUsers: React.FC = () => {
           <input
             type="text"
             placeholder="Search by name, email or IP..."
-            className="w-full p-5 bg-zinc-50 dark:bg-zinc-800 rounded-2xl outline-none border border-zinc-100 dark:border-zinc-800 focus:border-zinc-900 transition-all font-bold text-sm pl-14 shadow-sm"
+            className="w-full p-5 bg-zinc-50 dark:bg-zinc-800 rounded-2xl outline-none border border-zinc-100 dark:border-zinc-800 focus:border-zinc-900 transition-all font-semibold text-sm pl-14 shadow-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -557,22 +557,22 @@ const ManageUsers: React.FC = () => {
                     {user.displayName}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${user.role === "admin" ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "bg-zinc-100/50 text-zinc-500 dark:bg-zinc-800"}`}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${user.role === "admin" ? "bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900" : "bg-zinc-100/50 text-zinc-500 dark:bg-zinc-800"}`}
                   >
                     {user.role}
                   </span>
                   {user.isRegisteredBadge && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400">
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400">
                       Registered
                     </span>
                   )}
                   {(user.kycStatus === 'verified' || user.isVerifiedBadge) && (
-                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
+                    <span className="px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400">
                       Verified
                     </span>
                   )}
                   {user.isBanned && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-red-100 text-red-600">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-red-100 text-red-600">
                       Banned
                     </span>
                   )}
@@ -620,7 +620,7 @@ const ManageUsers: React.FC = () => {
           </motion.div>
         ))}
         {filteredUsers.length === 0 && (
-          <div className="py-20 text-center text-zinc-400 font-bold tracking-normal text-xs">
+          <div className="py-20 text-center text-zinc-400 font-medium tracking-normal text-xs">
             No users found
           </div>
         )}
@@ -646,7 +646,7 @@ const ManageUsers: React.FC = () => {
 
               {/* Roles */}
               <div className="mb-6">
-                <p className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider">User Role</p>
+                <p className="text-xs font-normal text-zinc-500 mb-3 uppercase tracking-wider">User Role</p>
                 <div className="flex flex-wrap gap-2">
                   {(['user', 'seller', 'staff', 'admin'] as const).map((r) => {
                     const isCurrent = detailModal.user?.role === r;
@@ -654,7 +654,7 @@ const ManageUsers: React.FC = () => {
                       <button
                         key={r}
                         onClick={() => updateRole(detailModal.user!.uid, r)}
-                        className={`px-4 py-2 rounded-xl text-xs font-bold capitalize transition-all ${
+                        className={`px-4 py-2 rounded-xl text-xs font-medium capitalize transition-all ${
                           isCurrent
                             ? "bg-indigo-600 text-white shadow-md"
                             : "bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100"
@@ -670,10 +670,10 @@ const ManageUsers: React.FC = () => {
               {/* Badges */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-zinc-200 dark:border-zinc-800 pt-6">
                 <div>
-                  <p className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider">Registered Badge</p>
+                  <p className="text-xs font-normal text-zinc-500 mb-3 uppercase tracking-wider">Registered Badge</p>
                   <button
                     onClick={() => toggleRegisteredBadge(detailModal.user!.uid, !!detailModal.user?.isRegisteredBadge)}
-                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
+                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-2 border ${
                       detailModal.user?.isRegisteredBadge
                         ? "bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400"
                         : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-zinc-100"
@@ -685,10 +685,10 @@ const ManageUsers: React.FC = () => {
                 </div>
 
                 <div>
-                  <p className="text-xs font-bold text-zinc-500 mb-3 uppercase tracking-wider">Verified Badge</p>
+                  <p className="text-xs font-normal text-zinc-500 mb-3 uppercase tracking-wider">Verified Badge</p>
                   <button
                     onClick={() => toggleVerifiedBadge(detailModal.user!.uid, detailModal.user?.kycStatus === 'verified' || !!detailModal.user?.isVerifiedBadge)}
-                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 border ${
+                    className={`w-full py-2.5 px-4 rounded-xl text-xs font-medium transition-all flex items-center justify-center gap-2 border ${
                       (detailModal.user?.kycStatus === 'verified' || detailModal.user?.isVerifiedBadge)
                         ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400"
                         : "bg-white dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-500 hover:bg-zinc-100"
@@ -712,7 +712,7 @@ const ManageUsers: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-zinc-500">Current Rating</p>
-                      <p className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
+                      <p className="text-2xl font-semibold text-zinc-900 dark:text-white mt-1">
                         {((detailModal.user as any).customRating !== undefined && (detailModal.user as any).customRating !== null) 
                           ? (detailModal.user as any).customRating 
                           : "0 (Using reviews default)"}
@@ -736,14 +736,14 @@ const ManageUsers: React.FC = () => {
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-3 items-center">
-                    <p className="text-xs font-bold text-zinc-500 uppercase tracking-wider shrink-0">Adjust Rating:</p>
+                    <p className="text-xs font-normal text-zinc-500 uppercase tracking-wider shrink-0">Adjust Rating:</p>
                     <div className="flex gap-2 w-full sm:w-auto">
                       <button
                         onClick={() => {
                           const current = (detailModal.user as any).customRating || 0;
                           updateCustomRating(detailModal.user!.uid, current - 0.5);
                         }}
-                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-xl text-xs font-bold transition-all"
+                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-xl text-xs font-medium transition-all"
                       >
                         -0.5 Stars
                       </button>
@@ -752,7 +752,7 @@ const ManageUsers: React.FC = () => {
                           const current = (detailModal.user as any).customRating || 0;
                           updateCustomRating(detailModal.user!.uid, current - 0.1);
                         }}
-                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-xl text-xs font-bold transition-all"
+                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-900/30 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/30 rounded-xl text-xs font-medium transition-all"
                       >
                         -0.1 Stars
                       </button>
@@ -761,7 +761,7 @@ const ManageUsers: React.FC = () => {
                           const current = (detailModal.user as any).customRating || 0;
                           updateCustomRating(detailModal.user!.uid, current + 0.1);
                         }}
-                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-xs font-bold transition-all"
+                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-xs font-medium transition-all"
                       >
                         +0.1 Stars
                       </button>
@@ -770,7 +770,7 @@ const ManageUsers: React.FC = () => {
                           const current = (detailModal.user as any).customRating || 0;
                           updateCustomRating(detailModal.user!.uid, current + 0.5);
                         }}
-                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-xs font-bold transition-all"
+                        className="flex-1 sm:flex-initial px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 rounded-xl text-xs font-medium transition-all"
                       >
                         +0.5 Stars
                       </button>
@@ -780,13 +780,13 @@ const ManageUsers: React.FC = () => {
                   <div className="flex gap-2 items-center">
                     <button
                       onClick={() => updateCustomRating(detailModal.user!.uid, 0)}
-                      className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs font-bold transition-all"
+                      className="px-4 py-2 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-xl text-xs font-medium transition-all"
                     >
                       Reset to 0
                     </button>
                     <button
                       onClick={() => updateCustomRating(detailModal.user!.uid, 5)}
-                      className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-xl text-xs font-bold transition-all"
+                      className="px-4 py-2 bg-zinc-900 dark:bg-zinc-100 hover:bg-zinc-800 dark:hover:bg-zinc-200 text-white dark:text-zinc-900 rounded-xl text-xs font-medium transition-all"
                     >
                       Set to 5.0
                     </button>
@@ -804,7 +804,7 @@ const ManageUsers: React.FC = () => {
               <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-zinc-500">Current Followers</p>
-                  <p className="text-2xl font-black text-zinc-900 dark:text-white mt-1">
+                  <p className="text-2xl font-semibold text-zinc-900 dark:text-white mt-1">
                     {detailModal.user.followersCount !== undefined ? detailModal.user.followersCount : 0}
                   </p>
                 </div>
@@ -815,7 +815,7 @@ const ManageUsers: React.FC = () => {
                       placeholder="e.g. 25000"
                       id="admin-followers-input"
                       defaultValue={detailModal.user.followersCount || 0}
-                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold w-32 outline-none text-zinc-900 dark:text-white"
+                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium w-32 outline-none text-zinc-900 dark:text-white"
                     />
                     <button
                       onClick={() => {
@@ -824,7 +824,7 @@ const ManageUsers: React.FC = () => {
                           updateFollowersCount(detailModal.user!.uid, Number(val));
                         }
                       }}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition-all"
                     >
                       Update
                     </button>
@@ -869,7 +869,7 @@ const ManageUsers: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between mb-6">
                   <div>
                     <p className="text-sm font-medium text-zinc-500">Sold by Store</p>
-                    <p className="text-xl font-black text-zinc-900 dark:text-white mt-1">
+                    <p className="text-xl font-semibold text-zinc-900 dark:text-white mt-1">
                       {(detailModal.user as any).customTotalSold !== undefined ? (detailModal.user as any).customTotalSold : 'Real Data'}
                     </p>
                   </div>
@@ -879,14 +879,14 @@ const ManageUsers: React.FC = () => {
                       placeholder="e.g. 50000"
                       id="admin-totalsold-input"
                       defaultValue={(detailModal.user as any).customTotalSold || ''}
-                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold w-32 outline-none text-zinc-900 dark:text-white"
+                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium w-32 outline-none text-zinc-900 dark:text-white"
                     />
                     <button
                       onClick={() => {
                         const val = (document.getElementById("admin-totalsold-input") as HTMLInputElement)?.value;
                         if (val !== undefined && val !== "") updateCustomTotalSold(detailModal.user!.uid, Number(val));
                       }}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition-all"
                     >
                       Update
                     </button>
@@ -897,7 +897,7 @@ const ManageUsers: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between mb-6 border-t border-zinc-200 dark:border-zinc-800 pt-6">
                   <div>
                     <p className="text-sm font-medium text-zinc-500">Positive Review %</p>
-                    <p className="text-xl font-black text-zinc-900 dark:text-white mt-1">
+                    <p className="text-xl font-semibold text-zinc-900 dark:text-white mt-1">
                       {(detailModal.user as any).customPositiveReviewPercent !== undefined ? `${(detailModal.user as any).customPositiveReviewPercent}%` : 'Real Data'}
                     </p>
                   </div>
@@ -908,14 +908,14 @@ const ManageUsers: React.FC = () => {
                       max="100"
                       id="admin-positive-input"
                       defaultValue={(detailModal.user as any).customPositiveReviewPercent || ''}
-                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold w-32 outline-none text-zinc-900 dark:text-white"
+                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium w-32 outline-none text-zinc-900 dark:text-white"
                     />
                     <button
                       onClick={() => {
                         const val = (document.getElementById("admin-positive-input") as HTMLInputElement)?.value;
                         if (val !== undefined && val !== "") updateCustomPositiveReviewPercent(detailModal.user!.uid, Number(val));
                       }}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition-all"
                     >
                       Update
                     </button>
@@ -926,7 +926,7 @@ const ManageUsers: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between border-t border-zinc-200 dark:border-zinc-800 pt-6">
                   <div>
                     <p className="text-sm font-medium text-zinc-500">Regular Buyers</p>
-                    <p className="text-xl font-black text-zinc-900 dark:text-white mt-1">
+                    <p className="text-xl font-semibold text-zinc-900 dark:text-white mt-1">
                       {(detailModal.user as any).customRegularBuyer !== undefined ? (detailModal.user as any).customRegularBuyer : 'Real Data'}
                     </p>
                   </div>
@@ -936,14 +936,14 @@ const ManageUsers: React.FC = () => {
                       placeholder="e.g. 1500"
                       id="admin-regular-input"
                       defaultValue={(detailModal.user as any).customRegularBuyer || ''}
-                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold w-32 outline-none text-zinc-900 dark:text-white"
+                      className="px-3 py-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium w-32 outline-none text-zinc-900 dark:text-white"
                     />
                     <button
                       onClick={() => {
                         const val = (document.getElementById("admin-regular-input") as HTMLInputElement)?.value;
                         if (val !== undefined && val !== "") updateCustomRegularBuyer(detailModal.user!.uid, Number(val));
                       }}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-medium transition-all"
                     >
                       Update
                     </button>
@@ -954,14 +954,14 @@ const ManageUsers: React.FC = () => {
                 <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between border-t border-zinc-200 dark:border-zinc-800 pt-6 mt-6">
                   <div>
                     <p className="text-sm font-medium text-zinc-500">Courier Shipping Feature</p>
-                    <p className="text-sm font-bold text-zinc-900 dark:text-white mt-1">
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-white mt-1">
                       {detailModal.user.canUseCourierShipping ? "Enabled" : "Disabled"}
                     </p>
                   </div>
                   <div>
                     <button
                       onClick={() => updateCourierShippingPermission(detailModal.user!.uid, !detailModal.user.canUseCourierShipping)}
-                      className={`px-4 py-2 text-white rounded-xl text-xs font-bold transition-all ${detailModal.user.canUseCourierShipping ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
+                      className={`px-4 py-2 text-white rounded-xl text-xs font-medium transition-all ${detailModal.user.canUseCourierShipping ? 'bg-red-500 hover:bg-red-600' : 'bg-emerald-500 hover:bg-emerald-600'}`}
                     >
                       {detailModal.user.canUseCourierShipping ? "Disable Courier" : "Enable Courier"}
                     </button>
@@ -982,11 +982,11 @@ const ManageUsers: React.FC = () => {
                   <p className="text-sm font-medium text-zinc-500">Ban / Block Status</p>
                   <p className="mt-2">
                     {detailModal.user.isBanned ? (
-                      <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 rounded-full text-xs font-bold">
+                      <span className="px-3 py-1 bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 rounded-full text-xs font-medium">
                         Banned / Blocked
                       </span>
                     ) : (
-                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-full text-xs font-bold">
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-full text-xs font-medium">
                         Active
                       </span>
                     )}
@@ -1002,7 +1002,7 @@ const ManageUsers: React.FC = () => {
                         user: { ...detailModal.user!, isBanned: nextStatus }
                       });
                     }}
-                    className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-white ${
+                    className={`px-5 py-2.5 rounded-xl text-xs font-medium transition-all text-white ${
                       detailModal.user.isBanned
                         ? "bg-emerald-600 hover:bg-emerald-500"
                         : "bg-red-600 hover:bg-red-500"
@@ -1012,7 +1012,7 @@ const ManageUsers: React.FC = () => {
                   </button>
                   <button
                     onClick={() => handleDeleteUser(detailModal.user!.uid, detailModal.user!.displayName)}
-                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all flex items-center gap-1.5"
+                    className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-medium transition-all flex items-center gap-1.5"
                   >
                     <Icon name="trash" className="text-xs" />
                     Delete User From DB
@@ -1034,11 +1034,11 @@ const ManageUsers: React.FC = () => {
                     Affiliate Status
                   </p>
                   {detailModal.user.isAffiliate ? (
-                    <span className="px-3 py-1 bg-zinc-200 dark:bg-zinc-700 dark:bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900/10 text-zinc-950 dark:text-zinc-50 dark:text-zinc-800 dark:text-zinc-200 rounded-full text-xs font-bold tracking-normal border border-zinc-200 dark:border-zinc-800 dark:border-emerald-800/30">
+                    <span className="px-3 py-1 bg-zinc-200 dark:bg-zinc-700 dark:bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900/10 text-zinc-950 dark:text-zinc-50 dark:text-zinc-800 dark:text-zinc-200 rounded-full text-xs font-medium tracking-normal border border-zinc-200 dark:border-zinc-800 dark:border-emerald-800/30">
                       Active Affiliate
                     </span>
                   ) : (
-                    <span className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full text-xs font-bold tracking-normal border border-zinc-300 dark:border-zinc-700">
+                    <span className="px-3 py-1 bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-full text-xs font-medium tracking-normal border border-zinc-300 dark:border-zinc-700">
                       Not Enrolled
                     </span>
                   )}
@@ -1046,14 +1046,14 @@ const ManageUsers: React.FC = () => {
                 {detailModal.user.isAffiliate ? (
                   <button
                     onClick={() => removeAffiliate(detailModal.user!.uid)}
-                    className="px-5 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-full text-xs font-bold tracking-normal hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                    className="px-5 py-2.5 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-full text-xs font-medium tracking-normal hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
                   >
                     Remove Access
                   </button>
                 ) : (
                   <button
                     onClick={() => addAffiliate(detailModal.user!.uid)}
-                    className="px-5 py-2.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full text-xs font-bold tracking-normal hover:bg-zinc-800 dark:hover:bg-white transition-colors"
+                    className="px-5 py-2.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full text-xs font-medium tracking-normal hover:bg-zinc-800 dark:hover:bg-white transition-colors"
                   >
                     Grant Access
                   </button>
@@ -1063,7 +1063,7 @@ const ManageUsers: React.FC = () => {
               <div className="border-t border-zinc-200 dark:border-zinc-800 pt-6">
                 <p className="text-sm font-medium text-zinc-500 mb-4">
                   Wallet Balance:{" "}
-                  <span className="text-xl font-bold text-zinc-900 dark:text-zinc-100 ml-2">
+                  <span className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 ml-2">
                     ৳{detailModal.user.walletBalance || 0}
                   </span>
                 </p>
@@ -1086,7 +1086,7 @@ const ManageUsers: React.FC = () => {
                           );
                         setCustomWalletAmount("");
                       }}
-                      className="px-5 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full text-xs font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                      className="px-5 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full text-xs font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                     >
                       + Add
                     </button>
@@ -1100,7 +1100,7 @@ const ManageUsers: React.FC = () => {
                           );
                         setCustomWalletAmount("");
                       }}
-                      className="px-5 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full text-xs font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                      className="px-5 py-3 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-full text-xs font-medium hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
                     >
                       - Sub
                     </button>
@@ -1113,7 +1113,7 @@ const ManageUsers: React.FC = () => {
                           );
                         setCustomWalletAmount("");
                       }}
-                      className="px-5 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full text-xs font-bold hover:bg-zinc-800 dark:hover:bg-white transition-colors"
+                      className="px-5 py-3 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full text-xs font-medium hover:bg-zinc-800 dark:hover:bg-white transition-colors"
                     >
                       Set
                     </button>
@@ -1135,7 +1135,7 @@ const ManageUsers: React.FC = () => {
                   />
                   <button
                     onClick={() => handleResetPassword(detailModal.user!.uid)}
-                    className="px-5 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors whitespace-nowrap"
+                    className="px-5 py-3 bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-xl text-xs font-medium hover:bg-red-100 transition-colors whitespace-nowrap"
                   >
                     Change Password
                   </button>
@@ -1150,7 +1150,7 @@ const ManageUsers: React.FC = () => {
                       <Icon name="shield-check" className="text-[#EF8020]" />
                       KYC Identity Verification
                     </div>
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold tracking-normal uppercase ${
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-medium tracking-normal uppercase ${
                       detailModal.user.kycStatus === "verified" ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400" :
                       detailModal.user.kycStatus === "pending" ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-400" :
                       detailModal.user.kycStatus === "rejected" ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400" :
@@ -1165,38 +1165,38 @@ const ManageUsers: React.FC = () => {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-medium">
                         <div>
                           <p className="text-zinc-400 mb-1">NID Legal Name</p>
-                          <p className="text-zinc-800 dark:text-zinc-200 font-bold text-sm">{kycRequest.nidName || "N/A"}</p>
+                          <p className="text-zinc-800 dark:text-zinc-200 font-semibold text-sm">{kycRequest.nidName || "N/A"}</p>
                         </div>
                         <div>
                           <p className="text-zinc-400 mb-1">Date of Birth</p>
-                          <p className="text-zinc-800 dark:text-zinc-200 font-bold text-sm">{kycRequest.dob || "N/A"}</p>
+                          <p className="text-zinc-800 dark:text-zinc-200 font-semibold text-sm">{kycRequest.dob || "N/A"}</p>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                         <div>
-                          <p className="text-[10px] text-zinc-400 font-bold mb-1">NID Front Side</p>
+                          <p className="text-[10px] text-zinc-400 font-normal mb-1">NID Front Side</p>
                           <a href={kycRequest.nidFrontUrl} target="_blank" rel="noreferrer" className="block relative aspect-[4/3] rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 group/img">
                             <img src={kycRequest.nidFrontUrl} className="w-full h-full object-cover group-hover/img:scale-105 transition-transform" alt="NID Front" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-[10px]">
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white font-semibold text-[10px]">
                               View Original
                             </div>
                           </a>
                         </div>
                         <div>
-                          <p className="text-[10px] text-zinc-400 font-bold mb-1">NID Back Side</p>
+                          <p className="text-[10px] text-zinc-400 font-normal mb-1">NID Back Side</p>
                           <a href={kycRequest.nidBackUrl} target="_blank" rel="noreferrer" className="block relative aspect-[4/3] rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 group/img">
                             <img src={kycRequest.nidBackUrl} className="w-full h-full object-cover group-hover/img:scale-105 transition-transform" alt="NID Back" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-[10px]">
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white font-semibold text-[10px]">
                               View Original
                             </div>
                           </a>
                         </div>
                         <div>
-                          <p className="text-[10px] text-zinc-400 font-bold mb-1">Facial Biometric</p>
+                          <p className="text-[10px] text-zinc-400 font-normal mb-1">Facial Biometric</p>
                           <a href={kycRequest.faceUrl} target="_blank" rel="noreferrer" className="block relative aspect-[4/3] rounded-lg overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 group/img">
                             <img src={kycRequest.faceUrl} className="w-full h-full object-cover group-hover/img:scale-105 transition-transform" alt="Face Biometric" />
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white font-bold text-[10px]">
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 transition-opacity flex items-center justify-center text-white font-semibold text-[10px]">
                               View Original
                             </div>
                           </a>
@@ -1207,14 +1207,14 @@ const ManageUsers: React.FC = () => {
                         <div className="flex gap-2 pt-3 border-t border-zinc-200 dark:border-zinc-800">
                           <button
                             onClick={() => handleApproveKyc(detailModal.user!.uid)}
-                            className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                           >
                             <Icon name="check" className="text-white text-xs" />
                             Approve
                           </button>
                           <button
                             onClick={() => setShowRejectInput(true)}
-                            className="flex-1 py-2.5 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg text-xs font-bold transition-colors flex items-center justify-center gap-1.5"
+                            className="flex-1 py-2.5 bg-red-50 dark:bg-red-500/10 hover:bg-red-100 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-500/20 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
                           >
                             <Icon name="times" className="text-red-500 text-xs" />
                             Reject
@@ -1224,7 +1224,7 @@ const ManageUsers: React.FC = () => {
 
                       {showRejectInput && (
                         <div className="mt-3 space-y-2 p-3 bg-red-50/50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-950/40">
-                          <label className="block text-[11px] font-bold text-red-700 dark:text-red-400">Decline Rejection Reason</label>
+                          <label className="block text-[11px] font-medium text-red-700 dark:text-red-400">Decline Rejection Reason</label>
                           <textarea
                             className="w-full p-2 bg-white dark:bg-zinc-900 border border-red-200 dark:border-red-950/40 rounded-lg text-xs outline-none text-zinc-900 dark:text-zinc-100"
                             placeholder="Please explain why this KYC request was declined..."
@@ -1238,13 +1238,13 @@ const ManageUsers: React.FC = () => {
                                 setShowRejectInput(false);
                                 setRejectReason("");
                               }}
-                              className="px-3 py-1 bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-md text-[11px] font-bold"
+                              className="px-3 py-1 bg-zinc-200 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 rounded-md text-[11px] font-semibold"
                             >
                               Cancel
                             </button>
                             <button
                               onClick={() => handleRejectKyc(detailModal.user!.uid)}
-                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-[11px] font-bold"
+                              className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white rounded-md text-[11px] font-semibold"
                             >
                               Confirm Reject
                             </button>
@@ -1254,14 +1254,14 @@ const ManageUsers: React.FC = () => {
 
                       {kycRequest.rejectReason && (
                         <div className="p-3 bg-red-50/50 dark:bg-red-950/10 rounded-xl border border-red-100/50 dark:border-red-950/20 mt-2">
-                          <p className="text-[10px] text-red-500 font-bold mb-1">Rejection Reason:</p>
+                          <p className="text-[10px] text-red-500 font-semibold mb-1">Rejection Reason:</p>
                           <p className="text-xs text-zinc-700 dark:text-zinc-300">{kycRequest.rejectReason}</p>
                         </div>
                       )}
                     </div>
                   ) : (
                     <div className="text-center py-6 bg-zinc-50 dark:bg-zinc-900/20 border border-dashed border-zinc-200 dark:border-zinc-800 rounded-xl">
-                      <p className="text-xs text-zinc-400 font-bold">No identity documents submitted yet.</p>
+                      <p className="text-xs text-zinc-400 font-normal">No identity documents submitted yet.</p>
                     </div>
                   )}
                 </div>

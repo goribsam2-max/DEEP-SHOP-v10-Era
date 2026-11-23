@@ -33,6 +33,13 @@ class AudioService {
     }
   }
 
+  public unlock() {
+    this.initCtx();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
   play(type: string = 'ringing', loop?: boolean) {
     if (this.muted) return;
     if (type === 'calling') {

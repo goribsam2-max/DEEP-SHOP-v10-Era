@@ -115,11 +115,11 @@ export const ReelUploadProgressOverlay: React.FC = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
-                      <p className="text-[13.5px] font-bold tracking-tight truncate">
+                      <p className="text-[13.5px] font-semibold tracking-tight truncate">
                         {statusTitle}
                       </p>
                       {job.autoPublishArmed && !isPublished && !isError && (
-                        <span className="hidden xs:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF] text-[10px] font-bold shrink-0">
+                        <span className="hidden xs:inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-[#1877F2]/12 text-[#1877F2] dark:text-[#58A6FF] text-[10px] font-semibold shrink-0">
                           <Sparkles className="w-2.5 h-2.5" />
                           <span>AUTO</span>
                         </span>
@@ -128,7 +128,7 @@ export const ReelUploadProgressOverlay: React.FC = () => {
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       {!isPublished && !isError && (
-                        <span className="text-[12.5px] font-extrabold tabular-nums text-[#1877F2] dark:text-[#58A6FF]">
+                        <span className="text-[12.5px] font-semibold tabular-nums text-[#1877F2] dark:text-[#58A6FF]">
                           {isPublishing ? "100%" : `${job.progress}%`}
                         </span>
                       )}
@@ -188,7 +188,7 @@ export const ReelUploadProgressOverlay: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => retryReelUploadJob(job.id)}
-                          className="px-3 py-1 rounded-lg bg-[#1877F2] hover:bg-blue-600 text-white text-[11.5px] font-bold inline-flex items-center gap-1 transition cursor-pointer"
+                          className="px-3 py-1 rounded-lg bg-[#1877F2] hover:bg-blue-600 text-white text-[11.5px] font-semibold inline-flex items-center gap-1 transition cursor-pointer"
                         >
                           <RefreshCw className="w-3 h-3" />
                           <span>Retry</span>
@@ -203,7 +203,7 @@ export const ReelUploadProgressOverlay: React.FC = () => {
                             dismissReelUploadJob(job.id);
                             navigate(`/loops?filter=video&postId=${postId}`);
                           }}
-                          className="px-3 py-1 rounded-lg bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[11.5px] font-bold inline-flex items-center gap-1 transition cursor-pointer"
+                          className="px-3 py-1 rounded-lg bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-[11.5px] font-semibold inline-flex items-center gap-1 transition cursor-pointer"
                         >
                           <span>View Reel</span>
                           <ExternalLink className="w-3 h-3" />

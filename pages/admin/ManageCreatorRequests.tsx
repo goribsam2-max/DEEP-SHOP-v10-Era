@@ -99,7 +99,7 @@ const ManageCreatorRequests: React.FC = () => {
       <div className="bg-white dark:bg-zinc-900 rounded-[24px] border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
-            <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800  text-[10px] font-bold text-zinc-500 tracking-wider uppercase">
+            <thead className="bg-zinc-50 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800  text-[10px] font-medium text-zinc-500 tracking-wider uppercase">
               <tr>
                 <th className="px-6 py-4">User</th>
                 <th className="px-6 py-4">Channel/Profile</th>
@@ -124,7 +124,7 @@ const ManageCreatorRequests: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2 items-center">
-                      <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px] font-semibold">
                         {r.platform}
                       </span>
                       <a
@@ -139,7 +139,7 @@ const ManageCreatorRequests: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span
-                      className={`px-2 py-1 rounded text-[10px] font-bold  ${r.status === "pending" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : r.status === "approved" ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-950 dark:text-zinc-50 dark:bg-emerald-900/30 dark:text-zinc-800 dark:text-zinc-200" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}
+                      className={`px-2 py-1 rounded text-[10px] font-semibold  ${r.status === "pending" ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" : r.status === "approved" ? "bg-zinc-200 dark:bg-zinc-700 text-zinc-950 dark:text-zinc-50 dark:bg-emerald-900/30 dark:text-zinc-800 dark:text-zinc-200" : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"}`}
                     >
                       {r.status}
                     </span>
@@ -152,13 +152,13 @@ const ManageCreatorRequests: React.FC = () => {
                       <>
                         <button
                           onClick={() => handleAction(r.id, r.userId, "approve")}
-                          className="px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:bg-zinc-200 rounded text-[10px] font-bold transition-colors"
+                          className="px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 hover:bg-zinc-800 dark:bg-zinc-200 rounded text-[10px] font-semibold transition-colors"
                         >
                           Approve
                         </button>
                         <button
                           onClick={() => handleAction(r.id, r.userId, "reject")}
-                          className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-[10px] font-bold transition-colors"
+                          className="px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white rounded text-[10px] font-semibold transition-colors"
                         >
                           Reject
                         </button>

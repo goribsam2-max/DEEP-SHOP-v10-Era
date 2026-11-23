@@ -503,7 +503,7 @@ export const GiftStarsPage: React.FC = () => {
               <ArrowLeft className="w-4.5 h-4.5" />
             </button>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold tracking-tight text-zinc-950 dark:text-white truncate">
+              <h1 className="text-base sm:text-lg font-semibold tracking-tight text-zinc-950 dark:text-white truncate">
                 Gift Stars
               </h1>
               <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate hidden sm:block">
@@ -547,7 +547,7 @@ export const GiftStarsPage: React.FC = () => {
                       className="w-14 h-14 sm:w-16 sm:h-16 rounded-full object-cover border border-zinc-200 dark:border-zinc-700"
                     />
                   ) : (
-                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center justify-center text-xl font-bold">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center justify-center text-xl font-semibold">
                       {creatorInitial}
                     </div>
                   )}
@@ -558,7 +558,7 @@ export const GiftStarsPage: React.FC = () => {
 
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <h2 className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white truncate">
+                    <h2 className="text-base sm:text-lg font-semibold text-zinc-950 dark:text-white truncate">
                       {creatorName}
                     </h2>
                     <CheckCircle2 className="w-4 h-4 text-[#0095F6] shrink-0" />
@@ -608,7 +608,7 @@ export const GiftStarsPage: React.FC = () => {
                     <span className="text-xs text-zinc-500 dark:text-zinc-400 block">
                       Available wallet balance
                     </span>
-                    <span className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white tabular-nums">
+                    <span className="text-sm sm:text-base font-semibold text-zinc-950 dark:text-white tabular-nums">
                       {userStarsBalance.toLocaleString()} Stars
                     </span>
                   </div>
@@ -710,7 +710,7 @@ export const GiftStarsPage: React.FC = () => {
                   {/* Tier Grid Card */}
                   <section className="rounded-2xl bg-white dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-zinc-800 p-4 sm:p-6 space-y-4 shadow-2xs">
                     <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                      <h3 className="text-sm sm:text-base font-semibold text-zinc-950 dark:text-white">
                         Select a Star bundle
                       </h3>
                       <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
@@ -750,7 +750,7 @@ export const GiftStarsPage: React.FC = () => {
                             </div>
 
                             <div className="space-y-0.5">
-                              <div className="text-base sm:text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
+                              <div className="text-base sm:text-lg font-semibold text-zinc-950 dark:text-white tabular-nums">
                                 {tier.stars.toLocaleString()}{" "}
                                 <span className="text-xs font-semibold text-amber-600 dark:text-amber-400">
                                   Stars
@@ -810,7 +810,7 @@ export const GiftStarsPage: React.FC = () => {
                             );
                             setGiftStarsAmount(val);
                           }}
-                          className="flex-1 h-11 px-4 text-center font-bold text-base sm:text-lg tabular-nums rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 outline-none text-zinc-950 dark:text-white"
+                          className="flex-1 h-11 px-4 text-center font-semibold text-base sm:text-lg tabular-nums rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 focus:border-amber-500 outline-none text-zinc-950 dark:text-white"
                         />
 
                         <button
@@ -883,7 +883,7 @@ export const GiftStarsPage: React.FC = () => {
                       type="button"
                       onClick={handleGiftSubmit}
                       disabled={isSubmitting || giftSuccessDone}
-                      className="w-full min-h-[50px] px-5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-bold text-sm sm:text-base transition cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 whitespace-nowrap"
+                      className="w-full min-h-[50px] px-5 rounded-xl bg-amber-500 hover:bg-amber-600 active:scale-[0.99] text-white font-semibold text-sm sm:text-base transition cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 whitespace-nowrap"
                     >
                       {giftSuccessDone ? (
                         <>
@@ -916,7 +916,7 @@ export const GiftStarsPage: React.FC = () => {
                 >
                   <div className="space-y-3">
                     <div className="flex items-baseline justify-between gap-2">
-                      <h3 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white">
+                      <h3 className="text-sm sm:text-base font-semibold text-zinc-950 dark:text-white">
                         Choose top-up package
                       </h3>
                       <span className="text-xs text-zinc-500 dark:text-zinc-400 tabular-nums">
@@ -941,7 +941,7 @@ export const GiftStarsPage: React.FC = () => {
                                 : "bg-zinc-50 dark:bg-zinc-950/60 text-zinc-800 dark:text-zinc-200 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
                             }`}
                           >
-                            <span className="block text-sm sm:text-base font-bold tabular-nums">
+                            <span className="block text-sm sm:text-base font-semibold tabular-nums">
                               {pkg.toLocaleString()} ★
                             </span>
                             <span
@@ -976,9 +976,9 @@ export const GiftStarsPage: React.FC = () => {
                               Math.max(50, parseInt(e.target.value, 10) || 50)
                             )
                           }
-                          className="flex-1 h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm font-bold tabular-nums outline-none focus:border-zinc-900 dark:focus:border-white"
+                          className="flex-1 h-11 px-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 text-sm font-semibold tabular-nums outline-none focus:border-zinc-900 dark:focus:border-white"
                         />
-                        <div className="h-11 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center text-sm font-bold tabular-nums text-zinc-900 dark:text-white whitespace-nowrap">
+                        <div className="h-11 px-4 rounded-xl bg-zinc-100 dark:bg-zinc-800 flex items-center text-sm font-semibold tabular-nums text-zinc-900 dark:text-white whitespace-nowrap">
                           ৳{buyStarsAmount.toLocaleString()} BDT
                         </div>
                       </div>
@@ -1015,7 +1015,7 @@ export const GiftStarsPage: React.FC = () => {
                             }`}
                           >
                             <div className="min-w-0">
-                              <span className="text-xs sm:text-sm font-bold text-[#E2125B] block whitespace-nowrap">
+                              <span className="text-xs sm:text-sm font-medium text-[#E2125B] block whitespace-nowrap">
                                 bKash · {rotatedBkash?.type || "Personal"}
                               </span>
                               <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
@@ -1048,7 +1048,7 @@ export const GiftStarsPage: React.FC = () => {
                             }`}
                           >
                             <div className="min-w-0">
-                              <span className="text-xs sm:text-sm font-bold text-[#F57C20] block whitespace-nowrap">
+                              <span className="text-xs sm:text-sm font-medium text-[#F57C20] block whitespace-nowrap">
                                 Nagad · {rotatedNagad?.type || "Personal"}
                               </span>
                               <span className="text-[11px] text-zinc-500 block whitespace-nowrap">
@@ -1083,7 +1083,7 @@ export const GiftStarsPage: React.FC = () => {
                           </div>
 
                           <div className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800">
-                            <span className="text-base sm:text-lg font-bold font-mono tabular-nums tracking-wider text-zinc-950 dark:text-white truncate">
+                            <span className="text-base sm:text-lg font-semibold font-mono tabular-nums tracking-wider text-zinc-950 dark:text-white truncate">
                               {activeAccount.number}
                             </span>
                             <button
@@ -1145,7 +1145,7 @@ export const GiftStarsPage: React.FC = () => {
                       <button
                         type="submit"
                         disabled={isSubmitting || !activeAccount}
-                        className="w-full min-h-[50px] px-5 rounded-xl bg-zinc-950 dark:bg-white hover:opacity-90 text-white dark:text-zinc-950 font-bold text-sm sm:text-base transition active:scale-[0.99] cursor-pointer disabled:opacity-50 whitespace-nowrap tabular-nums"
+                        className="w-full min-h-[50px] px-5 rounded-xl bg-zinc-950 dark:bg-white hover:opacity-90 text-white dark:text-zinc-950 font-semibold text-sm sm:text-base transition active:scale-[0.99] cursor-pointer disabled:opacity-50 whitespace-nowrap tabular-nums"
                       >
                         {isSubmitting
                           ? "Submitting verification..."

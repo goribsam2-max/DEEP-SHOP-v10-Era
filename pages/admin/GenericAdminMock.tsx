@@ -141,21 +141,21 @@ const GenericAdminMock: React.FC = () => {
 
       <div className="bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl p-8 shadow-sm">
         <div className="flex justify-between items-center mb-8 pb-6 border-b border-zinc-100 dark:border-zinc-800">
-          <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
+          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100">
             Database Records: {data.length}
           </h3>
           <div className="flex space-x-3">
             {["seo", "taxes", "bulk"].includes(pathBase) ? (
               <button
                 onClick={handleExportConfig}
-                className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-6 py-2.5 rounded-full text-xs font-bold tracking-normal  hover:bg-emerald-900 transition-colors shadow-md"
+                className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-6 py-2.5 rounded-full text-xs font-medium tracking-normal  hover:bg-emerald-900 transition-colors shadow-md"
               >
                 {pathBase === "bulk" ? "Export CSV" : "Update Config"}
               </button>
             ) : (
               <button
                 onClick={handleCreateDummy}
-                className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-6 py-2.5 rounded-full text-xs font-bold tracking-normal  hover:bg-emerald-900 transition-colors shadow-md"
+                className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 px-6 py-2.5 rounded-full text-xs font-medium tracking-normal  hover:bg-emerald-900 transition-colors shadow-md"
               >
                 <Icon name="plus" className="mr-2" /> Add Record
               </button>
@@ -181,7 +181,7 @@ const GenericAdminMock: React.FC = () => {
                       .map((key) => (
                         <th
                           key={key}
-                          className="py-4 px-5 text-[10px] font-bold  tracking-normal text-zinc-500"
+                          className="py-4 px-5 text-[10px] font-semibold  tracking-normal text-zinc-500"
                         >
                           {key}
                         </th>
@@ -213,7 +213,7 @@ const GenericAdminMock: React.FC = () => {
             ) : (
               <div className="py-16 text-center text-zinc-400">
                 <Icon name="database" className="text-lg mb-4 text-zinc-200" />
-                <p className="font-bold text-xs  tracking-normal">
+                <p className="font-medium text-xs  tracking-normal">
                   No data entries found.
                 </p>
               </div>

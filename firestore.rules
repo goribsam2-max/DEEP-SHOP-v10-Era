@@ -125,6 +125,25 @@ service cloud.firestore {
       allow read, write: if isSignedIn() || isAdmin();
     }
 
+    // P2P WebRTC Calls & ICE Candidate Subcollections
+    match /p2p_calls/{callId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+    match /p2p_calls/{callId}/{subCollection}/{documentId} {
+      allow read, write: if isSignedIn() || isAdmin();
+    }
+
+    // Helpline Calls & Presence
+    match /helpline_calls/{callId} {
+      allow read, write: if true;
+    }
+    match /helpline_presence/{presenceId} {
+      allow read, write: if true;
+    }
+    match /helpline_chats/{chatId} {
+      allow read, write: if true;
+    }
+
     // Community Channels Collection
     match /community_channels/{channelId} {
       allow read, write: if isSignedIn() || isAdmin();

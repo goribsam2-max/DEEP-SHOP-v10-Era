@@ -47,7 +47,7 @@ const BonusProducts: React.FC = () => {
               <CircleDollarSign className="w-6 h-6" />
             </div>
             <div className="min-w-0">
-              <h1 className="ds-apple-display text-[clamp(1.25rem,3vw,1.65rem)] font-bold tracking-tight leading-tight">
+              <h1 className="ds-apple-display text-[clamp(1.25rem,3vw,1.65rem)] font-semibold tracking-tight leading-tight">
                 DP Coin Rewards
               </h1>
               <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#8E8E93] mt-0.5">

@@ -88,14 +88,14 @@ const ManageRiders: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5 text-shine">
               Rider Fleet
             </h1>
-            <p className="text-zinc-400 text-[10px] md:text-xs font-bold tracking-normal ">
+            <p className="text-zinc-400 text-[10px] md:text-xs font-normal tracking-normal ">
               Delivery Personnel
             </p>
           </div>
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
-          className={`px-6 py-3 rounded-full font-bold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${showAdd ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"}`}
+          className={`px-6 py-3 rounded-full font-semibold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${showAdd ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"}`}
         >
           {showAdd ? "Cancel" : "Add Rider"}
         </button>
@@ -110,7 +110,7 @@ const ManageRiders: React.FC = () => {
         <form onSubmit={handleAddRider} className="w-full space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Full Name
               </label>
               <input
@@ -123,7 +123,7 @@ const ManageRiders: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Phone Number
               </label>
               <input
@@ -139,7 +139,7 @@ const ManageRiders: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Operating Zone
               </label>
               <select
@@ -155,7 +155,7 @@ const ManageRiders: React.FC = () => {
               </select>
             </div>
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Vehicle Type
               </label>
               <select
@@ -176,13 +176,13 @@ const ManageRiders: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowAdd(false)}
-              className="px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 border-none dark:text-zinc-100 rounded-lg font-bold tracking-wide transition-all outline-none!"
+              className="px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 border-none dark:text-zinc-100 rounded-lg font-semibold tracking-wide transition-all outline-none!"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-8 py-3 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-bold tracking-wide shadow-xl active:scale-95 transition-all outline-none!"
+              className="px-8 py-3 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-semibold tracking-wide shadow-xl active:scale-95 transition-all outline-none!"
             >
               Register Rider
             </button>
@@ -215,7 +215,7 @@ const ManageRiders: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-3 pr-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
+              <span className="px-2.5 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-[10px] font-semibold text-zinc-600 dark:text-zinc-300">
                 {rider.status}
               </span>
               <button
@@ -231,7 +231,7 @@ const ManageRiders: React.FC = () => {
         {riders.length === 0 && !loading && (
           <div className="py-20 text-center bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm text-zinc-400">
             <Icon name="motorcycle" className="text-lg mb-4 text-zinc-300" />
-            <p className="font-bold text-xs tracking-normal">
+            <p className="font-medium text-xs tracking-normal">
               No riders recorded yet
             </p>
           </div>

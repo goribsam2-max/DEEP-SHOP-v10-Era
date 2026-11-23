@@ -44,7 +44,7 @@ export default function MyCoupons() {
     <div className="ds-apple-shop-canvas min-h-screen pb-28">
       <div className="max-w-2xl mx-auto px-4 pt-6">
         <div className="mb-4 px-1">
-          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             My Coupons
           </h1>
           <p className="text-[13.5px] text-[#6E6E73] dark:text-[#98989D] mt-1">
@@ -71,7 +71,7 @@ export default function MyCoupons() {
                 >
                   {isUsed && (
                     <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/40 dark:bg-black/40 backdrop-blur-[2px]">
-                      <div className="border-2 border-[#6E6E73] text-[#6E6E73] font-bold text-[18px] tracking-widest uppercase px-4 py-1 rounded-[10px] -rotate-12 select-none">
+                      <div className="border-2 border-[#6E6E73] text-[#6E6E73] font-medium text-[18px] tracking-widest uppercase px-4 py-1 rounded-[10px] -rotate-12 select-none">
                         Used
                       </div>
                     </div>
@@ -79,7 +79,7 @@ export default function MyCoupons() {
 
                   {/* Left Discount Strip */}
                   <div className="w-[104px] md:w-[120px] bg-[#0071E3] dark:bg-[#0A84FF] text-white flex flex-col justify-center items-center p-4 shrink-0">
-                    <span className="text-[22px] md:text-[26px] font-bold tabular-nums leading-tight">
+                    <span className="text-[22px] md:text-[26px] font-semibold tabular-nums leading-tight">
                       {c.type === "percent" ? `${c.discount}%` : formatPrice(c.discount)}
                     </span>
                     <span className="text-[11px] font-semibold tracking-wider uppercase mt-0.5 opacity-90">

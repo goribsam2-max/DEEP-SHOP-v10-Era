@@ -95,7 +95,7 @@ const Logo: React.FC<{
         />
       )}
       <span
-        className="lowercase text-[22px] sm:text-[25px] tracking-tight mt-0.5 text-zinc-900 dark:text-white block leading-none font-black"
+        className="lowercase text-[22px] sm:text-[25px] tracking-tight mt-0.5 text-zinc-900 dark:text-white block leading-none font-semibold"
         style={{
           fontFamily: "'Comfortaa', cursive",
           letterSpacing: "-0.02em",

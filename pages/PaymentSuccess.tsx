@@ -22,7 +22,7 @@ const PaymentSuccess: React.FC = () => {
         <div className="w-20 h-20 bg-[#248A3D]/12 dark:bg-[#30D158]/15 rounded-full flex items-center justify-center mb-6 text-[#248A3D] dark:text-[#30D158]">
           <CheckCircle2 className="w-10 h-10" />
         </div>
-        <h1 className="text-2xl font-bold mb-2 tracking-tight">Order Confirmed</h1>
+        <h1 className="text-2xl font-semibold mb-2 tracking-tight">Order Confirmed</h1>
         <p className="text-[#6E6E73] dark:text-[#8E8E93] text-sm mb-8 max-w-xs leading-relaxed">
           Your essentials are being prepared for delivery.
         </p>

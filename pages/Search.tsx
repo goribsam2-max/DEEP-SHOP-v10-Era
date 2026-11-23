@@ -219,7 +219,7 @@ const Search: React.FC = () => {
             {recent.length > 0 && (
               <div className="mb-8">
                 <div className="flex items-center justify-between gap-3 mb-3.5">
-                  <h2 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                  <h2 className="text-lg sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                     Recent Searches
                   </h2>
                   <button
@@ -265,7 +265,7 @@ const Search: React.FC = () => {
             {/* Favorite Categories */}
             <div className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                <h2 className="text-lg sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                   Favorite Categories
                 </h2>
                 <button
@@ -305,7 +305,7 @@ const Search: React.FC = () => {
             {/* Favorite Products */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+                <h2 className="text-lg sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
                   Favorite Products
                 </h2>
                 <button
@@ -333,7 +333,7 @@ const Search: React.FC = () => {
                     <div className="w-14 h-14 rounded-2xl overflow-hidden mb-3 bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center border border-black/[0.05] dark:border-white/[0.08]">
                       <img src={getProductDisplayImage(prod)} alt={prod.name} className="w-10 h-10 object-contain mix-blend-multiply dark:mix-blend-normal" />
                     </div>
-                    <h3 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-[15px] leading-tight line-clamp-1 mb-1 tracking-tight">
+                    <h3 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-[15px] leading-tight line-clamp-1 mb-1 tracking-tight">
                       {prod.name}
                     </h3>
                     <span className="text-[12.5px] text-[#6E6E73] dark:text-[#98989D] capitalize">
@@ -346,7 +346,7 @@ const Search: React.FC = () => {
           </motion.div>
         ) : (
           <div className="space-y-4">
-            <h3 className="text-xs font-bold text-[#6E6E73] dark:text-[#98989D] tracking-wider uppercase tabular-nums">
+            <h3 className="text-xs font-semibold text-[#6E6E73] dark:text-[#98989D] tracking-wider uppercase tabular-nums">
               Search Results ({results.length})
             </h3>
             <div

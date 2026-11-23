@@ -38,7 +38,7 @@ export const RegisteredBadge: React.FC<{ showText?: boolean; size?: 'sm' | 'md' 
   };
 
   return (
-    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 font-bold shrink-0">
+    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800/50 text-blue-600 dark:text-blue-400 font-semibold shrink-0">
       <svg 
         className={`${iconSizes[size]} fill-blue-500/10 stroke-blue-500`} 
         viewBox="0 0 24 24" 
@@ -73,7 +73,7 @@ export const SellerBadge: React.FC<SellerBadgeProps> = ({ kycStatus, showText = 
 
   if (isVerified) {
     return (
-      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400 font-bold shrink-0">
+      <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400 font-semibold shrink-0">
         <VerifiedIcon className={iconSizes[size]} />
         {showText && <span className={`${textSizes[size]} tracking-tight`}>Verified Partner</span>}
       </div>
@@ -81,7 +81,7 @@ export const SellerBadge: React.FC<SellerBadgeProps> = ({ kycStatus, showText = 
   }
 
   return (
-    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 font-bold shrink-0">
+    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/50 text-amber-600 dark:text-amber-400 font-semibold shrink-0">
       <AlertCircle className={`${iconSizes[size]} text-amber-500`} />
       {showText && <span className={`${textSizes[size]} tracking-tight`}>Not Verified</span>}
     </div>

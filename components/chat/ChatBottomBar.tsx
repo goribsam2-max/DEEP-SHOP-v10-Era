@@ -265,7 +265,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
                 }}
                 className="w-full px-3.5 py-2.5 rounded-2xl flex items-center gap-3 text-sm font-medium text-zinc-900 dark:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition text-left cursor-pointer"
               >
-                <div className="w-4 h-4 border-[1.75px] border-zinc-700 dark:border-zinc-300 rounded-[4px] flex items-center justify-center font-bold text-[7.5px] leading-none">
+                <div className="w-4 h-4 border-[1.75px] border-zinc-700 dark:border-zinc-300 rounded-[4px] flex items-center justify-center font-semibold text-[7.5px] leading-none">
                   GIF
                 </div>
                 <span>Browse GIFs</span>
@@ -490,7 +490,7 @@ export const ChatBottomBar: React.FC<ChatBottomBarProps> = ({
               className="w-full flex flex-col items-center justify-center bg-white/95 dark:bg-zinc-900/95 backdrop-blur-xl rounded-[28px] px-6 pt-5 pb-6 shadow-[0_6px_28px_rgba(120,90,160,0.06)] relative transition-transform duration-75"
             >
               <div className="flex items-center gap-2 mb-3">
-                <h3 className="text-[18px] font-bold text-zinc-950 dark:text-white tracking-tight">
+                <h3 className="text-[18px] font-semibold text-zinc-950 dark:text-white tracking-tight">
                   {cancelArmed ? 'Release to cancel' : 'Listening...'}
                 </h3>
                 <span className="text-[11px] font-mono font-semibold text-zinc-400 dark:text-zinc-500 tabular-nums">

@@ -67,7 +67,7 @@ export const ReferralCard = ({
 
         <motion.h2
           variants={itemVariants}
-          className="mb-2 text-3xl sm:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100"
+          className="mb-2 text-3xl sm:text-5xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100"
         >
           {title}
         </motion.h2>
@@ -76,7 +76,7 @@ export const ReferralCard = ({
         </motion.p>
 
         <div className="mb-8">
-          <motion.h3 variants={itemVariants} className="mb-5 font-bold uppercase tracking-wider text-xs text-zinc-400">
+          <motion.h3 variants={itemVariants} className="mb-5 font-medium uppercase tracking-wider text-xs text-zinc-400">
             How it works
           </motion.h3>
           <motion.ul
@@ -98,7 +98,7 @@ export const ReferralCard = ({
 
         {referralLink ? (
             <div>
-            <motion.h3 variants={itemVariants} className="mb-3 font-bold uppercase tracking-wider text-xs text-zinc-400">
+            <motion.h3 variants={itemVariants} className="mb-3 font-medium uppercase tracking-wider text-xs text-zinc-400">
                 Your invite link
             </motion.h3>
             <motion.div
@@ -109,7 +109,7 @@ export const ReferralCard = ({
                 <Link2 className="h-5 w-5 text-zinc-400" />
                 <p className="truncate text-sm font-medium text-zinc-700 dark:text-zinc-300">{referralLink}</p>
                 </div>
-                <Button onClick={handleCopy} className="h-12 w-full rounded-2xl shrink-0 sm:w-auto bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold px-8" variant="default">
+                <Button onClick={handleCopy} className="h-12 w-full rounded-2xl shrink-0 sm:w-auto bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold px-8" variant="default">
                 <AnimatePresence mode="wait" initial={false}>
                     {copied ? (
                     <motion.span
@@ -138,7 +138,7 @@ export const ReferralCard = ({
             </div>
         ) : (
             <motion.div variants={itemVariants}>
-                <Button onClick={onButtonClick} className="h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold px-10 text-base" variant="default">
+                <Button onClick={onButtonClick} className="h-12 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-semibold px-10 text-base" variant="default">
                     {buttonText || "Get Started"}
                 </Button>
             </motion.div>

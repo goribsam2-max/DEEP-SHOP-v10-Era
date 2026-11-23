@@ -1864,7 +1864,7 @@ export const NewsHub: React.FC = () => {
                     triggerHaptic();
                     setChooserOpen(true);
                   }}
-                  className="w-full py-2.5 px-4 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-sm font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer whitespace-nowrap"
+                  className="w-full py-2.5 px-4 rounded-full bg-zinc-950 dark:bg-white text-white dark:text-zinc-950 text-sm font-semibold flex items-center justify-center gap-2 shadow-xs cursor-pointer whitespace-nowrap"
                 >
                   <Icon name="plus" className="w-4 h-4 shrink-0" />
                   <span>Create a Loop</span>
@@ -1880,7 +1880,7 @@ export const NewsHub: React.FC = () => {
                     <span>My Activity</span>
                   </span>
                   {unreadNewsNotifications > 0 && (
-                    <span className="px-2 py-0.5 rounded-full bg-[#FF3040] text-white text-[11px] font-bold">
+                    <span className="px-2 py-0.5 rounded-full bg-[#FF3040] text-white text-[11px] font-semibold">
                       {unreadNewsNotifications > 99 ? "99+" : unreadNewsNotifications}
                     </span>
                   )}
@@ -1889,7 +1889,7 @@ export const NewsHub: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => navigate("/creator-dashboard")}
-                  className="w-full py-2.5 px-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 hover:bg-blue-100/80 dark:hover:bg-blue-900/40 text-sm font-bold text-[#0095F6] flex items-center gap-3 text-left cursor-pointer whitespace-nowrap"
+                  className="w-full py-2.5 px-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 hover:bg-blue-100/80 dark:hover:bg-blue-900/40 text-sm font-semibold text-[#0095F6] flex items-center gap-3 text-left cursor-pointer whitespace-nowrap"
                 >
                   <Icon name="layout-dashboard" className="w-4 h-4 shrink-0" />
                   <span>Creator Dashboard</span>
@@ -1960,7 +1960,7 @@ export const NewsHub: React.FC = () => {
                     triggerHaptic();
                     setShowGhostIntroSheet(true);
                   }}
-                  className="inline-flex items-center gap-1.5 text-[17px] font-bold text-zinc-950 dark:text-white cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-[17px] font-semibold text-zinc-950 dark:text-white cursor-pointer"
                 >
                   <DottedGhostCatIcon className="w-5 h-5" />
                   <span>Ghost posts</span>
@@ -2577,7 +2577,7 @@ export const NewsHub: React.FC = () => {
                             className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
                           />
                         ) : (
-                          <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                          <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-200">
                             {(group.name || "U").charAt(0).toUpperCase()}
                           </div>
                         )}
@@ -2633,7 +2633,7 @@ export const NewsHub: React.FC = () => {
                           className="w-full h-full rounded-full object-cover border-2 border-white dark:border-zinc-900 group-hover:scale-[1.03] transition-transform"
                         />
                       ) : (
-                        <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-bold text-zinc-700 dark:text-zinc-200">
+                        <div className="w-full h-full rounded-full bg-zinc-100 dark:bg-zinc-800 border-2 border-white dark:border-zinc-900 flex items-center justify-center text-sm font-semibold text-zinc-700 dark:text-zinc-200">
                           {(note.displayName || "U")[0]?.toUpperCase()}
                         </div>
                       )}
@@ -2658,13 +2658,13 @@ export const NewsHub: React.FC = () => {
                             {viewingLoopNote.photoURL ? (
                               <img src={viewingLoopNote.photoURL} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-sm">
+                              <div className="w-full h-full flex items-center justify-center font-semibold text-sm">
                                 {(viewingLoopNote.displayName || "U")[0]?.toUpperCase()}
                               </div>
                             )}
                           </div>
                           <div>
-                            <h3 className="font-bold text-sm text-zinc-900 dark:text-white leading-tight">
+                            <h3 className="font-semibold text-sm text-zinc-900 dark:text-white leading-tight">
                               {viewingLoopNote.displayName}
                             </h3>
                             <span className="text-[11px] text-zinc-400">Active 24h</span>
@@ -2719,18 +2719,18 @@ export const NewsHub: React.FC = () => {
                             {viewingLoopNote.photoURL ? (
                               <img src={viewingLoopNote.photoURL} alt="" className="w-full h-full object-cover" />
                             ) : (
-                              <div className="w-full h-full flex items-center justify-center font-bold text-3xl">
+                              <div className="w-full h-full flex items-center justify-center font-semibold text-3xl">
                                 {(viewingLoopNote.displayName || "U")[0]?.toUpperCase()}
                               </div>
                             )}
                           </div>
 
-                          <h2 className="text-lg font-bold text-zinc-900 dark:text-white mt-4">
+                          <h2 className="text-lg font-semibold text-zinc-900 dark:text-white mt-4">
                             {viewingLoopNote.displayName}
                           </h2>
 
                           <p className="text-sm text-zinc-500 mt-1">
-                            Shared with <span className="font-bold text-zinc-800 dark:text-zinc-200">Friends</span>
+                            Shared with <span className="font-semibold text-zinc-800 dark:text-zinc-200">Friends</span>
                           </p>
                           <p className="text-sm text-zinc-400 mt-0.5">
                             Expires in 24h
@@ -2767,7 +2767,7 @@ export const NewsHub: React.FC = () => {
                                 )}
                               </div>
                               <div className="text-left min-w-0 max-w-[165px]">
-                                <p className="text-xs font-bold text-zinc-900 dark:text-white truncate">
+                                <p className="text-xs font-medium text-zinc-900 dark:text-white truncate">
                                   {viewingLoopNote.musicTitle}
                                 </p>
                                 <p className="text-[10px] text-zinc-500 truncate">
@@ -2991,7 +2991,7 @@ export const NewsHub: React.FC = () => {
                     );
                     setPrefs(DEFAULT_FEED_PREFERENCES);
                   }}
-                  className="text-[#1877F2] font-bold shrink-0 cursor-pointer"
+                  className="text-[#1877F2] font-semibold shrink-0 cursor-pointer"
                 >
                   Show All
                 </button>
@@ -3005,7 +3005,7 @@ export const NewsHub: React.FC = () => {
               </div>
             ) : visiblePosts.length === 0 ? (
               <div className="loops-surface sm:rounded-[28px] border-y sm:border loops-divider p-10 text-center space-y-3">
-                <p className="text-base font-bold">
+                <p className="text-base font-semibold">
                   {scamOnlyMode || isPersonalizedActive
                     ? "No Loops match your current filter"
                     : "No Loops published yet"}
@@ -3095,7 +3095,7 @@ export const NewsHub: React.FC = () => {
                       {postIndex === 1 && suggestedProfiles.length > 0 && (
                         <section className="border-b loops-divider p-4 space-y-3">
                           <div className="flex items-center justify-between px-0.5">
-                            <h3 className="text-sm font-bold text-zinc-950 dark:text-white">
+                            <h3 className="text-sm font-semibold text-zinc-950 dark:text-white">
                               Suggested for you
                             </h3>
                             <button
@@ -3134,11 +3134,11 @@ export const NewsHub: React.FC = () => {
                                       className="w-14 h-14 rounded-full object-cover border loops-divider"
                                     />
                                   ) : (
-                                    <div className="w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800 border loops-divider flex items-center justify-center text-base font-bold text-zinc-700 dark:text-zinc-200">
+                                    <div className="w-14 h-14 rounded-full bg-zinc-100 dark:bg-zinc-800 border loops-divider flex items-center justify-center text-base font-semibold text-zinc-700 dark:text-zinc-200">
                                       {(prof.name || "U").charAt(0).toUpperCase()}
                                     </div>
                                   )}
-                                  <p className="text-xs font-bold text-zinc-950 dark:text-white truncate w-full">
+                                  <p className="text-xs font-medium text-zinc-950 dark:text-white truncate w-full">
                                     {prof.name}
                                   </p>
                                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate w-full tabular-nums">
@@ -3180,9 +3180,9 @@ export const NewsHub: React.FC = () => {
                   <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-[#1877F2] flex items-center justify-center shrink-0">
                     <Icon name="trending-up" className="w-4 h-4" />
                   </div>
-                  <h3 className="text-sm font-bold truncate">Creator Studio</h3>
+                  <h3 className="text-sm font-semibold truncate">Creator Studio</h3>
                 </div>
-                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold whitespace-nowrap">
+                <span className="px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-semibold whitespace-nowrap">
                   Monetize
                 </span>
               </div>
@@ -3203,7 +3203,7 @@ export const NewsHub: React.FC = () => {
             {suggestedProfiles.length > 0 && (
               <div className="loops-surface rounded-[28px] p-5 shadow-[0_6px_24px_rgba(15,23,42,0.04)] space-y-3 border loops-divider">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold">Suggested Profiles</h3>
+                  <h3 className="text-sm font-semibold">Suggested Profiles</h3>
                   <button
                     type="button"
                     onClick={() => navigate("/loops/search")}
@@ -3228,12 +3228,12 @@ export const NewsHub: React.FC = () => {
                             className="w-9 h-9 rounded-full object-cover shrink-0"
                           />
                         ) : (
-                          <div className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 border loops-divider flex items-center justify-center text-xs font-bold text-zinc-700 dark:text-zinc-200 shrink-0">
+                          <div className="w-9 h-9 rounded-full bg-zinc-100 dark:bg-zinc-800 border loops-divider flex items-center justify-center text-xs font-medium text-zinc-700 dark:text-zinc-200 shrink-0">
                             {(prof.name || "U").charAt(0).toUpperCase()}
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-zinc-900 dark:text-white truncate group-hover:text-[#0095F6] transition-colors">
+                          <p className="text-xs font-medium text-zinc-900 dark:text-white truncate group-hover:text-[#0095F6] transition-colors">
                             {prof.name}
                           </p>
                           <p className="text-[11px] text-zinc-500 truncate tabular-nums">
@@ -3256,7 +3256,7 @@ export const NewsHub: React.FC = () => {
 
             <div className="loops-surface rounded-[28px] p-5 shadow-[0_6px_24px_rgba(15,23,42,0.04)] space-y-3 border loops-divider">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold">Active Themes</h3>
+                <h3 className="text-sm font-semibold">Active Themes</h3>
                 <button
                   type="button"
                   onClick={() => navigate("/loops/personalization")}
@@ -3282,7 +3282,7 @@ export const NewsHub: React.FC = () => {
             </div>
 
             <div className="loops-surface rounded-[28px] p-5 shadow-[0_6px_24px_rgba(15,23,42,0.04)] space-y-2.5 border loops-divider">
-              <h3 className="text-sm font-bold">Community Safety</h3>
+              <h3 className="text-sm font-semibold">Community Safety</h3>
               <p className="text-xs text-zinc-500 leading-relaxed">
                 Need to warn shoppers about a fraudulent page or number? Switch
                 to Scam Report inside the composer to stamp verified incident
@@ -3291,7 +3291,7 @@ export const NewsHub: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate("/loops/create?tab=scam")}
-                className="w-full py-2.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                className="w-full py-2.5 rounded-full bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <Icon name="shield-alert" className="w-4 h-4 shrink-0" />
                 <span>Report a Scam</span>
@@ -3351,7 +3351,7 @@ export const NewsHub: React.FC = () => {
                 <DottedGhostCatIcon className="w-16 h-16" />
               </div>
               <div className="space-y-2 max-w-[320px] mx-auto">
-                <h2 className="text-[22px] font-bold leading-snug text-zinc-950 dark:text-white">
+                <h2 className="text-[22px] font-semibold leading-snug text-zinc-950 dark:text-white">
                   Share posts that don&apos;t last forever
                 </h2>
                 <p className="text-[14.5px] leading-relaxed text-zinc-500 dark:text-zinc-400">

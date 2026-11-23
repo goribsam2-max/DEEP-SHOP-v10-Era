@@ -405,7 +405,7 @@ export function TourProvider({
                         )}
                         <Button
                           onClick={nextStep}
-                          className={cn("text-sm h-9 rounded-full px-5 bg-[#109E92] hover:bg-[#0D8A7D] text-white font-bold", !currentStep && "ml-auto")}
+                          className={cn("text-sm h-9 rounded-full px-5 bg-[#109E92] hover:bg-[#0D8A7D] text-white font-semibold", !currentStep && "ml-auto")}
                         >
                           {currentStep === steps.length - 1 ? "Finish" : "Next"}
                         </Button>
@@ -492,7 +492,7 @@ export function TourAlertDialog({
               </div>
             </motion.div>
           </div>
-          <AlertDialogTitle className="text-center text-xl font-black text-zinc-900 dark:text-zinc-100">
+          <AlertDialogTitle className="text-center text-xl font-semibold text-zinc-900 dark:text-zinc-100">
             Welcome to the Tour
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-[15px] font-medium text-zinc-500 mt-2">
@@ -500,7 +500,7 @@ export function TourAlertDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="mt-8 space-y-3">
-          <Button onClick={() => { setIsOpen(false); startTour(); }} className="w-full bg-[#109E92] hover:bg-[#0D8A7D] text-white rounded-xl h-12 text-[15px] font-bold">
+          <Button onClick={() => { setIsOpen(false); startTour(); }} className="w-full bg-[#109E92] hover:bg-[#0D8A7D] text-white rounded-xl h-12 text-[15px] font-semibold">
             Start Tour
           </Button>
           <Button onClick={handleSkip} variant="ghost" className="w-full text-zinc-500 font-semibold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl h-12 text-[15px]">

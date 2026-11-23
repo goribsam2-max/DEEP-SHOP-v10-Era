@@ -15,7 +15,9 @@ let inflightBootstrap: Promise<void> | null = null;
 
 export function readCachedLoopsFeed(): ScamPost[] {
   try {
-    const raw = localStorage.getItem(LOOPS_FEED_CACHE_KEY);
+    const raw =
+      localStorage.getItem(LOOPS_FEED_CACHE_KEY) ||
+      localStorage.getItem("deep_scam_posts");
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
@@ -26,10 +28,10 @@ export function readCachedLoopsFeed(): ScamPost[] {
 
 export function writeCachedLoopsFeed(posts: ScamPost[]): void {
   try {
-    localStorage.setItem(
-      LOOPS_FEED_CACHE_KEY,
-      JSON.stringify(posts.slice(0, 36))
-    );
+    const slice = posts.slice(0, 50);
+    const json = JSON.stringify(slice);
+    localStorage.setItem(LOOPS_FEED_CACHE_KEY, json);
+    localStorage.setItem("deep_scam_posts", json);
   } catch {}
 }
 

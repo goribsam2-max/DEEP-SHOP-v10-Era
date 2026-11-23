@@ -163,7 +163,7 @@ const EditProduct: React.FC = () => {
           <span>Go Back</span>
         </button>
 
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100 mb-6">Edit Product Details</h1>
+        <h1 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-6">Edit Product Details</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
@@ -236,7 +236,7 @@ const EditProduct: React.FC = () => {
           </div>
 
           <div className="border-t border-zinc-200 dark:border-zinc-700 pt-6 space-y-4">
-            <h3 className="font-bold text-sm text-zinc-700 dark:text-zinc-300">Offer Settings</h3>
+            <h3 className="font-semibold text-sm text-zinc-700 dark:text-zinc-300">Offer Settings</h3>
             
             <div className="flex items-center gap-2">
               <input
@@ -264,13 +264,13 @@ const EditProduct: React.FC = () => {
           </div>
 
           <div className="border-t border-zinc-200 dark:border-zinc-700 pt-6 space-y-4">
-            <h3 className="font-bold text-sm text-zinc-700 dark:text-zinc-300">Advance Payment Setting</h3>
+            <h3 className="font-semibold text-sm text-zinc-700 dark:text-zinc-300">Advance Payment Setting</h3>
             
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, advanceType: "normal" })}
-                className={`p-3 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                className={`p-3 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                   formData.advanceType === "normal"
                     ? "border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20"
                     : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -283,7 +283,7 @@ const EditProduct: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, advanceType: "offer" })}
-                className={`p-3 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                className={`p-3 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                   formData.advanceType === "offer"
                     ? "border-red-500 bg-red-500/10 text-red-600 dark:text-red-400 ring-2 ring-red-500/20"
                     : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -296,7 +296,7 @@ const EditProduct: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, advanceType: "bypass" })}
-                className={`p-3 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                className={`p-3 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                   formData.advanceType === "bypass"
                     ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 ring-2 ring-emerald-500/20"
                     : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -309,7 +309,7 @@ const EditProduct: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setFormData({ ...formData, advanceType: "custom" })}
-                className={`p-3 rounded-xl border text-xs font-bold transition-all text-center flex flex-col items-center justify-center gap-1 ${
+                className={`p-3 rounded-xl border text-xs font-medium transition-all text-center flex flex-col items-center justify-center gap-1 ${
                   formData.advanceType === "custom"
                     ? "border-[#EF8020] bg-[#EF8020]/10 text-[#EF8020] ring-2 ring-[#EF8020]/20"
                     : "border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300"
@@ -341,7 +341,7 @@ const EditProduct: React.FC = () => {
             {formData.advanceType === "custom" && (
               <div className="space-y-3 p-3.5 bg-zinc-50 dark:bg-zinc-800/60 rounded-xl border border-zinc-200 dark:border-zinc-700">
                 <div className="flex items-center gap-3">
-                  <Label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 whitespace-nowrap">Advance Mode:</Label>
+                  <Label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 whitespace-nowrap">Advance Mode:</Label>
                   <select
                     value={formData.advanceMode}
                     onChange={(e: any) => setFormData({ ...formData, advanceMode: e.target.value })}
@@ -365,7 +365,7 @@ const EditProduct: React.FC = () => {
                         placeholder="e.g. 10 or 20"
                         className="rounded-xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-700 h-10 text-xs"
                       />
-                      <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap bg-emerald-500/10 px-3 py-2.5 rounded-xl border border-emerald-500/20">
+                      <div className="text-xs font-medium text-emerald-600 dark:text-emerald-400 whitespace-nowrap bg-emerald-500/10 px-3 py-2.5 rounded-xl border border-emerald-500/20">
                         Calc: ৳{Math.round((Number(formData.price || 0) * (Number(formData.advancePercentage || 0) / 100)))}
                       </div>
                     </div>
@@ -389,7 +389,7 @@ const EditProduct: React.FC = () => {
           </div>
 
           <div className="border-t border-zinc-200 dark:border-zinc-700 pt-6 space-y-4">
-            <h3 className="font-bold text-sm text-zinc-700 dark:text-zinc-300">Product Image</h3>
+            <h3 className="font-semibold text-sm text-zinc-700 dark:text-zinc-300">Product Image</h3>
             
             {formData.image && !newImageFile && (
               <div className="relative w-32 h-32 rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-700 bg-zinc-50 flex items-center justify-center">
@@ -421,7 +421,7 @@ const EditProduct: React.FC = () => {
           <button
             type="submit"
             disabled={saving}
-            className="w-full py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors rounded-2xl text-sm font-bold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
+            className="w-full py-3.5 bg-zinc-900 hover:bg-zinc-800 text-white dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-200 transition-colors rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 shadow-lg disabled:opacity-50"
           >
             {saving ? (
               <>

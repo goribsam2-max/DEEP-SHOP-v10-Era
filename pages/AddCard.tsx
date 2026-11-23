@@ -32,7 +32,7 @@ const AddCard: React.FC = () => {
         className="max-w-md mx-auto px-4 pt-5 sm:pt-7 space-y-6"
       >
         <div className="px-1">
-          <h1 className="ds-apple-display text-[24px] font-bold tracking-tight">
+          <h1 className="ds-apple-display text-[24px] font-semibold tracking-tight">
             Add Card
           </h1>
           <p className="text-xs ds-apple-muted mt-0.5">

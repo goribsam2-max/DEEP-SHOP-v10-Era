@@ -120,14 +120,14 @@ const ManageStaff: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5 text-shine">
               Staff Roles
             </h1>
-            <p className="text-zinc-400 text-[10px] md:text-xs font-bold tracking-normal ">
+            <p className="text-zinc-400 text-[10px] md:text-xs font-normal tracking-normal ">
               RBAC & Permissions
             </p>
           </div>
         </div>
         <button
           onClick={() => setShowAdd(!showAdd)}
-          className={`px-6 py-3 rounded-full font-bold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${showAdd ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"}`}
+          className={`px-6 py-3 rounded-full font-semibold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${showAdd ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"}`}
         >
           {showAdd ? "Cancel" : "Add Staff"}
         </button>
@@ -142,7 +142,7 @@ const ManageStaff: React.FC = () => {
         <form onSubmit={handleAddStaff} className="w-full space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Staff Email
               </label>
               <input
@@ -155,7 +155,7 @@ const ManageStaff: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                       Role Title
                     </label>
                     <input
@@ -172,7 +172,7 @@ const ManageStaff: React.FC = () => {
                 </div>
 
                 <div className="mb-8">
-                  <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-4 block">
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-4 block">
                     Module Permissions
                   </label>
                   <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
@@ -190,7 +190,7 @@ const ManageStaff: React.FC = () => {
                           )}
                         </div>
                         <span
-                          className={`text-sm font-bold truncate ${form.permissions.includes(mod.id) ? "text-zinc-900 dark:text-white" : "text-zinc-600 dark:text-zinc-400"}`}
+                          className={`text-sm font-semibold truncate ${form.permissions.includes(mod.id) ? "text-zinc-900 dark:text-white" : "text-zinc-600 dark:text-zinc-400"}`}
                         >
                           {mod.name}
                         </span>
@@ -198,7 +198,7 @@ const ManageStaff: React.FC = () => {
                     ))}
                   </div>
                   {form.permissions.length === 0 && (
-                    <p className="text-[10px] text-red-500 font-bold mt-2">
+                    <p className="text-[10px] text-red-500 font-semibold mt-2">
                     <Icon name="exclamation-triangle" className="mr-1" /> Select
                     at least one module
                   </p>
@@ -209,14 +209,14 @@ const ManageStaff: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowAdd(false)}
-                  className="px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 border-none dark:text-zinc-100 rounded-lg font-bold tracking-wide transition-all outline-none!"
+                  className="px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 border-none dark:text-zinc-100 rounded-lg font-semibold tracking-wide transition-all outline-none!"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={form.permissions.length === 0}
-                  className="px-8 py-3 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-bold tracking-wide shadow-xl active:scale-95 transition-all disabled:opacity-50 outline-none!"
+                  className="px-8 py-3 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-semibold tracking-wide shadow-xl active:scale-95 transition-all disabled:opacity-50 outline-none!"
                 >
                   Confirm & Add User
                 </button>
@@ -240,13 +240,13 @@ const ManageStaff: React.FC = () => {
                 <h3 className="font-semibold text-lg tracking-tight">
                   Super Admin
                 </h3>
-                <p className="text-[10px] text-emerald-200  tracking-normal font-bold">
+                <p className="text-[10px] text-emerald-200  tracking-normal font-semibold">
                   admin@deep.shop
                 </p>
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <span className="px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900/20 text-emerald-300 rounded-md text-[9px] font-bold  tracking-normal border border-zinc-900 dark:border-zinc-100/30">
+              <span className="px-3 py-1.5 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900/20 text-emerald-300 rounded-md text-[9px] font-semibold  tracking-normal border border-zinc-900 dark:border-zinc-100/30">
                 All Access
               </span>
             </div>
@@ -266,10 +266,10 @@ const ManageStaff: React.FC = () => {
                     <Icon name="user-shield" className="text-sm" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                    <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 truncate">
                       {member.roleName}
                     </h3>
-                    <p className="text-[10px] text-zinc-400 font-bold max-w-[150px] truncate">
+                    <p className="text-[10px] text-zinc-400 font-normal max-w-[150px] truncate">
                       {member.email}
                     </p>
                   </div>
@@ -283,14 +283,14 @@ const ManageStaff: React.FC = () => {
               </div>
 
               <div className="mt-4 border-t border-zinc-100 dark:border-zinc-800 pt-4">
-                <p className="text-[9px] font-bold  tracking-normal text-zinc-400 mb-3">
+                <p className="text-[9px] font-normal  tracking-normal text-zinc-400 mb-3">
                   Permissions
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {member.permissions?.map((p: string) => (
                     <span
                       key={p}
-                      className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded text-[9px] font-bold  tracking-normal border border-zinc-200 dark:border-zinc-700"
+                      className="px-2 py-1 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded text-[9px] font-semibold  tracking-normal border border-zinc-200 dark:border-zinc-700"
                     >
                       {ALL_MODULES.find((m) => m.id === p)?.name || p}
                     </span>

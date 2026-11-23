@@ -485,7 +485,7 @@ const ManageStories: React.FC = () => {
     <div className="max-w-[1440px] mx-auto px-6 md:px-12 py-10 min-h-screen bg-zinc-50 dark:bg-zinc-800 animate-fade-in relative overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 relative z-10">
         <div>
-          <h1 className="text-xl md:text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">
+          <h1 className="text-xl md:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1">
             Stories & Songs Manager
           </h1>
           <p className="text-zinc-400 text-xs font-medium">
@@ -497,7 +497,7 @@ const ManageStories: React.FC = () => {
           <div className="flex items-center gap-1.5 p-1 bg-zinc-200 dark:bg-zinc-800 rounded-2xl border border-zinc-300 dark:border-zinc-700">
             <button
               onClick={() => setActiveTab("stories")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                 activeTab === "stories"
                   ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-sm"
                   : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
@@ -507,7 +507,7 @@ const ManageStories: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveTab("songs")}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs font-medium transition-all ${
                 activeTab === "songs"
                   ? "bg-pink-500 text-white shadow-sm"
                   : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
@@ -523,14 +523,14 @@ const ManageStories: React.FC = () => {
                 resetForm();
                 setIsAdding(true);
               }}
-              className="px-5 py-2.5 rounded-2xl font-bold text-xs shadow-lg transition-all active:scale-95 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
+              className="px-5 py-2.5 rounded-2xl font-medium text-xs shadow-lg transition-all active:scale-95 bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900"
             >
               Add Story
             </button>
           ) : (
             <button
               onClick={() => setIsAddingSong(true)}
-              className="px-5 py-2.5 rounded-2xl font-bold text-xs shadow-lg transition-all active:scale-95 bg-pink-600 text-white hover:bg-pink-700"
+              className="px-5 py-2.5 rounded-2xl font-medium text-xs shadow-lg transition-all active:scale-95 bg-pink-600 text-white hover:bg-pink-700"
             >
               + Add Song
             </button>
@@ -549,7 +549,7 @@ const ManageStories: React.FC = () => {
       >
         <div className="space-y-4 pt-2">
           <div>
-            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">Song Title *</label>
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1 block">Song Title *</label>
             <input
               type="text"
               value={songTitle}
@@ -560,7 +560,7 @@ const ManageStories: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">Artist Name</label>
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1 block">Artist Name</label>
             <input
               type="text"
               value={songArtist}
@@ -571,7 +571,7 @@ const ManageStories: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">MP3 / WAV Audio File or Direct Link *</label>
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1 block">MP3 / WAV Audio File or Direct Link *</label>
             <div className="flex gap-2 items-center">
               <input
                 type="text"
@@ -580,7 +580,7 @@ const ManageStories: React.FC = () => {
                 placeholder="https://... or upload MP3/WAV"
                 className="flex-1 h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium"
               />
-              <label className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 shadow-xs">
+              <label className="px-3.5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium rounded-xl cursor-pointer transition-colors flex items-center gap-1.5 shrink-0 shadow-xs">
                 {songAudioUploading ? (
                   <span>Processing...</span>
                 ) : (
@@ -601,7 +601,7 @@ const ManageStories: React.FC = () => {
           </div>
 
           <div>
-            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1 block">
+            <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1 block">
               Cover Image (ImgBB Upload or Image URL)
             </label>
             <div className="flex gap-2 items-center">
@@ -612,7 +612,7 @@ const ManageStories: React.FC = () => {
                 placeholder="https://..."
                 className="flex-1 h-10 px-3 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-medium"
               />
-              <label className="px-3.5 py-2.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 text-xs font-bold rounded-xl cursor-pointer transition-colors border border-pink-500/20 flex items-center gap-1.5 shrink-0">
+              <label className="px-3.5 py-2.5 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 text-xs font-medium rounded-xl cursor-pointer transition-colors border border-pink-500/20 flex items-center gap-1.5 shrink-0">
                 {songCoverUploading ? (
                   <span>Uploading...</span>
                 ) : (
@@ -640,14 +640,14 @@ const ManageStories: React.FC = () => {
           <div className="flex justify-end gap-3 pt-3">
             <button
               onClick={() => setIsAddingSong(false)}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-600 bg-zinc-100 dark:bg-zinc-800"
+              className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-600 bg-zinc-100 dark:bg-zinc-800"
             >
               Cancel
             </button>
             <button
               onClick={handleSaveSong}
               disabled={loading}
-              className="px-5 py-2 bg-pink-600 text-white rounded-xl text-xs font-bold hover:bg-pink-700 disabled:opacity-50"
+              className="px-5 py-2 bg-pink-600 text-white rounded-xl text-xs font-medium hover:bg-pink-700 disabled:opacity-50"
             >
               {loading ? "Saving..." : "Save Song"}
             </button>
@@ -770,7 +770,7 @@ const ManageStories: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => togglePlayAdminSong(song)}
-                    className="relative w-12 h-12 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-xl flex items-center justify-center shrink-0 border border-pink-500/20 font-black text-sm overflow-hidden cursor-pointer group"
+                    className="relative w-12 h-12 bg-pink-500/10 text-pink-600 dark:text-pink-400 rounded-xl flex items-center justify-center shrink-0 border border-pink-500/20 font-semibold text-sm overflow-hidden cursor-pointer group"
                     title={isPlayingThis ? "Pause preview" : "Play preview"}
                   >
                     {song.coverUrl ? (
@@ -787,7 +787,7 @@ const ManageStories: React.FC = () => {
                     </span>
                   </button>
                   <div className="overflow-hidden">
-                    <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 truncate">{song.title}</h3>
+                    <h3 className="font-semibold text-sm text-zinc-900 dark:text-zinc-100 truncate">{song.title}</h3>
                     <p className="text-xs text-zinc-400 truncate">{song.artist || "Unknown Artist"}</p>
                     <a
                       href={song.url}
@@ -834,10 +834,10 @@ const ManageStories: React.FC = () => {
 
             {dbSongs.length === 0 && (
               <div className="col-span-full py-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl">
-                <p className="text-xs font-bold text-zinc-400 mb-3">No custom songs added yet.</p>
+                <p className="text-xs font-normal text-zinc-400 mb-3">No custom songs added yet.</p>
                 <button
                   onClick={() => setIsAddingSong(true)}
-                  className="px-4 py-2 bg-pink-600 text-white font-bold text-xs rounded-xl"
+                  className="px-4 py-2 bg-pink-600 text-white font-medium text-xs rounded-xl"
                 >
                   + Add First Song
                 </button>
@@ -897,7 +897,7 @@ const ManageStories: React.FC = () => {
             {stories.length === 0 && (
               <div className="col-span-full py-20 text-center bg-white dark:bg-zinc-900 border border-solid border-zinc-200 dark:border-zinc-800 rounded-2xl">
                 <Icon name="layer-group" className="text-zinc-300 text-lg mb-4" />
-                <p className="text-xs font-bold  tracking-normal text-zinc-400">
+                <p className="text-xs font-normal  tracking-normal text-zinc-400">
                   No stories active
                 </p>
                 <button
@@ -905,7 +905,7 @@ const ManageStories: React.FC = () => {
                     resetForm();
                     setIsAdding(true);
                   }}
-                  className="mt-4 text-[10px] font-bold  tracking-normal text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-4 py-2 rounded-lg transition-colors"
+                  className="mt-4 text-[10px] font-semibold  tracking-normal text-zinc-900 dark:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 px-4 py-2 rounded-lg transition-colors"
                 >
                   Create First Story
                 </button>

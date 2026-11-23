@@ -44,7 +44,7 @@ const NotFound: React.FC = () => {
           </div>
         )}
 
-        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
           Page Not Found
         </h1>
 

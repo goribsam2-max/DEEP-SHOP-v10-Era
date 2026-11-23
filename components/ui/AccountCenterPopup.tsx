@@ -140,7 +140,7 @@ export function AccountCenterPopup({ isOpen, onClose, savedAccounts, currentUid 
             </div>
 
             <div className="px-6 pt-3 sm:pt-6 pb-3 relative flex items-center justify-between border-b border-black/[0.06] dark:border-white/[0.08]">
-              <h2 className="ds-apple-display text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h2 className="ds-apple-display text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                 Choose Account
               </h2>
               <button

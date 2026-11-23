@@ -1403,7 +1403,7 @@ function ProfileRow({
         <div className="flex items-center gap-2 shrink-0">
           {badge &&
             (isNumericAlert ? (
-              <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#FF3040] text-white text-[11.5px] font-bold flex items-center justify-center tabular-nums">
+              <span className="min-w-[22px] h-[22px] px-1.5 rounded-full bg-[#FF3040] text-white text-[11.5px] font-semibold flex items-center justify-center tabular-nums">
                 {badge}
               </span>
             ) : isStatusChip ? (

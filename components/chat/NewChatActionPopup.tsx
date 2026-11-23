@@ -284,7 +284,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                     </svg>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-zinc-950 dark:text-white leading-snug">
+                    <p className="text-[15px] font-semibold text-zinc-950 dark:text-white leading-snug">
                       New Chat
                     </p>
                     <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
@@ -311,7 +311,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                     </svg>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-zinc-950 dark:text-white leading-snug">
+                    <p className="text-[15px] font-semibold text-zinc-950 dark:text-white leading-snug">
                       New Contact
                     </p>
                     <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
@@ -330,7 +330,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                     <MsgCommunityIcon className="w-6 h-6" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[15px] font-bold text-zinc-950 dark:text-white leading-snug">
+                    <p className="text-[15px] font-semibold text-zinc-950 dark:text-white leading-snug">
                       New Community
                     </p>
                     <p className="text-[12.5px] text-zinc-500 dark:text-zinc-400 mt-0.5 leading-snug">
@@ -367,7 +367,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                       <MsgBackChevronIcon className="w-5 h-5" />
                     </button>
                     <div>
-                      <h3 className="text-[16px] font-bold text-zinc-950 dark:text-white leading-tight">
+                      <h3 className="text-[16px] font-semibold text-zinc-950 dark:text-white leading-tight">
                         New Contact
                       </h3>
                       <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
@@ -391,13 +391,13 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                         {selectedUserToSave.photoURL ? (
                           <img src={selectedUserToSave.photoURL} alt={selectedUserToSave.displayName} className="w-full h-full object-cover" />
                         ) : (
-                          <span className="font-bold text-base text-[#2F80ED]">
+                          <span className="font-semibold text-base text-[#2F80ED]">
                             {(selectedUserToSave.displayName || 'U')[0].toUpperCase()}
                           </span>
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold text-sm text-zinc-950 dark:text-white truncate">
+                        <p className="font-semibold text-sm text-zinc-950 dark:text-white truncate">
                           {selectedUserToSave.displayName}
                         </p>
                         <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
@@ -494,7 +494,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                                 {u.photoURL ? (
                                   <img src={u.photoURL} alt={u.displayName} className="w-full h-full object-cover" />
                                 ) : (
-                                  <span className="font-bold text-sm text-[#2F80ED]">
+                                  <span className="font-semibold text-sm text-[#2F80ED]">
                                     {(u.displayName || 'U')[0].toUpperCase()}
                                   </span>
                                 )}
@@ -540,7 +540,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                       <MsgBackChevronIcon className="w-5 h-5" />
                     </button>
                     <div>
-                      <h3 className="text-[16px] font-bold text-zinc-950 dark:text-white leading-tight">
+                      <h3 className="text-[16px] font-semibold text-zinc-950 dark:text-white leading-tight">
                         Communities
                       </h3>
                       <p className="text-[12px] text-zinc-500 dark:text-zinc-400">
@@ -575,7 +575,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                         onClose();
                         onCreateCommunity();
                       }}
-                      className="h-[42px] px-4 rounded-2xl msg-new-chat-pill text-xs font-bold flex items-center gap-1.5 shrink-0 cursor-pointer hover:opacity-90 transition"
+                      className="h-[42px] px-4 rounded-2xl msg-new-chat-pill text-xs font-medium flex items-center gap-1.5 shrink-0 cursor-pointer hover:opacity-90 transition"
                     >
                       <MsgPlusIcon className="w-4 h-4" />
                       <span>Create</span>
@@ -616,7 +616,7 @@ export const NewChatActionPopup: React.FC<NewChatActionPopupProps> = ({
                               )}
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="font-bold text-sm text-zinc-950 dark:text-white truncate">
+                              <p className="font-semibold text-sm text-zinc-950 dark:text-white truncate">
                                 {ch.name}
                               </p>
                               <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5">

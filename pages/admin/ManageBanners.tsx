@@ -154,7 +154,7 @@ const ManageBanners: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5 text-shine">
               Store Banners
             </h1>
-            <p className="text-zinc-400 text-[10px] md:text-xs font-bold tracking-normal">
+            <p className="text-zinc-400 text-[10px] md:text-xs font-normal tracking-normal">
               Homepage Visuals
             </p>
           </div>
@@ -165,7 +165,7 @@ const ManageBanners: React.FC = () => {
             setEditingId(null);
             setFormData({ title: "", description: "", link: "", imageFile: null, bannerType: "hero" });
           }}
-          className="px-6 py-3 rounded-full font-bold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"
+          className="px-6 py-3 rounded-full font-semibold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"
         >
           Add Banner
         </button>
@@ -185,7 +185,7 @@ const ManageBanners: React.FC = () => {
           className="w-full space-y-4"
         >
           <div>
-            <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+            <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Main Title
               </label>
               <input
@@ -201,7 +201,7 @@ const ManageBanners: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Description
               </label>
               <input
@@ -217,7 +217,7 @@ const ManageBanners: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Action Link (Optional)
               </label>
               <input
@@ -232,7 +232,7 @@ const ManageBanners: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Banner Type
               </label>
               <select
@@ -255,7 +255,7 @@ const ManageBanners: React.FC = () => {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Banner Image (GIFs allowed)
               </label>
               <input
@@ -276,7 +276,7 @@ const ManageBanners: React.FC = () => {
               <button
                 disabled={uploading}
                 type="submit"
-                className="flex-1 py-4 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-bold tracking-wide shadow-xl active:scale-95 transition-all disabled:opacity-50"
+                className="flex-1 py-4 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-semibold tracking-wide shadow-xl active:scale-95 transition-all disabled:opacity-50"
               >
                 {uploading
                   ? "Uploading..."
@@ -297,7 +297,7 @@ const ManageBanners: React.FC = () => {
                     bannerType: "hero"
                   });
                 }}
-                className="py-4 px-6 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg font-bold shadow-sm active:scale-95 transition-all"
+                className="py-4 px-6 bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rounded-lg font-semibold shadow-sm active:scale-95 transition-all"
               >
                 Cancel
               </button>
@@ -311,7 +311,7 @@ const ManageBanners: React.FC = () => {
             <h2 className="text-xs font-semibold  tracking-normal text-zinc-400 mb-6">
               Home Slider Category
             </h2>
-            <p className="text-[10px] font-bold text-zinc-500 mb-6 leading-relaxed">
+            <p className="text-[10px] font-normal text-zinc-500 mb-6 leading-relaxed">
               Select a category to display in the auto-slider below the header
               search bar on the homepage.
             </p>
@@ -319,7 +319,7 @@ const ManageBanners: React.FC = () => {
               <select
                 value={featuredCategory}
                 onChange={(e) => setFeaturedCategory(e.target.value)}
-                className="w-full bg-zinc-50 dark:bg-zinc-800 p-5 rounded-2xl outline-none focus:ring-1 focus:ring-black transition-all font-bold shadow-inner  tracking-normal text-xs"
+                className="w-full bg-zinc-50 dark:bg-zinc-800 p-5 rounded-2xl outline-none focus:ring-1 focus:ring-black transition-all font-medium shadow-inner  tracking-normal text-xs"
               >
                 <option value="">-- No Slider --</option>
                 <option value="Mobile">Mobile</option>
@@ -330,7 +330,7 @@ const ManageBanners: React.FC = () => {
               <button
                 onClick={saveSettings}
                 disabled={savingSettings}
-                className="w-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm disabled:opacity-50 text-[10px] font-bold  tracking-normal py-4 rounded-full transition-all hover:bg-emerald-900"
+                className="w-full bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 shadow-sm disabled:opacity-50 text-[10px] font-semibold  tracking-normal py-4 rounded-full transition-all hover:bg-emerald-900"
               >
                 {savingSettings ? "Saving..." : "Update Category"}
               </button>
@@ -352,7 +352,7 @@ const ManageBanners: React.FC = () => {
                   <div className="flex w-full items-start justify-between gap-4">
                     <div className="flex flex-col gap-1 w-full relative">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-sm shrink-0 uppercase">
+                        <span className="bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 text-[9px] font-medium tracking-wider px-2 py-0.5 rounded-sm shrink-0 uppercase">
                           {banner.bannerType === "popup"
                             ? "WELCOME POPUP"
                             : banner.bannerType === "gif"

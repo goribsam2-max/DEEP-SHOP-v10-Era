@@ -302,7 +302,7 @@ export const NewsHubNotifications: React.FC = () => {
                 triggerHaptic();
                 navigate("/loops/activity");
               }}
-              className="px-3 h-9 rounded-full border border-black/[0.12] dark:border-white/[0.16] text-xs font-bold text-slate-900 dark:text-zinc-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
+              className="px-3 h-9 rounded-full border border-black/[0.12] dark:border-white/[0.16] text-xs font-medium text-slate-900 dark:text-zinc-100 hover:bg-black/[0.04] dark:hover:bg-white/[0.06] cursor-pointer active:scale-95 transition"
             >
               Activity
             </button>
@@ -331,7 +331,7 @@ export const NewsHubNotifications: React.FC = () => {
           </div>
         ) : displayedNotifications.length === 0 ? (
           <div className="text-center py-20 bg-white dark:bg-zinc-900 rounded-[28px] p-6 shadow-sm border border-slate-200/70 dark:border-zinc-800">
-            <p className="text-sm font-bold text-slate-800 dark:text-zinc-200">No notifications yet</p>
+            <p className="text-sm font-semibold text-slate-800 dark:text-zinc-200">No notifications yet</p>
             <p className="text-xs text-slate-400 mt-1">Interactions with your posts and followers will appear here.</p>
           </div>
         ) : (
@@ -344,7 +344,7 @@ export const NewsHubNotifications: React.FC = () => {
                 className="space-y-3"
               >
                 <div className="px-1 flex items-center justify-between">
-                  <h2 className="text-xs font-black text-slate-400 dark:text-zinc-500 uppercase tracking-widest px-1">
+                  <h2 className="text-xs font-medium text-slate-400 dark:text-zinc-500 uppercase tracking-widest px-1">
                     {groupTitle}
                   </h2>
                   <div className="h-px flex-1 bg-slate-100 dark:bg-zinc-800 ml-4" />
@@ -384,25 +384,25 @@ export const NewsHubNotifications: React.FC = () => {
                         <div className="min-w-0 flex-1">
                           {isMilestone ? (
                             <p className="text-[13px] sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
-                              <span className="font-extrabold text-amber-600 dark:text-amber-400">
+                              <span className="font-semibold text-amber-600 dark:text-amber-400">
                                 {item.title || "Congratulations! 🎉"}
                               </span>{" "}
                               <span className="text-slate-700 dark:text-zinc-200 font-medium">
                                 {item.body}
                               </span>{" "}
-                              <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px] uppercase ml-1 opacity-80">
+                              <span className="text-slate-400 dark:text-zinc-500 font-medium text-[10px] uppercase ml-1 opacity-80">
                                 {formatCompactTimeAgo(item.createdAt)}
                               </span>
                             </p>
                           ) : (
                             <p className="text-[13px] sm:text-sm text-slate-900 dark:text-zinc-100 leading-snug">
-                              <span className="font-bold text-slate-900 dark:text-white hover:underline">
+                              <span className="font-semibold text-slate-900 dark:text-white hover:underline">
                                 {username}
                               </span>{" "}
                               <span className="text-slate-600 dark:text-zinc-300 font-medium">
                                 {item.body}
                               </span>{" "}
-                              <span className="text-slate-400 dark:text-zinc-500 font-bold text-[10px] uppercase ml-1 opacity-80">
+                              <span className="text-slate-400 dark:text-zinc-500 font-medium text-[10px] uppercase ml-1 opacity-80">
                                 {formatCompactTimeAgo(item.createdAt)}
                               </span>
                             </p>
@@ -416,7 +416,7 @@ export const NewsHubNotifications: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={(e) => handleToggleFollow(e, item)}
-                                className="px-4 py-2 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-[11px] font-extrabold transition cursor-pointer border border-slate-200/50 dark:border-zinc-700"
+                                className="px-4 py-2 rounded-2xl bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 text-[11px] font-semibold transition cursor-pointer border border-slate-200/50 dark:border-zinc-700"
                               >
                                 Following
                               </button>
@@ -424,7 +424,7 @@ export const NewsHubNotifications: React.FC = () => {
                               <button
                                 type="button"
                                 onClick={(e) => handleToggleFollow(e, item)}
-                                className="px-5 py-2 rounded-2xl bg-[#1877F2] hover:bg-[#1465D8] text-white text-[11px] font-extrabold shadow-md shadow-blue-500/20 transition cursor-pointer"
+                                className="px-5 py-2 rounded-2xl bg-[#1877F2] hover:bg-[#1465D8] text-white text-[11px] font-semibold shadow-md shadow-blue-500/20 transition cursor-pointer"
                               >
                                 Follow
                               </button>
@@ -506,7 +506,7 @@ export const NewsHubNotifications: React.FC = () => {
                 <div className="w-10 h-1 rounded-full bg-slate-300 dark:bg-zinc-700" />
               </div>
               <div className="flex items-center justify-between">
-              <h2 className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">
                 Get notified about important stuff
               </h2>
               <button
@@ -518,7 +518,7 @@ export const NewsHubNotifications: React.FC = () => {
               </button>
             </div>
 
-            <p className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+            <p className="text-xs font-medium text-slate-700 dark:text-zinc-300">
               We'll notify you when
             </p>
 
@@ -588,7 +588,7 @@ export const NewsHubNotifications: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowPreferencesModal(false)}
-                className="py-3 px-4 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 transition cursor-pointer"
+                className="py-3 px-4 rounded-xl text-xs font-medium bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 transition cursor-pointer"
               >
                 Later
               </button>
@@ -599,7 +599,7 @@ export const NewsHubNotifications: React.FC = () => {
                   setShowPreferencesModal(false);
                   notify("Notification preferences updated!", "success");
                 }}
-                className="py-3 px-4 rounded-xl text-xs font-bold bg-[#1877F2] hover:bg-[#1465D8] text-white transition cursor-pointer shadow-sm"
+                className="py-3 px-4 rounded-xl text-xs font-medium bg-[#1877F2] hover:bg-[#1465D8] text-white transition cursor-pointer shadow-sm"
               >
                 Get notified
               </button>

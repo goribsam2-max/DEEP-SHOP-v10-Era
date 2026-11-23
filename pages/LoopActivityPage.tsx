@@ -579,7 +579,7 @@ export const LoopActivityPage: React.FC = () => {
               className="w-full h-full object-cover"
             />
           ) : (
-            <span className="text-[14px] font-bold text-zinc-700 dark:text-zinc-200">
+            <span className="text-[14px] font-semibold text-zinc-700 dark:text-zinc-200">
               {name.charAt(0).toUpperCase()}
             </span>
           )}
@@ -657,7 +657,7 @@ export const LoopActivityPage: React.FC = () => {
             <Icon name="chevron-left" className="w-5 h-5" />
           </button>
 
-          <h1 className="text-[19px] font-bold tracking-tight text-zinc-900 dark:text-white">
+          <h1 className="text-[19px] font-semibold tracking-tight text-zinc-900 dark:text-white">
             {isPostActivity ? "Post activity" : "Notifications"}
           </h1>
 
@@ -728,7 +728,7 @@ export const LoopActivityPage: React.FC = () => {
             {/* NEW SECTION */}
             {newItems.length > 0 && (
               <div className="space-y-3">
-                <h2 className="text-[16px] font-bold text-zinc-900 dark:text-white px-1">
+                <h2 className="text-[16px] font-semibold text-zinc-900 dark:text-white px-1">
                   New
                 </h2>
                 <div className="space-y-3">
@@ -740,7 +740,7 @@ export const LoopActivityPage: React.FC = () => {
             {/* OLD SECTION */}
             {oldItems.length > 0 && (
               <div className="space-y-3 pt-2">
-                <h2 className="text-[16px] font-bold text-zinc-900 dark:text-white px-1">
+                <h2 className="text-[16px] font-semibold text-zinc-900 dark:text-white px-1">
                   Old
                 </h2>
                 <div className="space-y-3">

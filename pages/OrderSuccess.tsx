@@ -36,7 +36,7 @@ const OrderSuccess: React.FC = () => {
           <Check className="w-9 h-9" strokeWidth={2.5} />
         </motion.div>
 
-        <h1 className="text-[24px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+        <h1 className="text-[24px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
           Order Placed!
         </h1>
 

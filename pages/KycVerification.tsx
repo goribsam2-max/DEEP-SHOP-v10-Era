@@ -244,7 +244,7 @@ export default function KycVerification(props?: { onSuccess?: () => void }) {
     <div className="ds-apple-shop-canvas min-h-screen pb-24">
       <div className="max-w-2xl mx-auto px-4 pt-6 space-y-4">
         <div className="px-1">
-          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             KYC Verification
           </h1>
         </div>

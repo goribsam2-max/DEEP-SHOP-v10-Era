@@ -421,7 +421,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               >
                 Cancel
               </button>
-              <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
+              <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-white tracking-tight">
                 New message
               </h2>
               <div className="w-16" /> {/* Balancing spacer */}
@@ -529,7 +529,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                         {item.photoURL ? (
                           <img src={item.photoURL} alt={item.displayName} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-bold text-base">
+                          <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-semibold text-base">
                             {item.displayName[0]?.toUpperCase() || 'U'}
                           </div>
                         )}
@@ -571,7 +571,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               >
                 Cancel
               </button>
-              <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
+              <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-white tracking-tight">
                 New group
               </h2>
               <button 
@@ -625,7 +625,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                         {user.photoURL ? (
                           <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-bold text-sm">
+                          <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-semibold text-sm">
                             {user.displayName[0]?.toUpperCase() || 'U'}
                           </div>
                         )}
@@ -672,7 +672,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                         {user.photoURL ? (
                           <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-bold text-base">
+                          <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-semibold text-base">
                             {user.displayName[0]?.toUpperCase() || 'U'}
                           </div>
                         )}
@@ -719,7 +719,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               >
                 <ChevronLeft className="w-5 h-5 stroke-[2.3]" />
               </button>
-              <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
+              <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-white tracking-tight">
                 New group
               </h2>
               <button 
@@ -836,7 +836,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
                           {user.photoURL ? (
                             <img src={user.photoURL} alt={user.displayName} className="w-full h-full object-cover" />
                           ) : (
-                            <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-bold text-sm">
+                            <div className="w-full h-full flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-white font-semibold text-sm">
                               {user.displayName[0]?.toUpperCase() || 'U'}
                             </div>
                           )}
@@ -875,7 +875,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               >
                 Cancel
               </button>
-              <h2 className="text-[17px] font-bold text-zinc-900 dark:text-white tracking-tight">
+              <h2 className="text-[17px] font-semibold text-zinc-900 dark:text-white tracking-tight">
                 New note
               </h2>
               <button 
@@ -920,7 +920,7 @@ export const NewMessageModal: React.FC<NewMessageModalProps> = ({
               </div>
 
               <div className="space-y-1">
-                <h4 className="text-[16px] font-bold text-zinc-900 dark:text-white">
+                <h4 className="text-[16px] font-semibold text-zinc-900 dark:text-white">
                   {currentUser?.displayName || 'Your Profile'}
                 </h4>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-xs">

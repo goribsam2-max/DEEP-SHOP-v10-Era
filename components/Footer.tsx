@@ -247,7 +247,7 @@ export const Footer: React.FC = () => {
           className="w-full h-full object-cover"
         />
       ) : (
-        <span className="text-xs font-black text-zinc-900 dark:text-white">
+        <span className="text-xs font-semibold text-zinc-900 dark:text-white">
           DS
         </span>
       )}
@@ -266,7 +266,7 @@ export const Footer: React.FC = () => {
               {renderBrandLogo("w-12 h-12")}
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
-                  <h2 className="ds-apple-display text-lg font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
+                  <h2 className="ds-apple-display text-lg font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                     DEEP SHOP
                   </h2>
                   <span className="text-xs text-[#86868B]">
@@ -387,7 +387,7 @@ export const Footer: React.FC = () => {
             <div className="flex items-center gap-2.5 min-w-0">
               {renderBrandLogo("w-10 h-10")}
               <div className="min-w-0">
-                <h2 className="ds-apple-display text-sm font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
+                <h2 className="ds-apple-display text-sm font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate">
                   DEEP SHOP
                 </h2>
                 <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] truncate">
@@ -528,7 +528,7 @@ export const Footer: React.FC = () => {
                   <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/25" />
                 </div>
                 <div className="flex justify-between items-center mb-5">
-                  <h3 className="ds-apple-display text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <h3 className="ds-apple-display text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     24/7 Customer Support
                   </h3>
                   <button
@@ -613,7 +613,7 @@ export const Footer: React.FC = () => {
                   <div className="w-9 h-1 rounded-full bg-black/15 dark:bg-white/25" />
                 </div>
                 <div className="flex justify-between items-center mb-5">
-                  <h3 className="ds-apple-display text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <h3 className="ds-apple-display text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     What do you need help with?
                   </h3>
                   <button

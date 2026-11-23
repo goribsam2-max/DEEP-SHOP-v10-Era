@@ -28,6 +28,9 @@ import { useSwipeNavigation } from "../lib/useSwipeNavigation";
 import {
   findOfflineProductByIdOrSlug,
   upsertOfflineProduct,
+  readSellerMetaCache,
+  readProductReviewsCache,
+  writeProductReviewsCache,
 } from "../lib/offlineStore";
 import {
   APPLE_SPRING_DEFAULT,
@@ -90,12 +93,20 @@ const ProductDetails: React.FC = () => {
 
   const [product, setProduct] = useState<Product | null>(initialCachedProduct);
   const [isNotFound, setIsNotFound] = useState(false);
-  const [sellerInfo, setSellerInfo] = useState<any>(null);
+  const [sellerInfo, setSellerInfo] = useState<any>(() => {
+    const sid = initialCachedProduct?.sellerId;
+    if (!sid) return null;
+    const cached = readSellerMetaCache()[sid];
+    return cached ? { id: sid, ...cached } : null;
+  });
   const [sellerReviews, setSellerReviews] = useState<any[]>([]);
   const [resolvedId, setResolvedId] = useState<string | null>(
     id || initialCachedProduct?.id || null
   );
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviews, setReviews] = useState<Review[]>(() => {
+    const rid = id || initialCachedProduct?.id;
+    return rid ? (readProductReviewsCache(rid) as Review[]) : [];
+  });
   const [reviewFilter, setReviewFilter] = useState<
     "all" | "photos" | "5" | "4" | "3" | "2" | "1"
   >("all");
@@ -421,6 +432,11 @@ const ProductDetails: React.FC = () => {
         } catch (e) {}
       }
 
+      const cachedRevs = readProductReviewsCache(resolvedId) as Review[];
+      if (cachedRevs.length > 0) {
+        setReviews((prev) => (prev.length > 0 ? prev : cachedRevs));
+      }
+
       const q = query(
         collection(db, "reviews"),
         where("productId", "==", resolvedId),
@@ -434,6 +450,7 @@ const ProductDetails: React.FC = () => {
           const reviewList = filterSafeReviews(rawList);
           reviewList.sort((a, b) => b.createdAt - a.createdAt);
           setReviews(reviewList);
+          writeProductReviewsCache(resolvedId, reviewList);
         },
         (err) => console.warn("Reviews fetch error:", err.message),
       );
@@ -1099,10 +1116,10 @@ const ProductDetails: React.FC = () => {
     if (activeInfoTab === "description") {
       return (
         <div className="space-y-3">
-          <h2 className="text-sm sm:text-base font-extrabold text-zinc-900 dark:text-white tracking-tight">
+          <h2 className="text-sm sm:text-base font-semibold text-zinc-900 dark:text-white tracking-tight">
             <Tr>Product Description</Tr>
           </h2>
-          <div className="text-zinc-600 dark:text-zinc-300 text-sm leading-relaxed whitespace-pre-wrap">
+          <div className="text-zinc-600 dark:text-zinc-300 text-xs sm:text-sm md:text-[15px] font-normal leading-relaxed whitespace-pre-wrap">
             <Tr>
               {product.description ||
                 "High-quality authentic border cross imported product curated by DEEP SHOP for reliable performance."}
@@ -1116,7 +1133,7 @@ const ProductDetails: React.FC = () => {
       return (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="ds-liquid-subpanel p-4 space-y-2">
-            <div className="flex items-center gap-2 text-zinc-900 dark:text-white font-bold text-sm">
+            <div className="flex items-center gap-2 text-zinc-900 dark:text-white font-semibold text-sm">
               <ShieldCheck className="w-4 h-4 text-sky-600 dark:text-sky-400 shrink-0" />
               <span>100% Authentic Guarantee</span>
             </div>
@@ -1126,7 +1143,7 @@ const ProductDetails: React.FC = () => {
           </div>
 
           <div className="ds-liquid-callout-amber p-4 space-y-2">
-            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
+            <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-semibold text-sm">
               <Box className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
               <span>Unboxing &amp; Return Policy</span>
             </div>
@@ -1142,7 +1159,7 @@ const ProductDetails: React.FC = () => {
       return (
         <div className="space-y-3">
           <article className="ds-liquid-subpanel p-4 space-y-1">
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+            <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">
               Is {product.name} 100% Authentic?
             </h3>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -1150,7 +1167,7 @@ const ProductDetails: React.FC = () => {
             </p>
           </article>
           <article className="ds-liquid-subpanel p-4 space-y-1">
-            <h3 className="font-bold text-sm text-zinc-900 dark:text-white">
+            <h3 className="font-semibold text-sm text-zinc-900 dark:text-white">
               How long does delivery take?
             </h3>
             <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 leading-relaxed">
@@ -1194,7 +1211,7 @@ const ProductDetails: React.FC = () => {
                 className="w-full h-full object-cover rounded-full"
               />
             ) : (
-              <AvatarFallback className="ds-liquid-subpanel text-zinc-900 dark:text-white font-extrabold text-xs">
+              <AvatarFallback className="ds-liquid-subpanel text-zinc-900 dark:text-white font-semibold text-xs">
                 {(sellerInfo?.shopName || sellerInfo?.displayName || "DS")
                   .slice(0, 2)
                   .toUpperCase()}
@@ -1203,7 +1220,7 @@ const ProductDetails: React.FC = () => {
           </Avatar>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <p className="font-extrabold text-zinc-900 dark:text-white text-sm sm:text-base truncate">
+              <p className="font-semibold text-zinc-900 dark:text-white text-sm sm:text-base truncate">
                 {sellerInfo?.shopName || sellerInfo?.displayName || "Deep Shop"}
               </p>
               {sellerInfo ? (
@@ -1230,7 +1247,7 @@ const ProductDetails: React.FC = () => {
             const targetChatId = product?.sellerId || "system";
             navigate(`/messages?chatId=${targetChatId}`);
           }}
-          className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+          className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
         >
           <MessageSquare className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0" />
           <span>Message</span>
@@ -1241,7 +1258,7 @@ const ProductDetails: React.FC = () => {
             const targetSellerId = product?.sellerId || "system";
             navigate(`/store/${targetSellerId}`);
           }}
-          className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+          className="px-3.5 py-2.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
         >
           <span>Visit Store</span>
           <ChevronRight className="w-3.5 h-3.5 shrink-0" />
@@ -1270,14 +1287,14 @@ const ProductDetails: React.FC = () => {
            ===================================================================== */}
         {isAdmin && (
           <div className="ds-liquid-callout-amber px-4 sm:px-5 py-3 flex flex-wrap items-center justify-between gap-3">
-            <span className="text-xs font-extrabold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+            <span className="text-xs font-medium uppercase tracking-wider text-amber-900 dark:text-amber-200">
               Admin Product Controls
             </span>
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => navigate(`/admin/products/edit/${resolvedId}`)}
-                className="px-3.5 py-1.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                className="px-3.5 py-1.5 ds-liquid-btn-secondary !min-h-0 !text-xs font-medium flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <Pen className="w-3.5 h-3.5" />
                 <span>Edit Post</span>
@@ -1299,7 +1316,7 @@ const ProductDetails: React.FC = () => {
                     },
                   });
                 }}
-                className="px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                className="px-3.5 py-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Delete</span>
@@ -1355,7 +1372,7 @@ const ProductDetails: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowSideCart((prev) => !prev)}
-                className="px-3.5 py-1.5 ds-liquid-dock rounded-full text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer tabular-nums whitespace-nowrap"
+                className="px-3.5 py-1.5 ds-liquid-dock rounded-full text-xs font-semibold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer tabular-nums whitespace-nowrap"
               >
                 <ShoppingCart className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
                 <span>Cart ({totalCartQty})</span>
@@ -1522,7 +1539,7 @@ const ProductDetails: React.FC = () => {
 
               {/* Bottom Glass Frame Controls */}
               <div className="absolute bottom-3 inset-x-3 flex items-center justify-between pointer-events-none z-10">
-                <span className="px-2.5 py-1 rounded-full ds-liquid-icon-btn text-[11px] font-bold text-zinc-700 dark:text-zinc-200 tabular-nums">
+                <span className="px-2.5 py-1 rounded-full ds-liquid-icon-btn text-[11px] font-semibold text-zinc-700 dark:text-zinc-200 tabular-nums">
                   {activeImg + 1} / {images.length}
                 </span>
                 <button
@@ -1531,7 +1548,7 @@ const ProductDetails: React.FC = () => {
                     e.stopPropagation();
                     setIsLightboxOpen(true);
                   }}
-                  className="pointer-events-auto px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                  className="pointer-events-auto px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-medium text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                 >
                   <Camera className="w-3.5 h-3.5" />
                   <span>View Large</span>
@@ -1540,7 +1557,7 @@ const ProductDetails: React.FC = () => {
 
               {product.stock <= 0 && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                  <div className="ds-liquid-panel px-5 py-2.5 text-xs font-extrabold text-zinc-900 dark:text-white">
+                  <div className="ds-liquid-panel px-5 py-2.5 text-xs font-semibold text-zinc-900 dark:text-white">
                     Out of Stock · Coming Soon
                   </div>
                 </div>
@@ -1586,7 +1603,7 @@ const ProductDetails: React.FC = () => {
                     .getElementById("customer-reviews")
                     ?.scrollIntoView({ behavior: "smooth" })
                 }
-                className="inline-flex items-center gap-1 font-bold text-zinc-800 dark:text-zinc-200 hover:underline cursor-pointer tabular-nums"
+                className="inline-flex items-center gap-1 font-semibold text-zinc-800 dark:text-zinc-200 hover:underline cursor-pointer tabular-nums"
               >
                 <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                 <span>
@@ -1605,7 +1622,7 @@ const ProductDetails: React.FC = () => {
               </span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-snug">
+            <h1 className="text-lg sm:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white leading-snug">
               <Tr>{product.name}</Tr>
             </h1>
 
@@ -1613,7 +1630,7 @@ const ProductDetails: React.FC = () => {
             <div className="ds-liquid-subpanel p-3.5 space-y-2.5">
               <div className="flex items-baseline justify-between gap-2 flex-wrap">
                 <div className="flex items-baseline gap-2.5">
-                  <span className="text-2xl sm:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                  <span className="text-2xl sm:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white tabular-nums">
                     {formatPrice(basePrice)}
                   </span>
                   {hasDiscount && (
@@ -1623,7 +1640,7 @@ const ProductDetails: React.FC = () => {
                   )}
                 </div>
                 {savingsAmount > 0 && (
-                  <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
                     Save {formatPrice(savingsAmount)}
                   </span>
                 )}
@@ -1637,7 +1654,7 @@ const ProductDetails: React.FC = () => {
               )}
 
               <div className="pt-2 border-t border-slate-900/[0.07] dark:border-white/[0.08] flex flex-wrap items-center justify-between gap-2 text-xs">
-                <span className={`font-bold ${paymentTermInfo.accentText}`}>
+                <span className={`font-semibold ${paymentTermInfo.accentText}`}>
                   {paymentTermInfo.label}
                 </span>
                 <span className="text-zinc-500 dark:text-zinc-400">
@@ -1650,7 +1667,7 @@ const ProductDetails: React.FC = () => {
             {/* Mobile Quantity Stepper */}
             {product.stock > 0 && (
               <div className="flex items-center justify-between gap-3 pt-0.5">
-                <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
                   Select Quantity
                 </span>
                 <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
@@ -1666,7 +1683,7 @@ const ProductDetails: React.FC = () => {
                   >
                     <Minus className="w-3.5 h-3.5" />
                   </button>
-                  <span className="w-7 text-center text-sm font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                  <span className="w-7 text-center text-sm font-semibold text-zinc-900 dark:text-white tabular-nums">
                     {quantity}
                   </span>
                   <button
@@ -1703,7 +1720,7 @@ const ProductDetails: React.FC = () => {
                       triggerHaptic("selection");
                       setActiveInfoTab(tab.key);
                     }}
-                    className={`py-2 px-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer active:scale-[0.97] ${
+                    className={`py-2 px-2 rounded-full text-xs font-medium transition-all whitespace-nowrap cursor-pointer active:scale-[0.97] ${
                       isActive
                         ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
                         : "text-zinc-500 dark:text-zinc-400"
@@ -1811,7 +1828,7 @@ const ProductDetails: React.FC = () => {
                 )}
 
                 <div className="absolute bottom-4 inset-x-4 flex items-center justify-between pointer-events-none z-10">
-                  <span className="px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-700 dark:text-zinc-200 tabular-nums">
+                  <span className="px-3 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-semibold text-zinc-700 dark:text-zinc-200 tabular-nums">
                     Photo {activeImg + 1} / {images.length}
                   </span>
                   <button
@@ -1820,7 +1837,7 @@ const ProductDetails: React.FC = () => {
                       e.stopPropagation();
                       setIsLightboxOpen(true);
                     }}
-                    className="pointer-events-auto px-4 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-bold text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                    className="pointer-events-auto px-4 py-1.5 rounded-full ds-liquid-icon-btn text-xs font-medium text-zinc-800 dark:text-zinc-100 flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
                   >
                     <Camera className="w-4 h-4" />
                     <span>Full Screen View</span>
@@ -1829,7 +1846,7 @@ const ProductDetails: React.FC = () => {
 
                 {product.stock <= 0 && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
-                    <div className="ds-liquid-panel px-6 py-3 text-sm font-extrabold text-zinc-900 dark:text-white">
+                    <div className="ds-liquid-panel px-6 py-3 text-sm font-semibold text-zinc-900 dark:text-white">
                       Out of Stock (Restocking Soon)
                     </div>
                   </div>
@@ -1850,7 +1867,7 @@ const ProductDetails: React.FC = () => {
                         triggerHaptic("selection");
                         setActiveInfoTab(tab.key);
                       }}
-                      className={`px-5 py-2 rounded-full text-xs font-bold transition-all whitespace-nowrap cursor-pointer active:scale-[0.97] ${
+                      className={`px-5 py-2 rounded-full text-xs font-medium transition-all whitespace-nowrap cursor-pointer active:scale-[0.97] ${
                         isActive
                           ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
                           : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
@@ -1883,7 +1900,7 @@ const ProductDetails: React.FC = () => {
                       .getElementById("customer-reviews")
                       ?.scrollIntoView({ behavior: "smooth" })
                   }
-                  className="inline-flex items-center gap-1 font-bold text-zinc-800 dark:text-zinc-200 hover:underline cursor-pointer tabular-nums whitespace-nowrap"
+                  className="inline-flex items-center gap-1 font-semibold text-zinc-800 dark:text-zinc-200 hover:underline cursor-pointer tabular-nums whitespace-nowrap"
                 >
                   <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
                   <span>
@@ -1894,7 +1911,7 @@ const ProductDetails: React.FC = () => {
               </div>
 
               {/* Balanced Product Title */}
-              <h1 className="text-2xl xl:text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white leading-tight">
+              <h1 className="text-xl sm:text-2xl xl:text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white leading-tight">
                 <Tr>{product.name}</Tr>
               </h1>
 
@@ -1902,7 +1919,7 @@ const ProductDetails: React.FC = () => {
               <div className="ds-liquid-subpanel p-4 space-y-3">
                 <div className="flex items-baseline justify-between gap-3 flex-wrap">
                   <div className="flex items-baseline gap-2.5">
-                    <span className="text-3xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                    <span className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-white tabular-nums">
                       {formatPrice(basePrice)}
                     </span>
                     {hasDiscount && (
@@ -1913,7 +1930,7 @@ const ProductDetails: React.FC = () => {
                   </div>
 
                   <span
-                    className={`text-xs font-bold ${
+                    className={`text-xs font-medium ${
                       product.stock > 0
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-rose-500"
@@ -1942,7 +1959,7 @@ const ProductDetails: React.FC = () => {
                     <span className="text-zinc-500 dark:text-zinc-400">
                       Reward Bonus
                     </span>
-                    <span className="font-bold text-amber-600 dark:text-amber-400 tabular-nums">
+                    <span className="font-semibold text-amber-600 dark:text-amber-400 tabular-nums">
                       Earn +{actualReward} DP Coins
                     </span>
                   </div>
@@ -1952,7 +1969,7 @@ const ProductDetails: React.FC = () => {
               {/* Payment & Delivery Transparency Callout */}
               <div className={`${paymentTermInfo.boxClass} p-4 space-y-1`}>
                 <div className="flex items-center justify-between gap-2 text-xs">
-                  <span className={`font-extrabold ${paymentTermInfo.accentText}`}>
+                  <span className={`font-semibold ${paymentTermInfo.accentText}`}>
                     {paymentTermInfo.label}
                   </span>
                   <span className="text-zinc-500 dark:text-zinc-400 font-medium whitespace-nowrap">
@@ -1976,7 +1993,7 @@ const ProductDetails: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowOrdersPausedModal(true)}
-                    className="font-bold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
+                    className="font-semibold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
                   >
                     View Reason
                   </button>
@@ -1989,7 +2006,7 @@ const ProductDetails: React.FC = () => {
                   <button
                     type="button"
                     disabled
-                    className="w-full py-3.5 rounded-full ds-liquid-subpanel text-sm font-bold text-zinc-400 cursor-not-allowed whitespace-nowrap"
+                    className="w-full py-3.5 rounded-full ds-liquid-subpanel text-sm font-semibold text-zinc-400 cursor-not-allowed whitespace-nowrap"
                   >
                     Out of Stock
                   </button>
@@ -1997,7 +2014,7 @@ const ProductDetails: React.FC = () => {
                     type="button"
                     onClick={handleNotifyMe}
                     disabled={notifying}
-                    className="w-full py-3 ds-liquid-btn-secondary text-xs font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                    className="w-full py-3 ds-liquid-btn-secondary text-xs font-medium flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                   >
                     <Bell className="w-4 h-4" />
                     <span>
@@ -2010,7 +2027,7 @@ const ProductDetails: React.FC = () => {
               ) : (
                 <div className="space-y-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">
+                    <span className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       Quantity
                     </span>
                     <div className="ds-liquid-dock rounded-full p-1 flex items-center gap-2">
@@ -2026,7 +2043,7 @@ const ProductDetails: React.FC = () => {
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="w-8 text-center text-sm font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                      <span className="w-8 text-center text-sm font-semibold text-zinc-900 dark:text-white tabular-nums">
                         {quantity}
                       </span>
                       <button
@@ -2049,7 +2066,7 @@ const ProductDetails: React.FC = () => {
                       type="button"
                       onClick={() => addToCart(false)}
                       disabled={addingToCart}
-                      className="px-4 py-3.5 ds-liquid-btn-secondary text-sm font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                      className="px-4 py-3.5 ds-liquid-btn-secondary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                     >
                       {addingToCart ? (
                         <span className="w-20 h-4 rounded-full ds-skeleton inline-block" />
@@ -2064,7 +2081,7 @@ const ProductDetails: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => addToCart(true)}
-                      className="px-4 py-3.5 ds-liquid-btn-primary text-sm font-bold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
+                      className="px-4 py-3.5 ds-liquid-btn-primary text-sm font-semibold flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"
                     >
                       <span>Buy Now</span>
                     </button>
@@ -2080,7 +2097,7 @@ const ProductDetails: React.FC = () => {
             {showSideCart && cartItems.length > 0 && (
               <div className="ds-liquid-panel p-5 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-extrabold text-zinc-900 dark:text-white flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-zinc-900 dark:text-white flex items-center gap-2">
                     <ShoppingCart className="w-4 h-4 text-sky-600 dark:text-sky-400" />
                     <span>Your Cart ({totalCartQty})</span>
                   </h3>
@@ -2109,11 +2126,11 @@ const ProductDetails: React.FC = () => {
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-bold text-xs text-zinc-900 dark:text-white truncate">
+                        <h4 className="font-semibold text-xs text-zinc-900 dark:text-white truncate">
                           {item.name}
                         </h4>
                         <div className="flex items-center justify-between gap-2 mt-1">
-                          <span className="font-extrabold text-xs text-zinc-900 dark:text-white tabular-nums">
+                          <span className="font-semibold text-xs text-zinc-900 dark:text-white tabular-nums">
                             {formatPrice(item.price * item.quantity)}
                           </span>
                           <div className="flex items-center gap-1.5">
@@ -2136,7 +2153,7 @@ const ProductDetails: React.FC = () => {
                             >
                               <Minus className="w-3 h-3" />
                             </button>
-                            <span className="text-xs font-bold tabular-nums w-4 text-center">
+                            <span className="text-xs font-semibold tabular-nums w-4 text-center">
                               {item.quantity}
                             </span>
                             <button
@@ -2185,7 +2202,7 @@ const ProductDetails: React.FC = () => {
                     <span className="text-zinc-500 dark:text-zinc-400 font-medium">
                       Subtotal
                     </span>
-                    <span className="font-extrabold text-zinc-900 dark:text-white tabular-nums">
+                    <span className="font-semibold text-zinc-900 dark:text-white tabular-nums">
                       {formatPrice(
                         cartItems.reduce(
                           (acc, curr) => acc + curr.price * curr.quantity,
@@ -2197,7 +2214,7 @@ const ProductDetails: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => navigate("/checkout")}
-                    className="w-full py-3 ds-liquid-btn-primary text-xs sm:text-sm font-bold cursor-pointer whitespace-nowrap"
+                    className="w-full py-3 ds-liquid-btn-primary text-xs sm:text-sm font-semibold cursor-pointer whitespace-nowrap"
                   >
                     Checkout
                   </button>
@@ -2216,7 +2233,7 @@ const ProductDetails: React.FC = () => {
         >
           <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
             <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
                 <Tr>Customer Reviews</Tr>
               </h2>
               <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 mt-0.5 tabular-nums">
@@ -2234,7 +2251,7 @@ const ProductDetails: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate(`/product/${product.id}/reviews`)}
-                className="px-4 py-2 ds-liquid-btn-secondary !min-h-0 !text-xs font-bold flex items-center gap-1 cursor-pointer self-start sm:self-auto whitespace-nowrap"
+                className="px-4 py-2 ds-liquid-btn-secondary !min-h-0 !text-xs font-medium flex items-center gap-1 cursor-pointer self-start sm:self-auto whitespace-nowrap"
               >
                 <span>
                   <Tr>See all</Tr> ({reviews.length})
@@ -2248,11 +2265,11 @@ const ProductDetails: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             <div className="lg:col-span-5 ds-liquid-subpanel p-5 sm:p-6 flex flex-col justify-between gap-5">
               <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                <span className="text-[11px] font-medium uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
                   <Tr>Overall Rating</Tr>
                 </span>
                 <div className="flex items-baseline gap-2 mt-2">
-                  <span className="text-4xl sm:text-5xl font-extrabold tracking-tight text-zinc-900 dark:text-white tabular-nums">
+                  <span className="text-4xl sm:text-5xl font-semibold tracking-tight text-zinc-900 dark:text-white tabular-nums">
                     {liveAverageRating.toFixed(1)}
                   </span>
                   <span className="text-sm font-medium text-zinc-400">
@@ -2361,7 +2378,7 @@ const ProductDetails: React.FC = () => {
                     key={tab.key}
                     type="button"
                     onClick={() => setReviewFilter(tab.key)}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap shrink-0 transition-all cursor-pointer tabular-nums ${
+                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer tabular-nums ${
                       active
                         ? "ds-liquid-dock-pill text-zinc-900 dark:text-white"
                         : "ds-liquid-subpanel text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white"
@@ -2400,7 +2417,7 @@ const ProductDetails: React.FC = () => {
               <button
                 type="button"
                 onClick={() => navigate(`/product/${product.id}/reviews`)}
-                className="w-full py-3.5 ds-liquid-btn-secondary text-sm font-bold cursor-pointer whitespace-nowrap"
+                className="w-full py-3.5 ds-liquid-btn-secondary text-sm font-semibold cursor-pointer whitespace-nowrap"
               >
                 <Tr>View All Reviews</Tr> ({reviews.length})
               </button>
@@ -2414,7 +2431,7 @@ const ProductDetails: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setReviewFilter("all")}
-                  className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
+                  className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
                 >
                   View All Reviews
                 </button>
@@ -2423,7 +2440,7 @@ const ProductDetails: React.FC = () => {
 
             {reviews.length === 0 && (
               <div className="py-10 px-6 ds-liquid-subpanel text-center space-y-1.5">
-                <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                <p className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">
                   <Tr>No customer reviews yet</Tr>
                 </p>
                 <p className="text-xs text-zinc-500 dark:text-zinc-400">
@@ -2443,13 +2460,13 @@ const ProductDetails: React.FC = () => {
         {bundleItems.length > 0 && (
           <section className="space-y-4 pt-2">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-zinc-900 dark:text-white">
+              <h2 className="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-900 dark:text-white">
                 <Tr>You May Like</Tr>
               </h2>
               <button
                 type="button"
                 onClick={() => navigate("/all-products")}
-                className="text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
+                className="text-xs font-medium text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1 cursor-pointer whitespace-nowrap"
               >
                 <span>View All Products</span>
                 <ChevronRight className="w-3.5 h-3.5" />
@@ -2486,7 +2503,7 @@ const ProductDetails: React.FC = () => {
             <button
               type="button"
               onClick={() => setShowOrdersPausedModal(true)}
-              className="font-bold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
+              className="font-semibold text-amber-800 dark:text-amber-300 underline shrink-0 cursor-pointer whitespace-nowrap"
             >
               Reason
             </button>
@@ -2498,7 +2515,7 @@ const ProductDetails: React.FC = () => {
             <span className="text-[10px] font-semibold text-zinc-500 dark:text-zinc-400 block whitespace-nowrap">
               Total ({quantity} {quantity === 1 ? "item" : "items"})
             </span>
-            <span className="text-base sm:text-lg font-extrabold text-zinc-900 dark:text-white tabular-nums whitespace-nowrap">
+            <span className="text-base sm:text-lg font-semibold text-zinc-900 dark:text-white tabular-nums whitespace-nowrap">
               {formatPrice(Number(basePrice) * quantity)}
             </span>
           </div>
@@ -2508,7 +2525,7 @@ const ProductDetails: React.FC = () => {
               type="button"
               onClick={handleNotifyMe}
               disabled={notifying}
-              className="flex-1 max-w-[220px] py-2.5 px-4 ds-liquid-btn-secondary !min-h-0 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+              className="flex-1 max-w-[220px] py-2.5 px-4 ds-liquid-btn-secondary !min-h-0 text-xs font-medium flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
             >
               <Bell className="w-3.5 h-3.5 shrink-0" />
               <span>{notifying ? "Please wait..." : "Notify Me"}</span>
@@ -2520,7 +2537,7 @@ const ProductDetails: React.FC = () => {
                 onClick={() => addToCart(false)}
                 disabled={addingToCart}
                 aria-label="Add to cart"
-                className="px-4 py-2.5 ds-liquid-btn-secondary !min-h-0 text-xs sm:text-sm font-bold flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
+                className="px-4 py-2.5 ds-liquid-btn-secondary !min-h-0 text-xs sm:text-sm font-medium flex items-center justify-center gap-1.5 cursor-pointer whitespace-nowrap"
               >
                 <ShoppingCart className="w-4 h-4 shrink-0" />
                 <span>Cart</span>
@@ -2528,7 +2545,7 @@ const ProductDetails: React.FC = () => {
               <button
                 type="button"
                 onClick={() => addToCart(true)}
-                className="px-5 py-2.5 ds-liquid-btn-primary !min-h-0 text-xs sm:text-sm font-bold flex items-center justify-center cursor-pointer whitespace-nowrap"
+                className="px-5 py-2.5 ds-liquid-btn-primary !min-h-0 text-xs sm:text-sm font-semibold flex items-center justify-center cursor-pointer whitespace-nowrap"
               >
                 Buy Now
               </button>
@@ -2580,7 +2597,7 @@ const ProductDetails: React.FC = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-base sm:text-lg font-extrabold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug tracking-tight">
+                        <h3 className="text-base sm:text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] leading-snug tracking-tight">
                           Orders Temporarily Paused
                         </h3>
                         <button
@@ -2604,7 +2621,7 @@ const ProductDetails: React.FC = () => {
                   </div>
 
                   <div className="rounded-2xl bg-[#FF9500]/[0.08] border border-[#FF9500]/25 p-4 space-y-1.5">
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#B25000] dark:text-[#FF9F0A]">
+                    <p className="text-xs font-medium uppercase tracking-wider text-[#B25000] dark:text-[#FF9F0A]">
                       Seller&apos;s Reason
                     </p>
                     <p className="text-sm font-medium text-[#1D1D1F] dark:text-[#F5F5F7] leading-relaxed">

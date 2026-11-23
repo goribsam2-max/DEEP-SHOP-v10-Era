@@ -595,7 +595,7 @@ export const LoopPostOptionsSheet: React.FC<{
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-[15px] font-bold text-[#0f0f0f] dark:text-white">
+                  <span className="text-[15px] font-semibold text-[#0f0f0f] dark:text-white">
                     Why are you reporting this post?
                   </span>
                   <span className="w-8" />
@@ -627,7 +627,7 @@ export const LoopPostOptionsSheet: React.FC<{
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-[15px] font-bold text-[#0f0f0f] dark:text-white">
+                  <span className="text-[15px] font-semibold text-[#0f0f0f] dark:text-white">
                     Why you&apos;re seeing this post
                   </span>
                   <span className="w-8" />
@@ -688,7 +688,7 @@ export const LoopPostOptionsSheet: React.FC<{
               <>
                 {/* Compact "About this post" Heading + Summary */}
                 <div className="space-y-1 px-0.5">
-                  <h3 className="text-[14.5px] font-bold text-[#0f0f0f] dark:text-white tracking-tight">
+                  <h3 className="text-[14.5px] font-semibold text-[#0f0f0f] dark:text-white tracking-tight">
                     About this post
                   </h3>
                   <p className="text-[13px] leading-[1.38] text-[#141414] dark:text-zinc-200 line-clamp-2">
@@ -925,7 +925,7 @@ export const LoopPostOptionsSheet: React.FC<{
                 {/* Admin Moderation Card */}
                 {isAdmin && (
                   <div className="loops-about-card rounded-[18px] py-1 px-1 space-y-0.5 border border-amber-500/20 bg-amber-500/5">
-                    <div className="px-3 py-1.5 text-[11px] font-bold text-amber-500 uppercase tracking-wider">
+                    <div className="px-3 py-1.5 text-[11px] font-medium text-amber-500 uppercase tracking-wider">
                       Admin Moderation
                     </div>
                     <button
@@ -1266,13 +1266,13 @@ export const LiquidGlassShareModal: React.FC<{
                     className="w-11 h-11 rounded-full object-cover shrink-0 ring-1 ring-black/10 dark:ring-white/10"
                   />
                 ) : (
-                  <div className="w-11 h-11 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center shrink-0">
+                  <div className="w-11 h-11 rounded-full bg-emerald-600 text-white font-semibold flex items-center justify-center shrink-0">
                     {(currentUser?.displayName || currentUser?.email || "U").charAt(0).toUpperCase()}
                   </div>
                 )}
 
                 <div className="flex-1 min-w-0">
-                  <h4 className="text-[14.5px] font-extrabold text-zinc-900 dark:text-white truncate">
+                  <h4 className="text-[14.5px] font-semibold text-zinc-900 dark:text-white truncate">
                     {currentUser?.displayName || currentUser?.email?.split("@")[0] || "Loops User"}
                   </h4>
                   <div className="flex items-center gap-2 mt-1">
@@ -1281,7 +1281,7 @@ export const LiquidGlassShareModal: React.FC<{
                       <select
                         value={shareTarget}
                         onChange={(e) => setShareTarget(e.target.value as any)}
-                        className="appearance-none bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs font-bold px-3 py-1 pr-6 rounded-xl outline-none cursor-pointer border border-zinc-300/60 dark:border-zinc-700"
+                        className="appearance-none bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs font-medium px-3 py-1 pr-6 rounded-xl outline-none cursor-pointer border border-zinc-300/60 dark:border-zinc-700"
                       >
                         <option value="feed">Feed</option>
                         <option value="profile">Profile</option>
@@ -1295,7 +1295,7 @@ export const LiquidGlassShareModal: React.FC<{
                       <select
                         value={sharePrivacy}
                         onChange={(e) => setSharePrivacy(e.target.value as any)}
-                        className="appearance-none bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs font-bold px-3 py-1 pr-6 rounded-xl outline-none cursor-pointer border border-zinc-300/60 dark:border-zinc-700"
+                        className="appearance-none bg-zinc-200/80 dark:bg-zinc-800 text-zinc-900 dark:text-white text-xs font-medium px-3 py-1 pr-6 rounded-xl outline-none cursor-pointer border border-zinc-300/60 dark:border-zinc-700"
                       >
                         <option value="public">🌐 Public</option>
                         <option value="followers">👥 Followers</option>
@@ -1347,7 +1347,7 @@ export const LiquidGlassShareModal: React.FC<{
                   type="button"
                   disabled={isPostingShare}
                   onClick={handleShareToFeedNow}
-                  className="px-5 py-2 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] active:scale-95 text-white font-extrabold text-[13.5px] shadow-sm transition flex items-center gap-2 cursor-pointer"
+                  className="px-5 py-2 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] active:scale-95 text-white font-semibold text-[13.5px] shadow-sm transition flex items-center gap-2 cursor-pointer"
                 >
                   {isPostingShare ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1429,7 +1429,7 @@ export const LiquidGlassShareModal: React.FC<{
                               className="w-full h-full object-cover"
                             />
                           ) : (
-                            <span className="text-lg font-bold text-zinc-600 dark:text-zinc-300">
+                            <span className="text-lg font-semibold text-zinc-600 dark:text-zinc-300">
                               {(contact.name || "U").charAt(0).toUpperCase()}
                             </span>
                           )}
@@ -1637,7 +1637,7 @@ export const LiquidGlassActivityModal: React.FC<{
             <div className="w-11 h-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 mx-auto" />
 
             <div className="flex items-center justify-between border-b loops-divider pb-3">
-              <span className="text-base font-bold text-zinc-950 dark:text-white flex items-center gap-2">
+              <span className="text-base font-semibold text-zinc-950 dark:text-white flex items-center gap-2">
                 <BarChart2 className="w-4 h-4 text-[#0095F6]" />
                 <span>Loop Activity</span>
               </span>
@@ -1655,7 +1655,7 @@ export const LiquidGlassActivityModal: React.FC<{
                 <span className="text-[11px] font-semibold text-zinc-500 block">
                   Views
                 </span>
-                <span className="text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
+                <span className="text-lg font-semibold text-zinc-950 dark:text-white tabular-nums">
                   {formatCompactNumber(views)}
                 </span>
               </div>
@@ -1663,7 +1663,7 @@ export const LiquidGlassActivityModal: React.FC<{
                 <span className="text-[11px] font-semibold text-zinc-500 block">
                   Reactions
                 </span>
-                <span className="text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
+                <span className="text-lg font-semibold text-zinc-950 dark:text-white tabular-nums">
                   {formatCompactNumber(totalReactions)}
                 </span>
               </div>
@@ -1671,14 +1671,14 @@ export const LiquidGlassActivityModal: React.FC<{
                 <span className="text-[11px] font-semibold text-zinc-500 block">
                   Replies
                 </span>
-                <span className="text-lg font-bold text-zinc-950 dark:text-white tabular-nums">
+                <span className="text-lg font-semibold text-zinc-950 dark:text-white tabular-nums">
                   {formatCompactNumber(commentsCount)}
                 </span>
               </div>
             </div>
 
             <div className="space-y-2 pt-1">
-              <span className="text-xs font-bold text-zinc-950 dark:text-white block">
+              <span className="text-xs font-medium text-zinc-950 dark:text-white block">
                 Reaction Breakdown
               </span>
               <div className="space-y-2">
@@ -1789,7 +1789,7 @@ export const CommentItemWithActions: React.FC<{
           <div className="flex items-center justify-between gap-2">
             <span
               onClick={() => navigate(`/loops/profile/${comment.userId}`)}
-              className="text-xs font-bold text-zinc-900 dark:text-white cursor-pointer hover:underline truncate"
+              className="text-xs font-medium text-zinc-900 dark:text-white cursor-pointer hover:underline truncate"
             >
               {comment.userName}
             </span>
@@ -1904,7 +1904,7 @@ export const CommentItemWithActions: React.FC<{
             }}
             className={`text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition ${
               myReaction
-                ? "text-[#FF3040] font-bold"
+                ? "text-[#FF3040] font-semibold"
                 : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
             }`}
           >

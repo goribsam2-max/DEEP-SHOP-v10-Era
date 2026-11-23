@@ -131,7 +131,7 @@ const ManageUsersMobile: React.FC = () => {
   });
 
   const getStatusBadge = (status: string) => {
-    const base = "px-2 py-0.5 rounded-full text-[10px] font-bold tracking-tight inline-flex items-center gap-1";
+    const base = "px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-tight inline-flex items-center gap-1";
     switch (status) {
       case "Delivered":
         return <span className={`${base} bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400`}><CheckCircle2 size={10} /> Delivered</span>;
@@ -159,11 +159,11 @@ const ManageUsersMobile: React.FC = () => {
             <ArrowLeft size={20} />
           </button>
           <div>
-            <h1 className="text-base font-bold tracking-tight">Mobile User Manager</h1>
+            <h1 className="text-base font-semibold tracking-tight">Mobile User Manager</h1>
             <p className="text-[10px] text-zinc-500 font-medium">Manage and view customers & orders on the go</p>
           </div>
         </div>
-        <div className="bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-xs font-bold text-zinc-600 dark:text-zinc-300">
+        <div className="bg-zinc-100 dark:bg-zinc-800 px-3 py-1 rounded-full text-xs font-medium text-zinc-600 dark:text-zinc-300">
           {users.length} Users
         </div>
       </div>
@@ -226,7 +226,7 @@ const ManageUsersMobile: React.FC = () => {
                         className="w-11 h-11 rounded-full object-cover border border-zinc-200 dark:border-zinc-700 shrink-0"
                       />
                     ) : (
-                      <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400 flex items-center justify-center font-bold text-base shrink-0 border border-blue-200/40">
+                      <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950/50 dark:text-blue-400 flex items-center justify-center font-semibold text-base shrink-0 border border-blue-200/40">
                         {initial}
                       </div>
                     )}
@@ -236,7 +236,7 @@ const ManageUsersMobile: React.FC = () => {
                       <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 truncate flex items-center gap-1.5">
                         {user.displayName || "No Name"}
                         {user.isBanned && (
-                          <span className="px-1.5 py-0.5 bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 rounded text-[9px] font-bold">
+                          <span className="px-1.5 py-0.5 bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400 rounded text-[9px] font-semibold">
                             Banned
                           </span>
                         )}
@@ -277,7 +277,7 @@ const ManageUsersMobile: React.FC = () => {
                 >
                   <ArrowLeft size={20} />
                 </button>
-                <h3 className="text-base font-bold tracking-tight">User Detailed Card</h3>
+                <h3 className="text-base font-semibold tracking-tight">User Detailed Card</h3>
               </div>
               <button
                 onClick={() => setSelectedUser(null)}
@@ -300,13 +300,13 @@ const ManageUsersMobile: React.FC = () => {
                     className="w-20 h-20 rounded-full object-cover border-2 border-white dark:border-zinc-800 shadow-md mb-3"
                   />
                 ) : (
-                  <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400 flex items-center justify-center font-bold text-2xl mb-3 border border-blue-200">
+                  <div className="w-20 h-20 rounded-full bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-400 flex items-center justify-center font-semibold text-2xl mb-3 border border-blue-200">
                     {(selectedUser.displayName || selectedUser.email || "U").charAt(0).toUpperCase()}
                   </div>
                 )}
-                <h4 className="text-base font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <h4 className="text-base font-semibold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                   {selectedUser.displayName || "No Name"}
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ${
                     selectedUser.role === 'admin' 
                       ? 'bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-400' 
                       : selectedUser.role === 'seller'
@@ -322,16 +322,16 @@ const ManageUsersMobile: React.FC = () => {
                 <div className="mt-4 pt-3 border-t border-zinc-200 dark:border-zinc-800 w-full flex justify-center">
                   {userToDelete === selectedUser.uid ? (
                     <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-red-500">Confirm DB Delete?</span>
+                      <span className="text-[11px] font-semibold text-red-500">Confirm DB Delete?</span>
                       <button
                         onClick={() => handleDeleteUser(selectedUser.uid)}
-                        className="px-3 py-1.5 bg-red-600 text-white text-xs font-bold rounded-xl"
+                        className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-xl"
                       >
                         Yes, Delete
                       </button>
                       <button
                         onClick={() => setUserToDelete(null)}
-                        className="px-3 py-1.5 bg-zinc-200 dark:bg-zinc-800 text-xs font-bold rounded-xl"
+                        className="px-3 py-1.5 bg-zinc-200 dark:bg-zinc-800 text-xs font-medium rounded-xl"
                       >
                         Cancel
                       </button>
@@ -339,7 +339,7 @@ const ManageUsersMobile: React.FC = () => {
                   ) : (
                     <button
                       onClick={() => setUserToDelete(selectedUser.uid)}
-                      className="px-4 py-2 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-red-100 transition-colors"
+                      className="px-4 py-2 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-900 rounded-xl text-xs font-medium flex items-center gap-1.5 hover:bg-red-100 transition-colors"
                     >
                       <Trash2 size={14} /> Delete User from Database
                     </button>
@@ -349,7 +349,7 @@ const ManageUsersMobile: React.FC = () => {
 
               {/* Contact & Extra Details List */}
               <div className="space-y-3">
-                <h5 className="text-xs font-bold uppercase tracking-wider text-zinc-400">Account Credentials & Metadata</h5>
+                <h5 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">Account Credentials & Metadata</h5>
                 <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 space-y-4 shadow-sm">
                   {/* Phone number */}
                   <div className="flex items-center gap-3">
@@ -380,7 +380,7 @@ const ManageUsersMobile: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-[10px] text-zinc-400 font-semibold">Wallet Balance</p>
-                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                         ৳{selectedUser.walletBalance !== undefined ? selectedUser.walletBalance : "0"}
                       </p>
                     </div>
@@ -408,7 +408,7 @@ const ManageUsersMobile: React.FC = () => {
                     </div>
                     <div>
                       <p className="text-[10px] text-zinc-400 font-semibold">Account Status</p>
-                      <p className={`text-xs font-bold ${selectedUser.isBanned ? "text-red-500" : "text-emerald-500"}`}>
+                      <p className={`text-xs font-medium ${selectedUser.isBanned ? "text-red-500" : "text-emerald-500"}`}>
                         {selectedUser.isBanned ? "Suspended / Blocked" : "Active / Verified"}
                       </p>
                     </div>
@@ -419,8 +419,8 @@ const ManageUsersMobile: React.FC = () => {
               {/* User Orders Area */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <h5 className="text-xs font-bold uppercase tracking-wider text-zinc-400">User's Purchase Orders</h5>
-                  <span className="bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400 text-xs px-2.5 py-0.5 rounded-full font-bold">
+                  <h5 className="text-xs font-semibold uppercase tracking-wider text-zinc-400">User's Purchase Orders</h5>
+                  <span className="bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-400 text-xs px-2.5 py-0.5 rounded-full font-medium">
                     {selectedUserOrders.length} Orders
                   </span>
                 </div>
@@ -445,7 +445,7 @@ const ManageUsersMobile: React.FC = () => {
                         {/* Order Header */}
                         <div className="bg-zinc-50 dark:bg-zinc-850 px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                           <div>
-                            <p className="text-[10px] text-zinc-400 font-bold">ORDER ID: #{order.id.slice(0, 10).toUpperCase()}</p>
+                            <p className="text-[10px] text-zinc-400 font-normal">ORDER ID: #{order.id.slice(0, 10).toUpperCase()}</p>
                             <p className="text-[10px] text-zinc-500 mt-0.5">
                               {order.createdAt ? new Date(order.createdAt).toLocaleDateString() : "N/A"}
                             </p>
@@ -465,7 +465,7 @@ const ManageUsersMobile: React.FC = () => {
                                 />
                               )}
                               <div className="min-w-0 flex-1">
-                                <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">{item.name}</p>
+                                <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{item.name}</p>
                                 <p className="text-[10px] text-zinc-400 font-semibold">Qty: {item.quantity} &bull; Price: ৳{item.priceAtPurchase || item.price}</p>
                               </div>
                             </div>
@@ -474,12 +474,12 @@ const ManageUsersMobile: React.FC = () => {
                           {/* Divider */}
                           <div className="border-t border-zinc-100 dark:border-zinc-800 my-2 pt-2 flex justify-between items-center">
                             <div>
-                              <p className="text-[10px] text-zinc-400 font-bold">PAYMENT METHOD</p>
+                              <p className="text-[10px] text-zinc-400 font-normal">PAYMENT METHOD</p>
                               <p className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{order.paymentMethod || "Cash on Delivery"}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-[10px] text-zinc-400 font-bold">TOTAL PAID</p>
-                              <p className="text-sm font-black text-blue-600 dark:text-blue-400">৳{order.total}</p>
+                              <p className="text-[10px] text-zinc-400 font-semibold">TOTAL PAID</p>
+                              <p className="text-sm font-semibold text-blue-600 dark:text-blue-400">৳{order.total}</p>
                             </div>
                           </div>
 
@@ -487,18 +487,18 @@ const ManageUsersMobile: React.FC = () => {
                           <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
                             {orderToDelete === order.id ? (
                               <div className="flex items-center gap-2 animate-scale-up">
-                                <span className="text-[10px] font-bold text-red-500 mr-2 flex items-center gap-1">
+                                <span className="text-[10px] font-semibold text-red-500 mr-2 flex items-center gap-1">
                                   <AlertTriangle size={12} /> Confirm delete?
                                 </span>
                                 <button
                                   onClick={() => handleDeleteOrder(order.id)}
-                                  className="px-3 py-1.5 bg-red-600 text-white hover:bg-red-500 text-xs font-bold rounded-lg cursor-pointer flex items-center gap-1"
+                                  className="px-3 py-1.5 bg-red-600 text-white hover:bg-red-500 text-xs font-medium rounded-lg cursor-pointer flex items-center gap-1"
                                 >
                                   Yes, Delete
                                 </button>
                                 <button
                                   onClick={() => setOrderToDelete(null)}
-                                  className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-bold rounded-lg cursor-pointer"
+                                  className="px-3 py-1.5 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-xs font-medium rounded-lg cursor-pointer"
                                 >
                                   Cancel
                                 </button>
@@ -506,7 +506,7 @@ const ManageUsersMobile: React.FC = () => {
                             ) : (
                               <button
                                 onClick={() => setOrderToDelete(order.id)}
-                                className="px-3.5 py-1.5 border border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
+                                className="px-3.5 py-1.5 border border-red-200 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 text-xs font-medium rounded-xl flex items-center gap-1.5 transition-all cursor-pointer"
                                 style={{ minHeight: "36px" }}
                               >
                                 <Trash2 size={13} />

@@ -162,7 +162,7 @@ const LeaveReview: React.FC = () => {
   if (errorLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F5F7] dark:bg-black px-4">
-        <h2 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
+        <h2 className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">
           Product not found
         </h2>
         <button
@@ -196,7 +196,7 @@ const LeaveReview: React.FC = () => {
         className="max-w-2xl mx-auto space-y-5"
       >
         <div>
-          <h1 className="text-[22px] sm:text-[26px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.022em] leading-tight">
+          <h1 className="text-[22px] sm:text-[26px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-[-0.022em] leading-tight">
             Leave a Product Review
           </h1>
         </div>
@@ -216,7 +216,7 @@ const LeaveReview: React.FC = () => {
                 <StatusBadge leftIcon={Box} leftLabel={product.category} />
               </div>
             )}
-            <h2 className="font-bold text-base sm:text-lg text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
+            <h2 className="font-semibold text-base sm:text-lg text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
               {product.name}
             </h2>
           </div>
@@ -224,7 +224,7 @@ const LeaveReview: React.FC = () => {
 
         {/* Star Rating Card */}
         <div className="bg-white dark:bg-[#1C1C1E] p-6 sm:p-8 rounded-[22px] border border-black/[0.06] dark:border-white/[0.1] text-center shadow-xs">
-          <h3 className="text-base sm:text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1 tracking-tight">
+          <h3 className="text-base sm:text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-1 tracking-tight">
             Rate Your Experience
           </h3>
           <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mb-6">
@@ -258,7 +258,7 @@ const LeaveReview: React.FC = () => {
           </div>
 
           {rating > 0 && (
-            <p className="text-xs font-bold text-[#FF9500] dark:text-[#FF9F0A] mt-4">
+            <p className="text-xs font-medium text-[#FF9500] dark:text-[#FF9F0A] mt-4">
               {
                 [
                   "Poor",

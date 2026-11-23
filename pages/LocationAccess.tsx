@@ -24,7 +24,7 @@ const LocationAccess: React.FC = () => {
         <div className="w-16 h-16 bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] rounded-[20px] flex items-center justify-center mb-6">
           <MapPin className="w-8 h-8" />
         </div>
-        <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+        <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
           What Is Your Location?
         </h1>
         <p className="text-[14px] text-[#6E6E73] dark:text-[#98989D] leading-relaxed mb-8">

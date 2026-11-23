@@ -119,7 +119,7 @@ const Deposit: React.FC = () => {
         className="max-w-lg mx-auto px-4 pt-5 sm:pt-7 space-y-5"
       >
         <div className="px-1">
-          <h1 className="ds-apple-display text-[24px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <h1 className="ds-apple-display text-[24px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
             Deposit Funds
           </h1>
           <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">

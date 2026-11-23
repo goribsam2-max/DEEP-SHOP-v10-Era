@@ -10,7 +10,7 @@ import { APPLE_SPRING_DEFAULT } from "../lib/shoppingRoute";
 import { triggerHaptic } from "../lib/haptics";
 import { useNotify } from "../components/Notifications";
 
-const StatusIcon = ({ status }: { status: OrderStatus }) => {
+const StatusIcon = ({ status }: { status: OrderStatus | string }) => {
   const base = "w-14 h-14 rounded-full flex items-center justify-center ";
   switch (status) {
     case OrderStatus.APPROVED:
@@ -93,7 +93,7 @@ const TrackOrder: React.FC = () => {
   if (!order) {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-black flex flex-col items-center justify-center p-8 text-center ds-apple-shop-canvas">
-        <div className="w-16 h-16 bg-white dark:bg-[#1C1C1E] rounded-full flex items-center justify-center mb-5 text-lg font-bold text-[#6E6E73] dark:text-[#98989D] border border-black/[0.06] dark:border-white/[0.08]">
+        <div className="w-16 h-16 bg-white dark:bg-[#1C1C1E] rounded-full flex items-center justify-center mb-5 text-lg font-semibold text-[#6E6E73] dark:text-[#98989D] border border-black/[0.06] dark:border-white/[0.08]">
           ?
         </div>
         <p className="font-semibold text-[15px] mb-6 text-[#1D1D1F] dark:text-[#F5F5F7]">
@@ -122,7 +122,7 @@ const TrackOrder: React.FC = () => {
         className="max-w-lg mx-auto px-4 pt-6 space-y-5"
       >
         <div className="px-1">
-          <h1 className="text-[22px] sm:text-[26px] font-bold tracking-[-0.024em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="text-[22px] sm:text-[26px] font-semibold tracking-[-0.024em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             Track Order
           </h1>
         </div>
@@ -156,7 +156,7 @@ const TrackOrder: React.FC = () => {
           <div className="mb-4">
             <StatusIcon status={order.status} />
           </div>
-          <h1 className="text-[22px] font-bold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <h1 className="text-[22px] font-semibold tracking-[-0.02em] text-[#1D1D1F] dark:text-[#F5F5F7]">
             {order.status}
           </h1>
 
@@ -203,7 +203,7 @@ const TrackOrder: React.FC = () => {
                 OrderStatus.DELIVER_ON_COURIER,
                 OrderStatus.ON_THE_WAY,
                 OrderStatus.DELIVERED,
-              ].includes(order.status)}
+              ].includes(order.status as OrderStatus)}
             />
             <Step
               label="Handed to Courier"
@@ -212,7 +212,7 @@ const TrackOrder: React.FC = () => {
                 OrderStatus.DELIVER_ON_COURIER,
                 OrderStatus.ON_THE_WAY,
                 OrderStatus.DELIVERED,
-              ].includes(order.status)}
+              ].includes(order.status as OrderStatus)}
             />
             <Step
               label="Delivered"

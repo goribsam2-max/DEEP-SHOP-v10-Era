@@ -89,7 +89,7 @@ export const ReelPlaybackSheet: React.FC<ReelPlaybackSheetProps> = ({
             <div className="w-11 h-1 rounded-full bg-zinc-500/75 dark:bg-zinc-500 mx-auto" />
 
             {/* Centered Title */}
-            <h2 className="text-[18px] font-bold tracking-tight text-center text-zinc-950 dark:text-white mt-4 mb-5">
+            <h2 className="text-[18px] font-semibold tracking-tight text-center text-zinc-950 dark:text-white mt-4 mb-5">
               Playback
             </h2>
 
@@ -136,7 +136,7 @@ export const ReelPlaybackSheet: React.FC<ReelPlaybackSheetProps> = ({
                     <span className="text-[16px] font-normal text-zinc-950 dark:text-white whitespace-nowrap">
                       Auto-scroll
                     </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#4B55F5] text-white text-[12px] font-bold leading-snug whitespace-nowrap shrink-0">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#4B55F5] text-white text-[12px] font-semibold leading-snug whitespace-nowrap shrink-0">
                       New
                     </span>
                   </div>
@@ -176,7 +176,7 @@ export const ReelPlaybackSheet: React.FC<ReelPlaybackSheetProps> = ({
                   </span>
                 </div>
                 {closedCaptions && (
-                  <span className="text-[13px] font-bold text-[#4B55F5] whitespace-nowrap">
+                  <span className="text-[13px] font-semibold text-[#4B55F5] whitespace-nowrap">
                     On
                   </span>
                 )}
@@ -599,7 +599,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
                       triggerHaptic();
                       setSortByTrending((v) => !v);
                     }}
-                    className={`h-9 px-3.5 rounded-full text-[13.5px] font-bold inline-flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap ${
+                    className={`h-9 px-3.5 rounded-full text-[13.5px] font-semibold inline-flex items-center gap-1.5 transition cursor-pointer whitespace-nowrap ${
                       sortByTrending
                         ? "bg-[#F2F4F7] dark:bg-zinc-800/90 text-zinc-950 dark:text-white"
                         : "bg-zinc-900 text-white dark:bg-white dark:text-zinc-950"
@@ -657,7 +657,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
                 </button>
 
                 <div className="min-w-0 flex-1 space-y-1.5">
-                  <h1 className="text-[20px] font-bold tracking-tight text-zinc-950 dark:text-white leading-snug line-clamp-2">
+                  <h1 className="text-[20px] font-semibold tracking-tight text-zinc-950 dark:text-white leading-snug line-clamp-2">
                     {audioMeta.title}
                   </h1>
 
@@ -680,11 +680,11 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
                           className="w-6 h-6 rounded-full object-cover shrink-0 border border-black/10 dark:border-white/15"
                         />
                       ) : (
-                        <span className="w-6 h-6 rounded-full bg-zinc-900 dark:bg-zinc-700 text-white text-[11px] font-bold inline-flex items-center justify-center shrink-0">
+                        <span className="w-6 h-6 rounded-full bg-zinc-900 dark:bg-zinc-700 text-white text-[11px] font-semibold inline-flex items-center justify-center shrink-0">
                           {creatorInfo.handle.charAt(0).toUpperCase()}
                         </span>
                       )}
-                      <span className="font-bold text-zinc-950 dark:text-white truncate max-w-[160px]">
+                      <span className="font-semibold text-zinc-950 dark:text-white truncate max-w-[160px]">
                         {creatorInfo.handle}
                       </span>
                       {creatorInfo.isVerified && (
@@ -696,7 +696,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
                       <>
                         <span
                           aria-hidden="true"
-                          className="text-zinc-400 font-bold"
+                          className="text-zinc-400 font-semibold"
                         >
                           ·
                         </span>
@@ -709,7 +709,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
                               creatorInfo.displayName
                             );
                           }}
-                          className="font-bold text-[#4150F7] hover:opacity-80 cursor-pointer whitespace-nowrap"
+                          className="font-semibold text-[#4150F7] hover:opacity-80 cursor-pointer whitespace-nowrap"
                         >
                           {isCreatorFollowed ? "Following" : "Follow"}
                         </button>
@@ -788,7 +788,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
                   type="button"
                   onClick={() => {
                     triggerHaptic();
-                    if (audioRef.current) audioRef.current.pause();
+                    audioPlayerRef.current?.stop();
                     setIsPlayingPreview(false);
                     onSelectReelPost(itemPost);
                   }}
@@ -817,7 +817,7 @@ export const ReelAudioDetailsModal: React.FC<ReelAudioDetailsModalProps> = ({
 
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
 
-                  <div className="pointer-events-none absolute left-2 bottom-2 flex items-center gap-1 text-white text-[13px] font-bold tabular-nums drop-shadow">
+                  <div className="pointer-events-none absolute left-2 bottom-2 flex items-center gap-1 text-white text-[13px] font-semibold tabular-nums drop-shadow">
                     <LoopsSvgIcon
                       name="loops-reel-views"
                       className="w-4 h-4 text-white"
@@ -962,12 +962,12 @@ export const ReelsSuggestedProfilesSlide: React.FC<
                       className="w-[82px] h-[82px] rounded-full object-cover ring-1 ring-white/20 shadow-md"
                     />
                   ) : (
-                    <div className="w-[82px] h-[82px] rounded-full bg-white/20 text-white text-2xl font-bold flex items-center justify-center ring-1 ring-white/20 shadow-md">
+                    <div className="w-[82px] h-[82px] rounded-full bg-white/20 text-white text-2xl font-semibold flex items-center justify-center ring-1 ring-white/20 shadow-md">
                       {item.displayName.charAt(0).toUpperCase()}
                     </div>
                   )}
 
-                  <span className="mt-3 text-[15.5px] font-bold text-white truncate w-full leading-snug">
+                  <span className="mt-3 text-[15.5px] font-semibold text-white truncate w-full leading-snug">
                     {item.displayName}
                   </span>
                   <span className="text-[12.5px] text-white/85 truncate w-full mt-0.5">
@@ -983,7 +983,7 @@ export const ReelsSuggestedProfilesSlide: React.FC<
                     triggerHaptic();
                     onToggleFollow(item.uid, item.displayName);
                   }}
-                  className={`mt-3.5 w-full h-[38px] rounded-[12px] text-[14px] font-bold flex items-center justify-center transition active:scale-95 cursor-pointer whitespace-nowrap ${
+                  className={`mt-3.5 w-full h-[38px] rounded-[12px] text-[14px] font-semibold flex items-center justify-center transition active:scale-95 cursor-pointer whitespace-nowrap ${
                     isFollowing
                       ? "bg-white/20 text-white border border-white/30"
                       : "bg-white text-zinc-950 hover:bg-zinc-100"
@@ -1023,7 +1023,7 @@ export const ReelsSuggestedProfilesSlide: React.FC<
       {/* Bottom Footer Caption Row right above Compact Reels Dock (Exact IMG_5297) */}
       <div className="relative z-10 flex items-center justify-between gap-3 px-1 pt-2">
         <div className="min-w-0">
-          <p className="text-[16px] font-bold text-white leading-snug">
+          <p className="text-[16px] font-semibold text-white leading-snug">
             Suggested for you
           </p>
           <p className="text-[13.5px] text-white/85 leading-snug mt-0.5">
@@ -1155,7 +1155,7 @@ export const SavedPopupSheet: React.FC<SavedPopupSheetProps> = ({
                   )}
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-[16px] font-bold text-zinc-950 dark:text-white leading-snug truncate">
+                  <h3 className="text-[16px] font-semibold text-zinc-950 dark:text-white leading-snug truncate">
                     {isSaved ? "Saved" : "Removed"}
                   </h3>
                   <p className="text-[14px] text-zinc-500 dark:text-zinc-400 font-normal truncate">
@@ -1263,7 +1263,7 @@ export const SavedPopupSheet: React.FC<SavedPopupSheetProps> = ({
                   />
                 </svg>
 
-                <h2 className="text-[22px] font-bold text-zinc-950 dark:text-white tracking-tight leading-snug">
+                <h2 className="text-[22px] font-semibold text-zinc-950 dark:text-white tracking-tight leading-snug">
                   Collect the posts you love
                 </h2>
                 <p className="text-[14.5px] text-zinc-700 dark:text-zinc-300 font-normal leading-[1.42] max-w-[305px] mt-2.5 mb-7">
@@ -1283,7 +1283,7 @@ export const SavedPopupSheet: React.FC<SavedPopupSheetProps> = ({
               /* Interactive Collections Picker when user has created 1+ collections */
               <div className="px-5 pt-4 pb-2 space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="text-[15px] font-bold text-zinc-950 dark:text-white">
+                  <span className="text-[15px] font-semibold text-zinc-950 dark:text-white">
                     Collections
                   </span>
                   <button
@@ -1380,7 +1380,7 @@ export const SavedPopupSheet: React.FC<SavedPopupSheetProps> = ({
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-sm rounded-[26px] bg-white dark:bg-[#1C1C1E] p-6 text-zinc-950 dark:text-white shadow-2xl border border-zinc-200/80 dark:border-zinc-800 space-y-4"
           >
-            <h3 className="text-[18px] font-bold text-center">New collection</h3>
+            <h3 className="text-[18px] font-semibold text-center">New collection</h3>
             <div className="flex flex-col items-center gap-3">
               {savedItem?.thumbnail && (
                 <img
@@ -1436,6 +1436,7 @@ export interface ReelTranslationModalProps {
   onToggleOriginal: () => void;
   isTranslated?: boolean;
   itemType?: "reel" | "post";
+  subjectLabel?: string;
 }
 
 export const ReelTranslationModal: React.FC<ReelTranslationModalProps> = ({
@@ -1564,7 +1565,7 @@ export const ReelTranslationModal: React.FC<ReelTranslationModalProps> = ({
             </div>
 
             <div className="px-6 pb-5">
-              <h3 className="text-[19px] font-bold text-zinc-950 dark:text-white tracking-tight leading-snug mb-2">
+              <h3 className="text-[19px] font-semibold text-zinc-950 dark:text-white tracking-tight leading-snug mb-2">
                 {itemType === "post"
                   ? "This post is auto-translated"
                   : "This reel is auto-translated"}
@@ -1584,7 +1585,7 @@ export const ReelTranslationModal: React.FC<ReelTranslationModalProps> = ({
                   onClose();
                   onOpenSettings();
                 }}
-                className="w-full py-3.5 text-center text-[16px] font-bold text-[#384DF5] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition cursor-pointer"
+                className="w-full py-3.5 text-center text-[16px] font-semibold text-[#384DF5] hover:bg-black/[0.04] dark:hover:bg-white/[0.06] transition cursor-pointer"
               >
                 Translation settings
               </button>
@@ -1656,7 +1657,7 @@ export const TranslationSettingsSheet: React.FC<
           >
             <div className="w-10 h-1 rounded-full bg-zinc-500/80 dark:bg-zinc-500 mx-auto mb-5" />
 
-            <h2 className="text-[18px] font-bold text-center text-zinc-950 dark:text-white mb-6">
+            <h2 className="text-[18px] font-semibold text-center text-zinc-950 dark:text-white mb-6">
               Translations
             </h2>
 
@@ -1850,7 +1851,7 @@ const PreferredLanguagesScreenContent: React.FC<{
             <X className="w-5 h-5 stroke-[2]" />
           </button>
 
-          <h1 className="text-[17.5px] font-bold text-zinc-950 dark:text-white tracking-tight">
+          <h1 className="text-[17.5px] font-semibold text-zinc-950 dark:text-white tracking-tight">
             Preferred languages
           </h1>
 
@@ -1991,7 +1992,7 @@ const PreferredLanguagesScreenContent: React.FC<{
               className="w-full max-w-[500px] mx-auto rounded-t-[28px] bg-white dark:bg-[#1C1C1E] p-5 pb-[calc(1.5rem+env(safe-area-inset-bottom))] text-zinc-950 dark:text-white shadow-2xl space-y-4 max-h-[80dvh] flex flex-col"
             >
               <div className="flex items-center justify-between">
-                <h3 className="text-[17px] font-bold">Add language</h3>
+                <h3 className="text-[17px] font-semibold">Add language</h3>
                 <button
                   type="button"
                   onClick={() => setShowAddLanguageModal(false)}
@@ -2158,13 +2159,13 @@ export const ReelEndScreenOverlay: React.FC<ReelEndScreenOverlayProps> = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-xs font-bold">
+              <div className="w-full h-full flex items-center justify-center text-xs font-medium">
                 {creatorName.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           <div className="min-w-0">
-            <p className="text-[14px] font-bold text-white truncate leading-snug">
+            <p className="text-[14px] font-semibold text-white truncate leading-snug">
               {creatorName}
             </p>
             <p className="text-[12px] text-white/85 truncate leading-snug flex items-center gap-1 mt-0.5">

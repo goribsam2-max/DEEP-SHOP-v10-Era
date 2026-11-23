@@ -528,7 +528,7 @@ export function Header() {
                         />
                       </div>
                     )}
-                    <span className="ds-apple-display text-[19px] sm:text-[22px] font-bold tracking-[-0.03em] leading-none text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
+                    <span className="ds-apple-display text-[19px] sm:text-[22px] font-semibold tracking-[-0.03em] leading-none text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap">
                       deep shop
                     </span>
                   </div>
@@ -626,7 +626,7 @@ export function Header() {
           >
             <Icon name="shopping-cart" className="w-5 h-5 text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {cartCount > 0 && (
-              <span className="absolute -top-2 -right-2 z-20 pointer-events-none bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-bold leading-none min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+              <span className="absolute -top-2 -right-2 z-20 pointer-events-none bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[10px] font-semibold leading-none min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
                 {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
@@ -641,7 +641,7 @@ export function Header() {
           >
             <Icon name="message-square" className="w-5 h-5 text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {unreadMessagesCount > 0 && (
-              <span className="absolute -top-2 -right-2 z-20 pointer-events-none bg-[#FF3B30] text-white text-[10px] font-bold leading-none min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+              <span className="absolute -top-2 -right-2 z-20 pointer-events-none bg-[#FF3B30] text-white text-[10px] font-semibold leading-none min-w-[19px] h-[19px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
                 {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
               </span>
             )}
@@ -677,7 +677,7 @@ export function Header() {
           >
             <Icon name="shopping-cart" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {cartCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 z-20 pointer-events-none bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[9.5px] font-bold leading-none min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+              <span className="absolute -top-1.5 -right-1.5 z-20 pointer-events-none bg-[#0071E3] dark:bg-[#0A84FF] text-white text-[9.5px] font-semibold leading-none min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
                 {cartCount > 99 ? "99+" : cartCount}
               </span>
             )}
@@ -692,7 +692,7 @@ export function Header() {
           >
             <Icon name="message-square" className="w-[18px] h-[18px] sm:w-[19px] sm:h-[19px] text-[#1D1D1F] dark:text-[#F5F5F7]" />
             {unreadMessagesCount > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 z-20 pointer-events-none bg-[#FF3B30] text-white text-[9.5px] font-bold leading-none min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
+              <span className="absolute -top-1.5 -right-1.5 z-20 pointer-events-none bg-[#FF3B30] text-white text-[9.5px] font-semibold leading-none min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full border-[1.5px] border-white dark:border-[#1C1C1E] shadow-xs tabular-nums">
                 {unreadMessagesCount > 99 ? "99+" : unreadMessagesCount}
               </span>
             )}
@@ -722,7 +722,7 @@ export function Header() {
       >
         <div className="flex-1 overflow-y-auto overflow-x-hidden no-scrollbar w-full">
           <div className="flex w-full flex-col gap-y-1.5 pb-4 px-2">
-            <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 px-2 mt-4 mb-2 block">
+            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 px-2 mt-4 mb-2 block">
               {showAdminMenu ? "Admin Pages" : "Explore Pages"}
             </span>
             {linksToShow.map((link) => (
@@ -738,7 +738,7 @@ export function Header() {
 
             {!showAdminMenu && categories.length > 0 && (
               <>
-                <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100 px-4 mt-6 mb-2 block">
+                <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100 px-4 mt-6 mb-2 block">
                   Categories
                 </span>
                 <div className="flex flex-row flex-nowrap overflow-x-auto gap-2 px-4 no-scrollbar scroll-smooth pb-2 w-full max-w-full">
@@ -982,7 +982,7 @@ const WordmarkIcon = ({
 }: React.ComponentProps<"span">) => (
   <span
     className={cn(
-      "ds-apple-display lowercase text-[19px] sm:text-[21px] font-bold tracking-[-0.03em] leading-none text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap",
+      "ds-apple-display lowercase text-[19px] sm:text-[21px] font-semibold tracking-[-0.03em] leading-none text-[#1D1D1F] dark:text-[#F5F5F7] whitespace-nowrap",
       className
     )}
     {...props}

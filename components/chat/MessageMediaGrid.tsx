@@ -193,7 +193,7 @@ export const MessageMediaGrid: React.FC<MessageMediaGridProps> = ({
             />
             {isLastItem && (
               <div className="absolute inset-0 bg-black/55 backdrop-blur-xs flex items-center justify-center transition-colors group-hover/item:bg-black/65">
-                <span className="text-white text-lg font-bold tabular-nums tracking-tight">
+                <span className="text-white text-lg font-semibold tabular-nums tracking-tight">
                   +{remainingCount}
                 </span>
               </div>

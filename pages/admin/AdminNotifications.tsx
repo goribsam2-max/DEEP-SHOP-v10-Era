@@ -54,7 +54,7 @@ const AdminNotifications: React.FC = () => {
             />
           </div>
           <div>
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+            <h2 className="text-xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               Broadcast Alert
             </h2>
             <p className="text-xs font-semibold text-zinc-400 mt-0.5">
@@ -65,7 +65,7 @@ const AdminNotifications: React.FC = () => {
 
         <form onSubmit={handleSendNotification} className="space-y-6">
           <div>
-            <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+            <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
               Notification Title
             </label>
             <input
@@ -78,7 +78,7 @@ const AdminNotifications: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+            <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
               Message Body
             </label>
             <textarea
@@ -91,7 +91,7 @@ const AdminNotifications: React.FC = () => {
             ></textarea>
           </div>
           <div>
-            <label className="block text-[10px] font-bold text-zinc-500  tracking-normal mb-2">
+            <label className="block text-[10px] font-medium text-zinc-500  tracking-normal mb-2">
               Image URL (Optional)
             </label>
             <input
@@ -115,7 +115,7 @@ const AdminNotifications: React.FC = () => {
             <button
               disabled={loading}
               type="submit"
-              className="w-full py-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-bold text-xs  tracking-normal shadow-lg shadow-[#06331e]/20 hover:bg-[#0a4a2b] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-3"
+              className="w-full py-4 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 rounded-full font-medium text-xs  tracking-normal shadow-lg shadow-[#06331e]/20 hover:bg-[#0a4a2b] transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center space-x-3"
             >
               <Icon name="paper-plane" />
               <span>{loading ? "Sending..." : "Send Broadcast Now"}</span>

@@ -236,11 +236,11 @@ export const ProgressiveImage: React.FC<ProgressiveImageProps> = ({
       {hasError && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center p-3 bg-zinc-900/95 text-center gap-1.5 border border-zinc-800">
           <AlertCircle className="w-5 h-5 text-zinc-400" />
-          <span className="text-[11px] font-bold text-zinc-300">Failed to load photo</span>
+          <span className="text-[11px] font-semibold text-zinc-300">Failed to load photo</span>
           <button
             type="button"
             onClick={handleRetry}
-            className="mt-1 px-3 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-sm"
+            className="mt-1 px-3 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-[10px] font-semibold flex items-center gap-1 transition cursor-pointer active:scale-95 shadow-sm"
           >
             <RefreshCw className="w-3 h-3" />
             <span>Tap to retry</span>

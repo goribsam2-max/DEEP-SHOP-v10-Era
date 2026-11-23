@@ -421,7 +421,7 @@ export const MobileAppInstallExperience: React.FC = () => {
                 </div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="ds-apple-display text-[17px] font-bold tracking-tight text-zinc-950 dark:text-white">
+                    <h3 className="ds-apple-display text-[17px] font-semibold tracking-tight text-zinc-950 dark:text-white">
                       DEEP SHOP App
                     </h3>
                     <span className="px-2 py-0.5 rounded-md bg-emerald-500/12 text-[#248A3D] dark:text-[#30D158] text-[11px] font-semibold">
@@ -560,7 +560,7 @@ export const MobileAppInstallExperience: React.FC = () => {
                   />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="ds-apple-display text-[17px] font-bold tracking-tight">
+                  <h3 className="ds-apple-display text-[17px] font-semibold tracking-tight">
                     Add DEEP SHOP to Home Screen
                   </h3>
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
@@ -614,7 +614,7 @@ export const MobileAppInstallExperience: React.FC = () => {
                     className="flex flex-col items-center text-center py-1"
                   >
                     <div className="w-full max-w-[270px] rounded-2xl bg-white dark:bg-[#1c1c1e] border-2 border-[#0071E3]/55 px-3.5 py-2.5 shadow-sm flex items-center justify-between">
-                      <span className="text-[13px] font-bold text-zinc-900 dark:text-white">
+                      <span className="text-[13px] font-semibold text-zinc-900 dark:text-white">
                         Add to Home Screen
                       </span>
                       <span className="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-black/[0.08] dark:border-white/[0.1] flex items-center justify-center text-zinc-900 dark:text-white">
@@ -643,9 +643,9 @@ export const MobileAppInstallExperience: React.FC = () => {
                           alt="DEEP SHOP"
                           className="w-8 h-8 rounded-lg object-contain border border-black/[0.08] dark:border-white/[0.1]"
                         />
-                        <span className="text-[13px] font-bold">DEEP SHOP</span>
+                        <span className="text-[13px] font-semibold">DEEP SHOP</span>
                       </div>
-                      <span className="px-3 py-1 rounded-full bg-[#0071E3] text-white text-xs font-bold">
+                      <span className="px-3 py-1 rounded-full bg-[#0071E3] text-white text-xs font-medium">
                         Add
                       </span>
                     </div>
@@ -693,7 +693,7 @@ export const MobileAppInstallExperience: React.FC = () => {
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <span
-                        className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold tabular-nums shrink-0 ${
+                        className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-semibold tabular-nums shrink-0 ${
                           active
                             ? "bg-[#0071E3] text-white"
                             : "bg-white dark:bg-[#1c1c1e] text-zinc-700 dark:text-zinc-300 border border-black/[0.08] dark:border-white/[0.1]"
@@ -702,7 +702,7 @@ export const MobileAppInstallExperience: React.FC = () => {
                         {item.step}
                       </span>
                       <div className="min-w-0">
-                        <p className="text-[13px] font-bold text-zinc-900 dark:text-white truncate">
+                        <p className="text-[13px] font-semibold text-zinc-900 dark:text-white truncate">
                           {item.title}
                         </p>
                         <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">

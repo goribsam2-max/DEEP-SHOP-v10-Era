@@ -313,7 +313,7 @@ export const ChatMediaGalleryModal: React.FC<ChatMediaGalleryModalProps> = ({
               <ChevronLeft className="w-5 h-5" />
             </button>
 
-            <div className="w-9 h-9 rounded-full bg-white/12 border border-white/15 flex items-center justify-center text-white text-xs font-bold shrink-0 hidden sm:flex">
+            <div className="w-9 h-9 rounded-full bg-white/12 border border-white/15 flex items-center justify-center text-white text-xs font-medium shrink-0 hidden sm:flex">
               {initialLetter}
             </div>
 

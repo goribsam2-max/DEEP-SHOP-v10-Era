@@ -66,7 +66,7 @@ export default function FlashSale() {
               <Zap className="w-3.5 h-3.5 fill-current" />
               <span>Limited-Time Offers</span>
             </p>
-            <h1 className="ds-apple-display text-2xl sm:text-3xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="ds-apple-display text-2xl sm:text-3xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
               Flash Sale
             </h1>
             <p className="ds-apple-muted text-sm leading-relaxed">

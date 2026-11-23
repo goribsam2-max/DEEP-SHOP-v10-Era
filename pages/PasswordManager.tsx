@@ -84,7 +84,7 @@ const PasswordManager: React.FC = () => {
         className="w-full max-w-md mx-auto px-4 pt-6 flex-1 space-y-5"
       >
         <div className="px-1">
-          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
+          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight">
             Password Manager
           </h1>
         </div>

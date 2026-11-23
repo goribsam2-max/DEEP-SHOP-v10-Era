@@ -91,7 +91,7 @@ const NewPassword: React.FC = () => {
       >
         <form onSubmit={handleReset} className="space-y-4 pt-1">
           <div className="space-y-2">
-            <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Create a new password
             </h1>
             <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">

@@ -30,7 +30,7 @@ export const MobileGuard: React.FC<{ children: React.ReactNode }> = ({ children 
                  </p>
                  
                  <div className="pt-8 mt-8 border-t border-white/5 relative z-10">
-                    <div className="inline-flex items-center space-x-2 text-[10px] font-bold  tracking-normal text-zinc-500 bg-black/50 px-4 py-2 border border-white/5 rounded-full">
+                    <div className="inline-flex items-center space-x-2 text-[10px] font-semibold  tracking-normal text-zinc-500 bg-black/50 px-4 py-2 border border-white/5 rounded-full">
                        <Icon name="ban" className="text-red-500 text-xs" />
                        <span className="mt-0.5">Desktop Access Disabled</span>
                     </div>

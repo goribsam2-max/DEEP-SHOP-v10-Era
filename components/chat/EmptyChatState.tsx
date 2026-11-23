@@ -30,13 +30,13 @@ export const EmptyChatState: React.FC<EmptyChatStateProps> = ({ otherUser }) => 
             referrerPolicy="no-referrer"
           />
         ) : (
-          <span className="text-2xl font-bold text-[#2F80ED]">
+          <span className="text-2xl font-semibold text-[#2F80ED]">
             {(displayName || 'U')[0].toUpperCase()}
           </span>
         )}
       </div>
 
-      <h3 className="text-[18px] font-bold text-zinc-950 dark:text-white tracking-tight">
+      <h3 className="text-[18px] font-semibold text-zinc-950 dark:text-white tracking-tight">
         {displayName}
       </h3>
 

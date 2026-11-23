@@ -103,7 +103,7 @@ export default function CourierPayment() {
     <div className="ds-apple-shop-canvas min-h-screen bg-[#F5F5F7] dark:bg-[#000000] text-[#1D1D1F] dark:text-[#F5F5F7] flex flex-col transition-colors">
       <div className="flex-1 p-4 max-w-lg w-full mx-auto pb-24 pt-5 sm:pt-7">
         <div className="mb-5 px-1">
-          <h1 className="ds-apple-display text-[24px] font-bold tracking-tight">
+          <h1 className="ds-apple-display text-[24px] font-semibold tracking-tight">
             Courier Processing
           </h1>
           <p className="text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93] tabular-nums mt-0.5">
@@ -120,7 +120,7 @@ export default function CourierPayment() {
             <div className="w-16 h-16 bg-[#248A3D]/12 dark:bg-[#30D158]/15 rounded-full flex items-center justify-center mx-auto mb-4 text-[#248A3D] dark:text-[#30D158]">
               <ShieldCheck className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
+            <h2 className="text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] mb-2">
               Payment Verified
             </h2>
             <p className="text-sm text-[#6E6E73] dark:text-[#8E8E93] mb-6">
@@ -153,7 +153,7 @@ export default function CourierPayment() {
             <div className="w-16 h-16 bg-[#FF9500]/12 dark:bg-[#FF9F0A]/15 rounded-full flex items-center justify-center mx-auto mb-4 text-[#FF9500] dark:text-[#FF9F0A]">
               <Clock className="w-8 h-8" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Payment Verification Pending</h2>
+            <h2 className="text-xl font-semibold mb-2">Payment Verification Pending</h2>
             <p className="text-sm text-[#6E6E73] dark:text-[#8E8E93]">
               We are currently verifying your courier payment. This usually completes within minutes.
             </p>
@@ -171,7 +171,7 @@ export default function CourierPayment() {
                   <Icon name="alert-circle" className="w-5 h-5" />
                 </div>
                 <div>
-                  <h2 className="text-base font-bold leading-tight">Action Required</h2>
+                  <h2 className="text-base font-semibold leading-tight">Action Required</h2>
                   <p className="text-xs text-[#6E6E73] dark:text-[#8E8E93] mt-0.5">
                     Please clear your courier balance
                   </p>
@@ -179,7 +179,7 @@ export default function CourierPayment() {
               </div>
               <p className="text-sm leading-relaxed text-[#3A3A3C] dark:text-[#D1D1D6]">
                 Please pay{" "}
-                <span className="text-[#FF3B30] dark:text-[#FF453A] font-bold tabular-nums">
+                <span className="text-[#FF3B30] dark:text-[#FF453A] font-semibold tabular-nums">
                   20% ({formatPrice(payAmount)})
                 </span>{" "}
                 of your remaining due balance.{" "}
@@ -197,7 +197,7 @@ export default function CourierPayment() {
                 <span className="text-sm font-medium text-[#6E6E73] dark:text-[#8E8E93]">
                   Payable Amount
                 </span>
-                <span className="text-xl font-bold text-[#0071E3] dark:text-[#0A84FF]">
+                <span className="text-xl font-semibold text-[#0071E3] dark:text-[#0A84FF]">
                   {formatPrice(payAmount)}
                 </span>
               </div>

@@ -417,7 +417,7 @@ const MusicPostCard: React.FC<{
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-bold text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
+        <p className="text-xs font-medium text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
           <Music className="w-3.5 h-3.5 text-[#1877F2] shrink-0" />
           <span className="truncate">{music.title}</span>
         </p>
@@ -551,7 +551,7 @@ const InteractivePollCard: React.FC<{
       className="rounded-[22px] bg-[#F8FAFC] dark:bg-zinc-800/75 border border-slate-200/80 dark:border-zinc-700/70 p-4 space-y-2.5"
     >
       {localPoll.question && (
-        <p className="text-sm font-bold text-zinc-900 dark:text-white">
+        <p className="text-sm font-semibold text-zinc-900 dark:text-white">
           {localPoll.question}
         </p>
       )}
@@ -596,7 +596,7 @@ const InteractivePollCard: React.FC<{
               </span>
 
               {showBars && (
-                <span className="relative z-10 text-xs font-bold tabular-nums text-zinc-600 dark:text-zinc-300 shrink-0">
+                <span className="relative z-10 text-xs font-semibold tabular-nums text-zinc-600 dark:text-zinc-300 shrink-0">
                   {pct}%
                 </span>
               )}
@@ -634,7 +634,7 @@ const SnippetPostCard: React.FC<{
       className="rounded-[22px] bg-[#F5F7FA] dark:bg-zinc-900/95 border border-slate-200/85 dark:border-zinc-700/80 overflow-hidden"
     >
       <div className="px-4 py-2.5 border-b border-slate-200/70 dark:border-zinc-800 flex items-center justify-between gap-2 bg-white/70 dark:bg-zinc-800/50">
-        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-200 truncate">
+        <span className="text-xs font-medium text-zinc-700 dark:text-zinc-200 truncate">
           {snippet.title || "Snippet"}
         </span>
         <button
@@ -754,7 +754,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
     return (
       <>
         <div className="absolute top-3 left-3 right-12 flex items-center gap-2 pointer-events-none">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-600/95 backdrop-blur-md text-white text-[11px] font-bold shadow-md whitespace-nowrap overflow-hidden max-w-full">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-rose-600/95 backdrop-blur-md text-white text-[11px] font-semibold shadow-md whitespace-nowrap overflow-hidden max-w-full">
             <Icon name="shield-alert" className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">Verified Scam Report · {place}</span>
           </div>
@@ -762,7 +762,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
         {!isDataUrlStamped && (
           <div className="absolute bottom-0 inset-x-0 bg-gradient-to-r from-rose-950/95 via-zinc-950/90 to-zinc-950/95 border-t border-rose-500/70 px-3.5 py-2 flex items-center justify-between gap-2 pointer-events-none">
             <div className="min-w-0">
-              <p className="text-[10px] font-bold tracking-wider uppercase text-white truncate">
+              <p className="text-[10px] font-medium tracking-wider uppercase text-white truncate">
                 SCAM REPORT · DEEP SHOP
               </p>
               <p className="text-[11px] font-medium text-rose-200 truncate flex items-center gap-1">
@@ -858,7 +858,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
             “{post.quoteBlock.text}”
           </p>
           {post.quoteBlock.author && (
-            <p className="text-xs font-bold text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs font-normal text-zinc-500 dark:text-zinc-400">
               — {post.quoteBlock.author}
             </p>
           )}
@@ -892,7 +892,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
             wrapperClassName="w-full rounded-none"
             className="w-full max-h-[420px] object-cover block rounded-none"
           />
-          <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-white text-[10px] font-extrabold tracking-wider">
+          <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 backdrop-blur-md text-white text-[10px] font-semibold tracking-wider">
             GIF
           </span>
         </div>
@@ -916,7 +916,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
           overlayBadge={
             isScam && images.length === 0 ? (
               <div className="absolute top-3 left-3 right-14 flex items-center gap-2 pointer-events-none z-10">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/95 backdrop-blur-md text-white text-[11px] font-bold shadow-md whitespace-nowrap overflow-hidden max-w-full">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-rose-600/95 backdrop-blur-md text-white text-[11px] font-semibold shadow-md whitespace-nowrap overflow-hidden max-w-full">
                   <Icon name="shield-alert" className="w-3.5 h-3.5 shrink-0" />
                   <span className="truncate">
                     Verified Scam Report · {getScamPlaceLabel()}
@@ -1045,7 +1045,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                   className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                 />
                 {idx === 3 && images.length > 4 && (
-                  <div className="absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-bold text-xl tabular-nums">
+                  <div className="absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-semibold text-xl tabular-nums">
                     +{images.length - 4}
                   </div>
                 )}
@@ -1204,7 +1204,7 @@ export const NewsPostMedia: React.FC<NewsPostMediaProps> = ({
                     className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
                   />
                   {idx === 3 && images.length > 4 && (
-                    <div className="absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-bold text-xl tabular-nums">
+                    <div className="absolute inset-0 z-20 bg-black/55 backdrop-blur-[2px] flex items-center justify-center text-white font-semibold text-xl tabular-nums">
                       +{images.length - 4}
                     </div>
                   )}

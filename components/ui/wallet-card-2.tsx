@@ -46,7 +46,7 @@ export default function WalletCard() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-4xl font-bold text-gray-900">$534,435.53</div>
+              <div className="text-4xl font-semibold text-gray-900">$534,435.53</div>
               <div className="flex items-center gap-2 text-orange-500">
                 <Bitcoin className="w-4 h-4" />
                 <span className="font-medium">9.300554 BTC</span>

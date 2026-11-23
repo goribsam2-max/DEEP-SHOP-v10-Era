@@ -181,7 +181,7 @@ const ExchangeRequest: React.FC = () => {
     return (
       <div className="min-h-screen bg-[#F5F5F7] dark:bg-black flex flex-col items-center justify-center p-4 ds-apple-shop-canvas">
         <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-8 max-w-sm w-full text-center border border-black/[0.06] dark:border-white/[0.08] shadow-xs">
-          <p className="text-[#FF3B30] dark:text-[#FF453A] font-bold text-[18px] mb-2">Invalid Link</p>
+          <p className="text-[#FF3B30] dark:text-[#FF453A] font-semibold text-[18px] mb-2">Invalid Link</p>
           <p className="text-[#6E6E73] dark:text-[#98989D] text-[13px] mb-6">This exchange link is missing required merchant parameters.</p>
           <button
             type="button"
@@ -229,7 +229,7 @@ const ExchangeRequest: React.FC = () => {
                   )}
                 </div>
                 <div>
-                  <h1 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-[17px] tracking-tight leading-tight">
+                  <h1 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-[17px] tracking-tight leading-tight">
                     Device Exchange
                   </h1>
                   <p className="text-[#6E6E73] dark:text-[#98989D] text-[12px] font-medium mt-0.5">
@@ -463,7 +463,7 @@ const ExchangeRequest: React.FC = () => {
                     Custom Payment Paid (TK)
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6E6E73] dark:text-[#98989D] text-[13px] font-bold">৳</span>
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6E6E73] dark:text-[#98989D] text-[13px] font-semibold">৳</span>
                     <input
                       type="number"
                       value={customPaymentAmount}
@@ -544,7 +544,7 @@ const ExchangeRequest: React.FC = () => {
               </div>
 
               <div>
-                <h2 className="font-bold text-[#1D1D1F] dark:text-[#F5F5F7] text-[20px] tracking-tight">
+                <h2 className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] text-[20px] tracking-tight">
                   Request Submitted
                 </h2>
                 <p className="text-[#6E6E73] dark:text-[#98989D] text-[13px] mt-2 leading-relaxed">

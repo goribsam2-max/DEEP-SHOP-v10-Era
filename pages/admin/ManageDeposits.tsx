@@ -53,21 +53,21 @@ const ManageDeposits: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-6 animate-fade-in">
-        <h2 className="text-xl font-bold mb-6">Manage Deposits</h2>
+        <h2 className="text-xl font-semibold mb-6">Manage Deposits</h2>
         <div className="bg-white dark:bg-zinc-900 rounded-3xl shadow-sm border border-zinc-100 dark:border-zinc-800 p-4">
             {deposits.map(dep => (
                 <div key={dep.id} className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
                     <div>
-                        <p className="font-bold text-sm">{dep.userEmail}</p>
+                        <p className="font-semibold text-sm">{dep.userEmail}</p>
                         <p className="text-xs text-zinc-500">Method: {dep.method.toUpperCase()} | TrxID: {dep.trxId}</p>
                         <p className="text-xs text-zinc-500">Amount: ৳{dep.amount}</p>
-                        <p className="text-xs text-zinc-500">Status: <span className={`${dep.status === 'pending' ? 'text-amber-500' : dep.status === 'approved' ? 'text-green-500' : 'text-red-500'} font-bold uppercase`}>{dep.status}</span></p>
+                        <p className="text-xs text-zinc-500">Status: <span className={`${dep.status === 'pending' ? 'text-amber-500' : dep.status === 'approved' ? 'text-green-500' : 'text-red-500'} font-normal uppercase`}>{dep.status}</span></p>
                         {dep.reason && <p className="text-xs text-red-500 mt-1">Reason: {dep.reason}</p>}
                     </div>
                     {dep.status === 'pending' && (
                         <div className="flex gap-2">
-                            <button onClick={() => handleUpdate(dep.id, 'approved', dep.userId, dep.amount)} className="px-3 py-1 bg-green-500 text-white rounded text-xs font-bold">Approve</button>
-                            <button onClick={() => handleUpdate(dep.id, 'rejected', dep.userId, dep.amount)} className="px-3 py-1 bg-red-500 text-white rounded text-xs font-bold">Reject</button>
+                            <button onClick={() => handleUpdate(dep.id, 'approved', dep.userId, dep.amount)} className="px-3 py-1 bg-green-500 text-white rounded text-xs font-semibold">Approve</button>
+                            <button onClick={() => handleUpdate(dep.id, 'rejected', dep.userId, dep.amount)} className="px-3 py-1 bg-red-500 text-white rounded text-xs font-semibold">Reject</button>
                         </div>
                     )}
                 </div>

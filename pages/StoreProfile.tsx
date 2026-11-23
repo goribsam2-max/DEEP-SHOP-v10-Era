@@ -413,7 +413,7 @@ export const StoreProfile: React.FC = () => {
 
         <div className="flex flex-col min-w-0">
           <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-bold text-base leading-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
+            <span className="font-semibold text-base leading-tight text-[#1D1D1F] dark:text-[#F5F5F7] truncate tracking-tight">
               {seller.shopName || getSafeDisplayName(seller, "Seller")}
             </span>
             {seller.kycStatus === "verified" && (
@@ -589,7 +589,7 @@ export const StoreProfile: React.FC = () => {
           ))}
         </div>
         <div>
-          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1.5">
             Additional Details (Optional)
           </label>
           <textarea
@@ -642,7 +642,7 @@ export const StoreProfile: React.FC = () => {
         {seller.ordersPaused && (
           <div className="bg-[#FF9500]/10 border border-[#FF9500]/25 rounded-[24px] p-5 backdrop-blur-xl shadow-xs space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-2.5 text-[#B25000] dark:text-[#FF9F0A] font-bold text-sm sm:text-base">
+              <div className="flex items-center gap-2.5 text-[#B25000] dark:text-[#FF9F0A] font-semibold text-sm sm:text-base">
                 <AlertTriangle className="w-5 h-5 text-[#FF9500] shrink-0" />
                 <span>Orders Temporarily Paused</span>
               </div>
@@ -669,7 +669,7 @@ export const StoreProfile: React.FC = () => {
         {/* Owner Quick Controls (When viewing own store) */}
         {user?.uid === seller.id && !seller.ordersPaused && (
           <div className="bg-[#248A3D]/10 dark:bg-[#30D158]/15 border border-[#248A3D]/25 dark:border-[#30D158]/30 rounded-[22px] p-4 flex items-center justify-between flex-wrap gap-3">
-            <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#248A3D] dark:text-[#30D158]">
+            <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-[#248A3D] dark:text-[#30D158]">
               <CheckCircle2 className="w-5 h-5 shrink-0" />
               <span>Your seller store is currently accepting orders normally</span>
             </div>
@@ -722,11 +722,11 @@ export const StoreProfile: React.FC = () => {
               <div className="min-w-0 space-y-1.5">
                 {/* Line 1: Shop Name + Verified Badge */}
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight truncate">
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight truncate">
                     {seller.shopName || getSafeDisplayName(seller, "Seller Store")}
                   </h1>
                   {seller.kycStatus === "verified" && (
-                    <span className="px-2.5 py-0.5 rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] text-xs font-bold border border-[#0071E3]/20 dark:border-[#0A84FF]/25 inline-flex items-center gap-1 shrink-0">
+                    <span className="px-2.5 py-0.5 rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/15 text-[#0071E3] dark:text-[#0A84FF] text-xs font-medium border border-[#0071E3]/20 dark:border-[#0A84FF]/25 inline-flex items-center gap-1 shrink-0">
                       <ShieldCheck className="w-3.5 h-3.5" />
                       <span>Verified Seller</span>
                     </span>
@@ -813,11 +813,11 @@ export const StoreProfile: React.FC = () => {
           {/* Rating */}
           <div className="p-4 rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between text-[#FF9500] dark:text-[#FF9F0A] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Rating</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Rating</span>
               <Star className="w-4 h-4 fill-[#FF9500] text-[#FF9500] dark:fill-[#FF9F0A] dark:text-[#FF9F0A]" />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="text-2xl font-extrabold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <span className="text-2xl font-semibold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {averageRating > 0 ? averageRating.toFixed(1) : "New"}
               </span>
               <span className="text-xs text-[#6E6E73] dark:text-[#98989D] font-semibold">/ 5.0</span>
@@ -830,11 +830,11 @@ export const StoreProfile: React.FC = () => {
           {/* Positive Percent */}
           <div className="p-4 rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between text-[#248A3D] dark:text-[#30D158] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Positive</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Positive</span>
               <ThumbsUp className="w-4 h-4" />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-extrabold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <span className="text-2xl font-semibold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {positivePercent}%
               </span>
             </div>
@@ -846,11 +846,11 @@ export const StoreProfile: React.FC = () => {
           {/* Total Sold */}
           <div className="p-4 rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between text-[#0071E3] dark:text-[#0A84FF] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Total Sold</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Total Sold</span>
               <Package className="w-4 h-4" />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-extrabold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <span className="text-2xl font-semibold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {formatCompactNumber(totalSold)}+
               </span>
             </div>
@@ -862,11 +862,11 @@ export const StoreProfile: React.FC = () => {
           {/* Regular Buyers */}
           <div className="p-4 rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between text-[#0071E3] dark:text-[#0A84FF] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Buyers</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Buyers</span>
               <Users className="w-4 h-4" />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-extrabold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <span className="text-2xl font-semibold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {formatCompactNumber(regularBuyers)}+
               </span>
             </div>
@@ -878,11 +878,11 @@ export const StoreProfile: React.FC = () => {
           {/* Followers */}
           <div className="col-span-2 sm:col-span-4 lg:col-span-1 p-4 rounded-[22px] bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] shadow-xs flex flex-col justify-between">
             <div className="flex items-center justify-between text-[#0071E3] dark:text-[#0A84FF] mb-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Followers</span>
+              <span className="text-[11px] font-medium uppercase tracking-wider text-[#6E6E73] dark:text-[#98989D]">Followers</span>
               <Sparkles className="w-4 h-4" />
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-2xl font-extrabold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <span className="text-2xl font-semibold tabular-nums text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {formatCompactNumber(followersCount)}
               </span>
             </div>
@@ -996,7 +996,7 @@ export const StoreProfile: React.FC = () => {
           {/* TAB 2: STORE CATEGORIES */}
           {activeTab === 'categories' && (
             <div className="space-y-4">
-              <h3 className="font-bold text-lg text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Store Categories</h3>
+              <h3 className="font-semibold text-lg text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Store Categories</h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {Array.from(new Set(products.map(p => p.category || 'Other'))).map(cat => {
                   const catCount = products.filter(p => (p.category || 'Other') === cat).length;
@@ -1012,7 +1012,7 @@ export const StoreProfile: React.FC = () => {
                       className="bg-white dark:bg-[#1C1C1E] p-5 rounded-[22px] border border-black/[0.06] dark:border-white/[0.1] hover:border-[#0071E3]/40 dark:hover:border-[#0A84FF]/45 shadow-xs flex items-center justify-between gap-3 text-left transition active:scale-[0.97] cursor-pointer"
                     >
                       <div>
-                        <span className="font-bold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] block">{cat}</span>
+                        <span className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] block">{cat}</span>
                         <span className="text-xs text-[#6E6E73] dark:text-[#98989D] font-medium tabular-nums">{catCount} items</span>
                       </div>
                       <Layers className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF] shrink-0" />
@@ -1053,7 +1053,7 @@ export const StoreProfile: React.FC = () => {
                     </div>
                   )}
                   {product.price && (
-                    <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-md text-white text-[11px] px-2 py-0.5 rounded-lg font-bold tabular-nums">
+                    <div className="absolute bottom-1.5 left-1.5 bg-black/75 backdrop-blur-md text-white text-[11px] px-2 py-0.5 rounded-lg font-semibold tabular-nums">
                       ৳{product.price}
                     </div>
                   )}
@@ -1072,7 +1072,7 @@ export const StoreProfile: React.FC = () => {
             <div className="space-y-6">
               {/* Leave a Review Form */}
               <div className="bg-white dark:bg-[#1C1C1E] rounded-[24px] p-5 sm:p-6 border border-black/[0.06] dark:border-white/[0.1] shadow-xs space-y-4">
-                <h3 className="font-bold text-base text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Write a Verified Store Review</h3>
+                <h3 className="font-semibold text-base text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight">Write a Verified Store Review</h3>
                 <form onSubmit={handleReviewSubmit} className="space-y-4">
                   <div className="flex gap-1.5">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -1130,13 +1130,13 @@ export const StoreProfile: React.FC = () => {
                   >
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white flex items-center justify-center font-bold text-base shrink-0 shadow-xs">
+                        <div className="w-10 h-10 rounded-full bg-[#0071E3] dark:bg-[#0A84FF] text-white flex items-center justify-center font-semibold text-base shrink-0 shadow-xs">
                           {(review.reviewerName || 'U').charAt(0).toUpperCase()}
                         </div>
                         <div>
                           <Link 
                             to={`/store/${review.reviewerId || review.userId}`} 
-                            className="font-bold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] hover:underline"
+                            className="font-semibold text-sm text-[#1D1D1F] dark:text-[#F5F5F7] hover:underline"
                           >
                             {review.reviewerName || 'Anonymous Buyer'}
                           </Link>
@@ -1166,7 +1166,7 @@ export const StoreProfile: React.FC = () => {
                     </div>
 
                     {review.title && (
-                      <h4 className="font-bold text-base text-[#1D1D1F] dark:text-[#F5F5F7]">
+                      <h4 className="font-semibold text-base text-[#1D1D1F] dark:text-[#F5F5F7]">
                         {review.title}
                       </h4>
                     )}
@@ -1257,7 +1257,7 @@ export const StoreProfile: React.FC = () => {
         }}
       >
         <div>
-          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 block mb-1.5">
+          <label className="text-xs font-medium text-zinc-700 dark:text-zinc-300 block mb-1.5">
             Reason to show buyers *
           </label>
           <textarea

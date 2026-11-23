@@ -169,7 +169,7 @@ const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
         className="max-w-2xl mx-auto px-4 pt-5 sm:pt-7 space-y-5"
       >
         <div className="px-1">
-          <h1 className="ds-apple-display text-[24px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <h1 className="ds-apple-display text-[24px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
             Withdraw Funds
           </h1>
           <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">
@@ -183,7 +183,7 @@ const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
               <p className="text-white/70 font-medium text-[13px] mb-1">
                 Available Balance
               </p>
-              <h1 className="text-[36px] sm:text-[42px] font-bold tracking-[-0.03em] leading-none tabular-nums">
+              <h1 className="text-[36px] sm:text-[42px] font-semibold tracking-[-0.03em] leading-none tabular-nums">
                 {formatPrice(userData.walletBalance || 0, region)}
               </h1>
             </div>
@@ -227,7 +227,7 @@ const WithdrawPage: React.FC<{ userData: UserProfile | null }> = ({
                   value={withdrawAmount}
                   onChange={(e) => setWithdrawAmount(e.target.value)}
                   placeholder="0.00"
-                  className="ds-apple-input w-full px-4 py-3.5 pr-16 rounded-[14px] font-bold text-[22px] tabular-nums"
+                  className="ds-apple-input w-full px-4 py-3.5 pr-16 rounded-[14px] font-semibold text-[22px] tabular-nums"
                 />
                 <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[13px] font-semibold text-[#6E6E73] dark:text-[#98989D]">
                   {region === "BD" ? "BDT" : region === "IN" ? "INR" : region === "PK" ? "PKR" : "USD"}

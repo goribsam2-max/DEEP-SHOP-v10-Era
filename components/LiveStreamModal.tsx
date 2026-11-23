@@ -421,7 +421,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
             </button>
             <div className="flex items-center gap-2">
               <Icon name="radio" className="w-5 h-5 text-red-500 animate-pulse" />
-              <h2 className="text-base font-bold">Go Live Studio</h2>
+              <h2 className="text-base font-semibold">Go Live Studio</h2>
             </div>
             <div className="w-10" />
           </div>
@@ -475,7 +475,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
           {/* Form details: Title, Description, Thumbnail */}
           <div className="space-y-3 bg-zinc-900/80 p-4 rounded-3xl border border-white/10 mb-2">
             <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">
                 Live Title
               </label>
               <input
@@ -488,7 +488,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+              <label className="block text-[11px] font-medium text-zinc-400 uppercase tracking-wider mb-1">
                 Description (Optional)
               </label>
               <input
@@ -531,7 +531,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
           <button
             type="button"
             onClick={handleGoLive}
-            className="w-full py-4 rounded-full bg-red-600 hover:bg-red-500 text-white font-bold text-base flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 active:scale-98 transition cursor-pointer"
+            className="w-full py-4 rounded-full bg-red-600 hover:bg-red-500 text-white font-semibold text-base flex items-center justify-center gap-2 shadow-lg shadow-red-600/30 active:scale-98 transition cursor-pointer"
           >
             <Icon name="radio" className="w-5 h-5 animate-pulse" />
             <span>Go Live Now</span>
@@ -565,7 +565,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                     className="w-full h-full rounded-full object-cover"
                   />
                 </div>
-                <h3 className="text-lg font-bold text-white">{streamData?.userName || "Creator"}</h3>
+                <h3 className="text-lg font-semibold text-white">{streamData?.userName || "Creator"}</h3>
                 <p className="text-zinc-400 text-xs mt-1">is broadcasting live</p>
               </div>
             )}
@@ -587,7 +587,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                 />
               </div>
               <div className="max-w-[120px] truncate">
-                <p className="text-xs font-bold leading-tight truncate">
+                <p className="text-xs font-medium leading-tight truncate">
                   {isBroadcaster ? currentUser?.displayName || "You" : streamData?.userName || "Creator"}
                 </p>
                 <p className="text-[10px] text-zinc-300 leading-tight truncate">
@@ -598,7 +598,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
 
             {/* LIVE Badge + Viewers */}
             <div className="flex items-center gap-2">
-              <div className="px-2.5 py-1 rounded-full bg-red-600 text-white font-extrabold text-[11px] tracking-wider uppercase flex items-center gap-1 shadow-md animate-pulse">
+              <div className="px-2.5 py-1 rounded-full bg-red-600 text-white font-medium text-[11px] tracking-wider uppercase flex items-center gap-1 shadow-md animate-pulse">
                 <span className="w-2 h-2 rounded-full bg-white animate-ping" />
                 <span>LIVE</span>
               </div>
@@ -611,7 +611,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
               <button
                 type="button"
                 onClick={isBroadcaster ? handleEndLive : onClose}
-                className="px-3 py-1 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-bold backdrop-blur-md border border-white/20 transition cursor-pointer active:scale-95"
+                className="px-3 py-1 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-medium backdrop-blur-md border border-white/20 transition cursor-pointer active:scale-95"
               >
                 {isBroadcaster ? "End Live" : "Leave"}
               </button>
@@ -665,7 +665,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
             <div className="relative z-20 px-4 mb-2 pointer-events-none">
               <div className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-600/90 to-purple-600/90 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/20 shadow-xl animate-pulse">
                 <span className="text-xl">{recentGifts[0].giftEmoji}</span>
-                <span className="text-xs font-bold text-white">
+                <span className="text-xs font-medium text-white">
                   {recentGifts[0].userName} sent a {recentGifts[0].giftName}!
                 </span>
               </div>
@@ -685,13 +685,13 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                     {cmt.userAvatar ? (
                       <img src={cmt.userAvatar} alt="" className="w-full h-full object-cover" />
                     ) : (
-                      <span className="text-[10px] flex items-center justify-center font-bold">
+                      <span className="text-[10px] flex items-center justify-center font-semibold">
                         {(cmt.userName || "U")[0]}
                       </span>
                     )}
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] font-bold text-pink-400 mr-1.5">
+                    <span className="text-[11px] font-semibold text-pink-400 mr-1.5">
                       {cmt.userName}:
                     </span>
                     <span className="text-xs text-white/95 break-words">{cmt.text}</span>
@@ -748,7 +748,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
             {showGiftDrawer && (
               <div className="bg-zinc-900/95 backdrop-blur-xl rounded-3xl p-4 border border-white/15 shadow-2xl animate-in slide-in-from-bottom duration-200">
                 <div className="flex items-center justify-between pb-3 border-b border-white/10">
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <h4 className="text-xs font-semibold text-white flex items-center gap-1.5">
                     <Icon name="gift" className="w-4 h-4 text-pink-400" />
                     <span>Send a Gift to Creator</span>
                   </h4>
@@ -769,7 +769,7 @@ export const LiveStreamModal: React.FC<LiveStreamModalProps> = ({
                       className="flex flex-col items-center justify-center p-2 rounded-2xl bg-white/5 hover:bg-white/15 border border-white/10 transition active:scale-95 cursor-pointer"
                     >
                       <span className="text-2xl">{gift.emoji}</span>
-                      <span className="text-[11px] font-bold text-white mt-1">{gift.name}</span>
+                      <span className="text-[11px] font-semibold text-white mt-1">{gift.name}</span>
                       <span className="text-[9px] text-amber-400">{gift.coins} coins</span>
                     </button>
                   ))}

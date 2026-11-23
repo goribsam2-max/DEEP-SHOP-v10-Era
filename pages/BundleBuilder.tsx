@@ -96,7 +96,7 @@ const BundleBuilder = () => {
   return (
     <div className="min-h-screen bg-[#F5F5F7] dark:bg-[#000000] pb-24 text-[#1D1D1F] dark:text-[#F5F5F7] transition-colors">
       <div className="max-w-5xl mx-auto px-4 pt-6 md:pt-8">
-        <h1 className="ds-apple-display text-[clamp(1.35rem,3vw,1.8rem)] font-bold tracking-[-0.02em] leading-tight mb-1.5">
+        <h1 className="ds-apple-display text-[clamp(1.35rem,3vw,1.8rem)] font-semibold tracking-[-0.02em] leading-tight mb-1.5">
           Build Custom Tech Box
         </h1>
         <p className="text-xs sm:text-sm text-[#6E6E73] dark:text-[#8E8E93] mb-6">
@@ -108,7 +108,7 @@ const BundleBuilder = () => {
         {/* Left: Selection UI */}
         <div className="space-y-8">
           <div>
-            <h2 className="text-lg font-bold tracking-tight mb-3.5">1. Choose Base Device</h2>
+            <h2 className="text-lg font-semibold tracking-tight mb-3.5">1. Choose Base Device</h2>
             {loading ? (
               <div className="grid grid-cols-2 gap-4">
                 {[0, 1, 2, 3].map((i) => (
@@ -157,7 +157,7 @@ const BundleBuilder = () => {
                 exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
                 transition={prefersReducedMotion ? { duration: 0.15 } : APPLE_SPRING_DEFAULT}
               >
-                <h2 className="text-lg font-bold tracking-tight mb-3.5">
+                <h2 className="text-lg font-semibold tracking-tight mb-3.5">
                   2. Add Accessories (Up to 3)
                 </h2>
                 <div className="grid grid-cols-3 gap-3">
@@ -288,7 +288,7 @@ const BundleBuilder = () => {
               </div>
               <div className="flex justify-between items-baseline mb-5 pt-2 border-t border-black/[0.06] dark:border-white/[0.08] tabular-nums">
                 <span className="font-semibold">Total</span>
-                <span className="text-2xl font-bold tracking-tight">
+                <span className="text-2xl font-semibold tracking-tight">
                   ৳{Math.round(discountedPrice).toLocaleString()}
                 </span>
               </div>

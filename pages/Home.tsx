@@ -17,7 +17,12 @@ import { motion, AnimatePresence, useReducedMotion, PanInfo } from "framer-motio
 import { optimizeImageUrl } from "../lib/imageOptimize";
 import SEO from "../components/SEO";
 import { useTheme } from "../components/ThemeContext";
-import { readOfflineProducts, writeOfflineProducts } from "../lib/offlineStore";
+import {
+  readOfflineProducts,
+  writeOfflineProducts,
+  readCachedHomeSellers,
+  writeCachedHomeSellers,
+} from "../lib/offlineStore";
 import { ProductSkeleton } from "../components/Skeletons";
 import { SectionShowcaseSkeleton, StoryRowSkeleton } from "../components/PageSkeletons";
 import { CustomSectionEmbed } from "../components/CustomSectionEmbed";
@@ -173,16 +178,7 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
   const [displayedCount, setDisplayedCount] = useState(8);
   const [loadingMore, setLoadingMore] = useState(false);
   const orderStats = useProductOrderStats();
-  const [sellers, setSellers] = useState<any[]>(() => {
-    try {
-      const raw = sessionStorage.getItem("ds_home_sellers_v1");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  });
+  const [sellers, setSellers] = useState<any[]>(() => readCachedHomeSellers());
 
   const bestSellerCutoff = useMemo(
     () => computeBestSellerCutoff(products, orderStats.salesByProductId),
@@ -336,22 +332,26 @@ const Home: React.FC<{ userData?: any }> = ({ userData }) => {
       }
     );
 
-    const sellerTimer = setTimeout(async () => {
+    let active = true;
+    const syncSellers = async () => {
       try {
-        if (sessionStorage.getItem("ds_home_sellers_v1")) return;
         const sellerSnap = await getDocs(
           query(collection(db, "users"), where("role", "==", "seller"), limit(24))
         );
-        const list = sellerSnap.docs.map((d) => d.data());
-        setSellers(list);
-        sessionStorage.setItem("ds_home_sellers_v1", JSON.stringify(list));
+        if (!active) return;
+        const list = sellerSnap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+        if (list.length > 0) {
+          setSellers(list);
+          writeCachedHomeSellers(list);
+        }
       } catch {}
-    }, 1800);
+    };
+    void syncSellers();
 
     return () => {
+      active = false;
       unsubscribeProds();
       unsubscribeBanners();
-      clearTimeout(sellerTimer);
     };
   }, []);
 

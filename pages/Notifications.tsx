@@ -269,7 +269,7 @@ const NotificationRow: React.FC<{
     >
       {/* Left Reveal: Toggle Read/Unread */}
       <div
-        className={`absolute inset-y-0 left-0 w-24 flex items-center justify-center rounded-l-2xl bg-[#0071E3] text-white text-xs font-bold transition-opacity ${
+        className={`absolute inset-y-0 left-0 w-24 flex items-center justify-center rounded-l-2xl bg-[#0071E3] text-white text-xs font-medium transition-opacity ${
           offsetX > 6 ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -285,7 +285,7 @@ const NotificationRow: React.FC<{
 
       {/* Right Reveal: Dismiss Notification */}
       <div
-        className={`absolute inset-y-0 right-0 w-24 flex items-center justify-center rounded-r-2xl bg-rose-500 text-white text-xs font-bold transition-opacity ${
+        className={`absolute inset-y-0 right-0 w-24 flex items-center justify-center rounded-r-2xl bg-rose-500 text-white text-xs font-medium transition-opacity ${
           offsetX < -6 ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -651,7 +651,7 @@ const NotificationsPage: React.FC = () => {
     >
       <div className="max-w-[560px] mx-auto px-4 sm:px-6 pt-6">
         <div className="flex items-center justify-between gap-3 mb-5 px-1">
-          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-bold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
+          <h1 className="ds-apple-display text-[22px] sm:text-[26px] font-semibold tracking-[-0.022em] text-[#1D1D1F] dark:text-[#F5F5F7] leading-tight truncate">
             {showSettings ? "Notification Settings" : "Notifications"}
           </h1>
 

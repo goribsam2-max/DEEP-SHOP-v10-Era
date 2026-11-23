@@ -56,7 +56,7 @@ const CallBubble = ({ msg }: { msg: any }) => {
           {icon}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">{title}</p>
+          <p className="text-xs font-medium text-zinc-800 dark:text-zinc-200 truncate">{title}</p>
           <p className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5 font-medium">{subtitle}</p>
         </div>
         <div className="text-[9px] text-zinc-400 self-end shrink-0 font-mono">
@@ -621,7 +621,7 @@ const ManageVGHelpline: React.FC = () => {
       {/* Sidebar List - Hidden on mobile if chat selected */}
       <div className={`w-full md:w-80 border-r border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 overflow-y-auto flex-shrink-0 ${selectedChat ? 'hidden md:block' : 'block'}`}>
         <div className="p-4 border-b border-zinc-200 dark:border-zinc-800 flex justify-between items-center bg-zinc-50/50 dark:bg-zinc-900/50">
-          <h2 className="font-bold text-lg text-zinc-900 dark:text-white">Helpline Chats</h2>
+          <h2 className="font-semibold text-lg text-zinc-900 dark:text-white">Helpline Chats</h2>
         </div>
         {chats.length === 0 ? (
           <div className="p-8 text-center text-zinc-500 text-sm">No chats active</div>
@@ -636,7 +636,7 @@ const ManageVGHelpline: React.FC = () => {
               className={`p-4 border-b border-zinc-100 dark:border-zinc-800 cursor-pointer hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors ${selectedChat === chat.id ? 'bg-zinc-100 dark:bg-zinc-800' : ''}`}
             >
               <div className="flex justify-between items-center mb-1">
-                <div className="font-bold text-sm text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
+                <div className="font-semibold text-sm text-zinc-900 dark:text-white truncate flex items-center gap-1.5">
                   {isUserOnline(chat.id) && (
                     <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -646,7 +646,7 @@ const ManageVGHelpline: React.FC = () => {
                   {chat.userName || chat.id.replace(/guest_/, 'Guest ')}
                 </div>
                 {chat.unreadCountAdmin && chat.unreadCountAdmin > 0 ? (
-                  <div className="bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <div className="bg-emerald-500 text-white text-[10px] font-semibold px-2 py-0.5 rounded-full">
                     {chat.unreadCountAdmin}
                   </div>
                 ) : null}
@@ -669,7 +669,7 @@ const ManageVGHelpline: React.FC = () => {
                   <ChevronLeft className="w-6 h-6" />
                 </button>
                 <div>
-                  <h3 className="font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                  <h3 className="font-semibold text-zinc-900 dark:text-white flex items-center gap-1.5">
                     {activeChatDetails && isUserOnline(activeChatDetails.id) && (
                       <span className="relative flex h-2 w-2">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -762,7 +762,7 @@ const ManageVGHelpline: React.FC = () => {
                   <Phone className="w-12 h-12 text-emerald-500 relative z-10" />
                   <div className="absolute inset-0 rounded-full border-4 border-emerald-500/30 scale-125" />
                 </div>
-                <h2 className="text-3xl font-bold mb-1 font-sans tracking-tight">Incoming Call</h2>
+                <h2 className="text-3xl font-semibold mb-1 font-sans tracking-tight">Incoming Call</h2>
                 <p className="text-zinc-400 mb-2">User is calling support</p>
                 <p className="text-sm text-emerald-400 font-mono tracking-wider mb-12 uppercase">
                   {chats.find(c => c.id === activeCallId)?.userName || 'Guest User'}
@@ -783,7 +783,7 @@ const ManageVGHelpline: React.FC = () => {
                   <Phone className="w-12 h-12 text-indigo-500 relative z-10" />
                   <div className="absolute inset-0 rounded-full border-4 border-indigo-500/30 scale-125" />
                 </div>
-                <h2 className="text-3xl font-bold mb-1 font-sans tracking-tight">
+                <h2 className="text-3xl font-semibold mb-1 font-sans tracking-tight">
                   {callState === 'calling' ? 'Calling User...' : 'Ringing...'}
                 </h2>
                 <p className="text-zinc-400 mb-2">
@@ -842,7 +842,7 @@ const ManageVGHelpline: React.FC = () => {
                     <div className="w-32 h-32 rounded-full bg-indigo-600 flex items-center justify-center mb-8 shadow-xl">
                       <Phone className="w-12 h-12" />
                     </div>
-                    <div className="text-2xl font-bold mb-1 font-sans tracking-tight">Support Call Active</div>
+                    <div className="text-2xl font-semibold mb-1 font-sans tracking-tight">Support Call Active</div>
                     <div className="text-sm text-zinc-400 mb-4 capitalize">
                       Connected to {chats.find(c => c.id === activeCallId)?.userName || 'Guest'}
                     </div>

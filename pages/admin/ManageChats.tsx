@@ -130,7 +130,7 @@ export default function ManageChats() {
   return (
     <div className="flex flex-col h-[calc(100vh-80px)] -mx-4 -mt-4 md:m-0 md:h-[calc(100vh-100px)]">
       <div className="md:h-auto h-14 flex justify-between items-center shrink-0 px-4 pt-2 md:p-0 md:mb-6">
-        <h2 className="text-xl md:text-2xl font-bold tracking-tight">Support Chats</h2>
+        <h2 className="text-xl md:text-2xl font-semibold tracking-tight">Support Chats</h2>
       </div>
 
       <div className="flex-1 bg-white dark:bg-zinc-900 md:rounded-3xl border-y md:border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden flex">

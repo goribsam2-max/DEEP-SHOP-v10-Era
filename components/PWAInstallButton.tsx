@@ -70,7 +70,7 @@ export const PWAInstallButton: React.FC<PWAInstallButtonProps> = ({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-base font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                    <h3 className="text-base font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                       Install on iPhone / iPad
                     </h3>
                     <p className="text-xs text-[#6E6E73] dark:text-[#98989D] mt-0.5">

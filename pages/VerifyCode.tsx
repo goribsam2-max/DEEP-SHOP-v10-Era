@@ -19,7 +19,7 @@ const VerifyCode: React.FC = () => {
     const signupPhone = sessionStorage.getItem('signup_phone');
     if (signupPhone) setPhone(signupPhone);
     
-    if (!window.confirmationResult) {
+    if (!(window as any).confirmationResult) {
       notify("OTP session expired or invalid. Please sign up again.", "error");
       navigate("/signup");
     }
@@ -28,11 +28,11 @@ const VerifyCode: React.FC = () => {
   const handleVerify = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (code.length !== 6) return notify("Please enter a 6-digit code.", "error");
-    if (!window.confirmationResult) return navigate("/signup");
+    if (!(window as any).confirmationResult) return navigate("/signup");
 
     setLoading(true);
     try {
-      const result = await window.confirmationResult.confirm(code);
+      const result = await (window as any).confirmationResult.confirm(code);
       const user = result.user;
       
       const name = sessionStorage.getItem('signup_name') || "";
@@ -94,7 +94,7 @@ const VerifyCode: React.FC = () => {
       sessionStorage.removeItem('signup_name');
       sessionStorage.removeItem('signup_phone');
       sessionStorage.removeItem('signup_password');
-      delete window.confirmationResult;
+      delete (window as any).confirmationResult;
 
       navigate("/");
     } catch (err: any) {
@@ -108,7 +108,7 @@ const VerifyCode: React.FC = () => {
     <div className="ds-apple-shop-canvas min-h-[100dvh] flex flex-col">
       <div className="flex-1 flex items-center justify-center px-5 py-8">
         <div className="ds-apple-surface w-full max-w-md rounded-[28px] p-6 sm:p-8 text-center">
-          <h1 className="ds-apple-display text-[26px] font-bold tracking-[-0.025em] mb-2 text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <h1 className="ds-apple-display text-[26px] font-semibold tracking-[-0.025em] mb-2 text-[#1D1D1F] dark:text-[#F5F5F7]">
             Verify Code
           </h1>
           <p className="ds-apple-muted text-[14.5px] mb-8">
@@ -125,7 +125,7 @@ const VerifyCode: React.FC = () => {
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
               placeholder="000000"
-              className="ds-apple-input w-full text-center text-[32px] tracking-[0.65em] font-bold tabular-nums rounded-2xl h-20 outline-none"
+              className="ds-apple-input w-full text-center text-[32px] tracking-[0.65em] font-semibold tabular-nums rounded-2xl h-20 outline-none"
               autoFocus
             />
 

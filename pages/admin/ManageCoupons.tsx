@@ -100,14 +100,14 @@ const ManageCoupons: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 mb-1.5 text-shine">
               Promotions
             </h1>
-            <p className="text-zinc-400 text-[10px] md:text-xs font-bold tracking-normal ">
+            <p className="text-zinc-400 text-[10px] md:text-xs font-normal tracking-normal ">
               Discount Management
             </p>
           </div>
         </div>
         <button
           onClick={() => setShowAddForm(!showAddForm)}
-          className={`px-6 py-3 rounded-full font-bold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${showAddForm ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"}`}
+          className={`px-6 py-3 rounded-full font-semibold text-[10px] tracking-normal shadow-lg transition-all active:scale-95 border hover-tilt hover-glow ${showAddForm ? "bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 border-zinc-200 dark:border-zinc-700" : "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-900 dark:bg-zinc-100 dark:text-zinc-900"}`}
         >
           {showAddForm ? "Cancel" : "New Coupon"}
         </button>
@@ -122,7 +122,7 @@ const ManageCoupons: React.FC = () => {
         <form onSubmit={handleAddCoupon} className="w-full space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6">
             <div>
-              <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+              <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                 Coupon Code
               </label>
               <input
@@ -140,7 +140,7 @@ const ManageCoupons: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                       Discount Amount
                     </label>
                     <div className="flex space-x-2">
@@ -167,7 +167,7 @@ const ManageCoupons: React.FC = () => {
                     </div>
                   </div>
                   <div className="md:col-span-2">
-                    <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                       Max Uses
                     </label>
                     <input
@@ -185,7 +185,7 @@ const ManageCoupons: React.FC = () => {
                   </div>
                   <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 lg:gap-6 mt-4">
                     <div>
-                      <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                         Min Order Amount (৳)
                       </label>
                       <input
@@ -201,7 +201,7 @@ const ManageCoupons: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mb-2 block">
+                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2 block">
                         Expiry Date
                       </label>
                       <input
@@ -221,13 +221,13 @@ const ManageCoupons: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="w-full md:w-auto px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 border-none dark:text-zinc-100 rounded-lg font-bold tracking-wide transition-all outline-none!"
+                className="w-full md:w-auto px-8 py-3 bg-zinc-200 dark:bg-zinc-800 text-zinc-900 border-none dark:text-zinc-100 rounded-lg font-semibold tracking-wide transition-all outline-none!"
               >
                 Cancel
               </button>
               <button
                 type="submit"
-                className="w-full md:w-auto px-8 py-3 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-bold tracking-wide shadow-xl hover-lift active:scale-95 transition-all outline-none!"
+                className="w-full md:w-auto px-8 py-3 bg-zinc-900 border-none text-white dark:bg-zinc-100 dark:text-zinc-900 rounded-lg font-semibold tracking-wide shadow-xl hover-lift active:scale-95 transition-all outline-none!"
               >
                 Create Promo
               </button>
@@ -255,11 +255,11 @@ const ManageCoupons: React.FC = () => {
                   <Icon name="ticket-alt" />
                 </div>
                 <div>
-                  <div className="text-sm font-bold text-zinc-900 dark:text-zinc-100 tracking-tight uppercase">
+                  <div className="text-sm font-medium text-zinc-900 dark:text-zinc-100 tracking-tight uppercase">
                     {coupon.code}
                   </div>
                   <div className="text-xs text-neutral-500 dark:text-neutral-400 font-medium flex gap-2 items-center mt-1">
-                    <span className="text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300 font-bold">
+                    <span className="text-zinc-800 dark:text-zinc-200 dark:text-zinc-700 dark:text-zinc-300 font-semibold">
                       {coupon.type === "percent" ? `${coupon.discount}% OFF` : `৳${coupon.discount} OFF`}
                     </span>
                     <span>•</span>
@@ -283,7 +283,7 @@ const ManageCoupons: React.FC = () => {
           {coupons.length === 0 && (
             <div className="py-20 text-center bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-200 dark:border-zinc-700 shadow-sm text-zinc-400">
               <Icon name="ticket-alt" className="text-lg mb-4 text-zinc-300" />
-              <p className="font-bold text-xs tracking-normal">
+              <p className="font-medium text-xs tracking-normal">
                 No active coupons
               </p>
             </div>

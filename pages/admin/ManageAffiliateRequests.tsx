@@ -148,7 +148,7 @@ const ManageAffiliateRequests: React.FC = () => {
             <h1 className="text-xl md:text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">
               Affiliate Requests
             </h1>
-            <p className="text-[10px] text-zinc-400 font-bold tracking-normal mt-1">
+            <p className="text-[10px] text-zinc-400 font-normal tracking-normal mt-1">
               Manage Partner Applications
             </p>
           </div>
@@ -171,7 +171,7 @@ const ManageAffiliateRequests: React.FC = () => {
                     {req.fullName}
                   </span>
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${req.status === "pending" ? "bg-yellow-100 text-yellow-700" : req.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${req.status === "pending" ? "bg-yellow-100 text-yellow-700" : req.status === "approved" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
                   >
                     {req.status}
                   </span>
@@ -227,7 +227,7 @@ const ManageAffiliateRequests: React.FC = () => {
           </div>
         ))}
         {requests.length === 0 && (
-          <div className="py-20 text-center text-zinc-400 font-bold tracking-normal text-xs">
+          <div className="py-20 text-center text-zinc-400 font-medium tracking-normal text-xs">
             No applications found.
           </div>
         )}

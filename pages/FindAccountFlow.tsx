@@ -147,7 +147,7 @@ export const FindAccountPage: React.FC = () => {
       >
         <form onSubmit={handleContinue} className="space-y-4 pt-1">
           <div className="space-y-2">
-            <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Find your account
             </h1>
             <p className="text-[15px] leading-[1.45] text-[#6E6E73] dark:text-[#98989D]">
@@ -275,7 +275,7 @@ export const ChooseAccountPage: React.FC = () => {
         desktopSubtext="Choose the account you want to sign in to from the matching profiles below."
       >
         <div className="space-y-4 pt-1">
-          <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+          <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
             Choose your account
           </h1>
 
@@ -298,7 +298,7 @@ export const ChooseAccountPage: React.FC = () => {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <span className="text-[10px] font-black text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <span className="text-[10px] font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     DS
                   </span>
                 )}
@@ -670,7 +670,7 @@ export const ReviewAccountPage: React.FC = () => {
       >
         {stepMode === "review" && (
           <div className="pt-2 flex flex-col items-center text-center">
-            <h1 className="text-[26px] font-bold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="text-[26px] font-semibold tracking-[-0.025em] leading-[1.2] text-[#1D1D1F] dark:text-[#F5F5F7]">
               Review your selection
             </h1>
             <p className="mt-2 text-[16px] text-[#6E6E73] dark:text-[#98989D]">
@@ -724,7 +724,7 @@ export const ReviewAccountPage: React.FC = () => {
                 displayName={account.displayName}
                 sizeClass="w-20 h-20"
               />
-              <h2 className="mt-3 text-[20px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+              <h2 className="mt-3 text-[20px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                 {account.displayName}
               </h2>
               <p className="text-[13px] text-[#6E6E73] dark:text-[#98989D]">
@@ -794,7 +794,7 @@ export const ReviewAccountPage: React.FC = () => {
             <div className="mx-auto w-16 h-16 rounded-full bg-[#0071E3]/10 dark:bg-[#0A84FF]/16 text-[#0071E3] dark:text-[#0A84FF] flex items-center justify-center">
               <Check className="w-8 h-8 stroke-[2.5]" />
             </div>
-            <h2 className="text-[22px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h2 className="text-[22px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
               Password reset requested
             </h2>
             <p className="text-[15px] leading-relaxed text-[#6E6E73] dark:text-[#98989D]">

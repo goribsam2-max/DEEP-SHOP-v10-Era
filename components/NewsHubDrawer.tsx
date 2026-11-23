@@ -366,7 +366,7 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
             <div className="flex flex-col gap-3.5 px-4 pt-5 pb-28 min-h-max">
               {/* Top Header: Feeds + Circled Plus + Pen (Customize Menu) */}
               <div className="shrink-0 flex items-center justify-between px-1 pt-0.5 gap-2">
-                <h2 className="text-[25px] font-bold tracking-tight text-zinc-950 dark:text-white leading-none truncate">
+                <h2 className="text-[25px] font-semibold tracking-tight text-zinc-950 dark:text-white leading-none truncate">
                   {isCustomizing ? "Customize" : "Feeds"}
                 </h2>
 
@@ -555,7 +555,7 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
                               )}
                             </span>
                             <div className="min-w-0">
-                              <span className="font-bold text-[15px] text-zinc-950 dark:text-white block truncate">
+                              <span className="font-semibold text-[15px] text-zinc-950 dark:text-white block truncate">
                                 {def.label}
                               </span>
                               {def.sublabel && (
@@ -598,7 +598,7 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
                         className="w-full flex items-center justify-between px-4 py-4 hover:bg-black/[0.025] dark:hover:bg-white/[0.04] transition cursor-pointer text-left"
                       >
                         <div className="min-w-0">
-                          <span className="font-bold text-[16px] text-zinc-950 dark:text-white block leading-snug">
+                          <span className="font-semibold text-[16px] text-zinc-950 dark:text-white block leading-snug">
                             {def.label}
                           </span>
                           {def.sublabel && (
@@ -646,7 +646,7 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
                                 <Check className="w-3 h-3 stroke-[3]" />
                               )}
                             </span>
-                            <span className="font-bold text-[15px] text-zinc-950 dark:text-white truncate">
+                            <span className="font-semibold text-[15px] text-zinc-950 dark:text-white truncate">
                               {def.label}
                             </span>
                           </button>
@@ -682,7 +682,7 @@ export const NewsHubDrawer: React.FC<NewsHubDrawerProps> = ({
                         onClick={def.onClick}
                         className="w-full flex items-center justify-between px-4 py-3.5 hover:bg-black/[0.025] dark:hover:bg-white/[0.04] transition cursor-pointer text-left"
                       >
-                        <span className="font-bold text-[15.5px] text-zinc-950 dark:text-white">
+                        <span className="font-semibold text-[15.5px] text-zinc-950 dark:text-white">
                           {def.label}
                         </span>
                         {def.trailing}

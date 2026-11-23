@@ -18,6 +18,8 @@ import {
   useProductOrderStats,
   type ProductAutoTag,
 } from "../../lib/productTags";
+import { readSellerMetaCache, writeSellerMetaEntry } from "../../lib/offlineStore";
+import { readCachedCommunityUsers } from "../../lib/loopsCache";
 
 export interface ProductCardProps {
   product: Product;
@@ -48,7 +50,7 @@ function renderAutoTagBadge(tag: ProductAutoTag, compact = false) {
   return (
     <span
       key={tag.id}
-      className={`inline-flex items-center gap-1 rounded-lg font-bold tracking-tight whitespace-nowrap ${getAutoTagBadgeStyle(
+      className={`inline-flex items-center gap-1 rounded-lg font-semibold tracking-tight whitespace-nowrap ${getAutoTagBadgeStyle(
         tag.id
       )} ${compact ? "px-1.5 py-0.5 text-[10px]" : "px-2 py-0.5 text-[10.5px]"}`}
     >
@@ -66,8 +68,39 @@ interface ResolvedSellerMeta {
 
 const sellerMetaCache = new Map<string, ResolvedSellerMeta>();
 const sellerPendingCache = new Map<string, Promise<ResolvedSellerMeta>>();
+let sellerCacheHydrated = false;
+
+function ensureSellerCacheHydrated() {
+  if (sellerCacheHydrated || typeof window === "undefined") return;
+  sellerCacheHydrated = true;
+  try {
+    const persisted = readSellerMetaCache();
+    Object.entries(persisted).forEach(([sid, meta]) => {
+      if (sid && meta?.name) {
+        sellerMetaCache.set(sid, {
+          name: meta.name,
+          isVerified: Boolean(meta.isVerified),
+          storeId: meta.storeId || sid,
+        });
+      }
+    });
+    const communityUsers = readCachedCommunityUsers();
+    communityUsers.forEach((u) => {
+      const uid = String(u?.uid || u?.id || "").trim();
+      if (!uid || sellerMetaCache.has(uid)) return;
+      const name = String(u.shopName || u.displayName || u.name || "").trim();
+      if (!name) return;
+      sellerMetaCache.set(uid, {
+        name,
+        isVerified: Boolean(u.isVerified || u.kycStatus === "verified"),
+        storeId: uid,
+      });
+    });
+  } catch {}
+}
 
 function getInitialSellerMeta(product: Product): ResolvedSellerMeta {
+  ensureSellerCacheHydrated();
   const p = product as any;
   const embeddedName =
     p.shopName || p.storeName || p.sellerShopName || p.sellerName || "";
@@ -192,6 +225,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               storeId: sid,
             };
             sellerMetaCache.set(sid, meta);
+            writeSellerMetaEntry(sid, {
+              ...meta,
+              displayName: d.displayName || "",
+              shopName: d.shopName || d.storeName || "",
+              photoURL: d.photoURL || "",
+              username: d.username || "",
+              kycStatus: d.kycStatus || "",
+              isVerifiedBadge: isVerified,
+            });
             return meta;
           }
 
@@ -207,6 +249,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             storeId: sid,
           };
           sellerMetaCache.set(sid, fallbackMeta);
+          writeSellerMetaEntry(sid, fallbackMeta);
           return fallbackMeta;
         })
         .catch(() => getInitialSellerMeta(product))
@@ -341,7 +384,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {!isOutOfStock && ((hasDiscount && discountPercentage > 0) || primaryAutoTag) && (
                 <div className="absolute top-2 left-2 z-20 flex flex-col items-start gap-1 pointer-events-none">
                   {hasDiscount && discountPercentage > 0 && (
-                    <span className="ds-liquid-discount-tag rounded-lg px-1.5 py-0.5 text-[10px] font-bold tabular-nums whitespace-nowrap">
+                    <span className="ds-liquid-discount-tag rounded-lg px-1.5 py-0.5 text-[10px] font-semibold tabular-nums whitespace-nowrap">
                       -{discountPercentage}%
                     </span>
                   )}
@@ -390,12 +433,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                   </button>
                 </div>
 
-                <h3 className="text-[14px] font-bold text-slate-900 dark:text-white leading-snug line-clamp-1">
+                <h3 className="text-[13px] sm:text-sm font-medium text-slate-900 dark:text-white leading-snug line-clamp-1">
                   {product.name}
                 </h3>
 
                 {/* Product Meta Description Excerpt */}
-                <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
+                <p className="text-[11px] sm:text-xs font-normal text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
                   {metaDescription}
                 </p>
               </div>
@@ -403,7 +446,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <div className="mt-2 pt-2 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-baseline gap-1.5 tabular-nums">
-                    <span className="text-[15px] font-extrabold text-slate-900 dark:text-white whitespace-nowrap">
+                    <span className="text-[15px] font-semibold text-slate-900 dark:text-white whitespace-nowrap">
                       {formatPrice(displayPrice)}
                     </span>
                     {hasDiscount && (
@@ -454,7 +497,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 }`}
               />
               {hasDiscount && discountPercentage > 0 && !isOutOfStock && (
-                <span className="absolute top-2.5 left-2.5 z-20 ds-liquid-discount-tag rounded-lg px-2 py-0.5 text-[11px] font-bold tabular-nums whitespace-nowrap">
+                <span className="absolute top-2.5 left-2.5 z-20 ds-liquid-discount-tag rounded-lg px-2 py-0.5 text-[11px] font-semibold tabular-nums whitespace-nowrap">
                   -{discountPercentage}% OFF
                 </span>
               )}
@@ -498,7 +541,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 {autoTags.slice(0, 2).map((tag) => renderAutoTagBadge(tag, true))}
               </div>
 
-              <h3 className="text-lg font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-snug line-clamp-1 group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
+              <h3 className="text-lg font-semibold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-snug line-clamp-1 group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
                 {product.name}
               </h3>
 
@@ -550,7 +593,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     {formatPrice(product.price)}
                   </div>
                 )}
-                <div className="text-xl lg:text-2xl font-extrabold text-slate-900 dark:text-white tracking-tight whitespace-nowrap">
+                <div className="text-xl lg:text-2xl font-semibold text-slate-900 dark:text-white tracking-tight whitespace-nowrap">
                   {formatPrice(displayPrice)}
                 </div>
               </div>
@@ -623,7 +666,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             {!isOutOfStock && ((hasDiscount && discountPercentage > 0) || primaryAutoTag) && (
               <div className="absolute top-2 left-2 z-20 flex flex-col items-start gap-1 pointer-events-none">
                 {hasDiscount && discountPercentage > 0 && (
-                  <span className="ds-liquid-discount-tag rounded-lg px-2 py-0.5 text-[10px] font-bold tabular-nums tracking-tight whitespace-nowrap">
+                  <span className="ds-liquid-discount-tag rounded-lg px-2 py-0.5 text-[10px] font-semibold tabular-nums tracking-tight whitespace-nowrap">
                     -{discountPercentage}%
                   </span>
                 )}
@@ -685,12 +728,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               </div>
 
               {/* Balanced Title */}
-              <h3 className="text-[13px] font-bold text-slate-900 dark:text-slate-100 leading-snug line-clamp-2">
+              <h3 className="text-[13px] sm:text-sm font-medium text-slate-900 dark:text-slate-100 leading-snug line-clamp-2">
                 {product.name}
               </h3>
 
               {/* Product Meta Description Excerpt */}
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
+              <p className="text-[11px] sm:text-xs font-normal text-slate-600 dark:text-slate-400 leading-snug line-clamp-2">
                 {metaDescription}
               </p>
             </div>
@@ -698,7 +741,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             {/* Mobile Price + Quick Cart Action Footer */}
             <div className="pt-2 border-t border-slate-900/[0.06] dark:border-white/[0.08] flex items-center justify-between gap-1.5">
               <div className="min-w-0 tabular-nums">
-                <div className="text-[14px] font-extrabold text-slate-900 dark:text-white leading-tight truncate">
+                <div className="text-[14px] font-semibold text-slate-900 dark:text-white leading-tight truncate">
                   {formatPrice(displayPrice)}
                 </div>
                 {hasDiscount && (
@@ -750,7 +793,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             {!isOutOfStock && ((hasDiscount && discountPercentage > 0) || primaryAutoTag) && (
               <div className="absolute top-3 left-3 z-20 flex flex-col items-start gap-1.5 pointer-events-none">
                 {hasDiscount && discountPercentage > 0 && (
-                  <span className="ds-liquid-discount-tag rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums tracking-tight whitespace-nowrap">
+                  <span className="ds-liquid-discount-tag rounded-lg px-2.5 py-1 text-[11px] font-semibold tabular-nums tracking-tight whitespace-nowrap">
                     -{discountPercentage}%
                   </span>
                 )}
@@ -850,12 +893,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               </div>
 
               {/* Crisp Product Title */}
-              <h3 className="text-[15px] font-bold text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-snug line-clamp-1 group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
+              <h3 className="text-sm lg:text-[15px] font-medium text-[#1D1D1F] dark:text-[#F5F5F7] tracking-tight leading-snug line-clamp-1 group-hover:text-[#0071E3] dark:group-hover:text-[#0A84FF] transition-colors">
                 {product.name}
               </h3>
 
               {/* Product Meta Description Excerpt */}
-              <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed pt-0.5">
+              <p className="text-xs lg:text-[13px] font-normal text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed pt-0.5">
                 {metaDescription}
               </p>
             </div>
@@ -868,7 +911,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     {formatPrice(product.price)}
                   </div>
                 )}
-                <div className="text-base lg:text-[17px] font-extrabold text-slate-900 dark:text-white tracking-tight leading-none whitespace-nowrap">
+                <div className="text-base lg:text-[17px] font-semibold text-slate-900 dark:text-white tracking-tight leading-none whitespace-nowrap">
                   {formatPrice(displayPrice)}
                 </div>
               </div>

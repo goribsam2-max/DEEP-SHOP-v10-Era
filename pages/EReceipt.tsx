@@ -89,7 +89,7 @@ const EReceipt: React.FC = () => {
       >
         <div className="flex items-center justify-between gap-3 mb-4 px-1 print:hidden">
           <div className="min-w-0">
-            <h1 className="text-[20px] font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h1 className="text-[20px] font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
               Official E-Receipt
             </h1>
             <p className="text-xs text-[#6E6E73] dark:text-[#98989D] tabular-nums">
@@ -122,7 +122,7 @@ const EReceipt: React.FC = () => {
             <div className="w-14 h-14 bg-[#1D1D1F] dark:bg-[#F5F5F7] text-white dark:text-[#1D1D1F] rounded-full flex items-center justify-center mb-4">
               <ShoppingBag className="w-6 h-6" />
             </div>
-            <h2 className="text-[19px] font-bold tracking-[-0.02em] mb-0.5 text-[#1D1D1F] dark:text-[#F5F5F7]">
+            <h2 className="text-[19px] font-semibold tracking-[-0.02em] mb-0.5 text-[#1D1D1F] dark:text-[#F5F5F7]">
               DEEP SHOP
             </h2>
             <p className="text-[11px] text-[#6E6E73] dark:text-[#98989D] font-semibold uppercase tracking-[0.06em]">
@@ -255,7 +255,7 @@ const EReceipt: React.FC = () => {
                       ((order.subTotal || subTotal) - (order.discount || 0)))}
                   </span>
                 </div>
-                <div className="flex justify-between text-[19px] font-bold pt-3.5 border-t border-black/[0.06] dark:border-white/[0.08] tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
+                <div className="flex justify-between text-[19px] font-semibold pt-3.5 border-t border-black/[0.06] dark:border-white/[0.08] tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7]">
                   <span>Total</span>
                   <span className="tabular-nums">{formatPrice(order.total)}</span>
                 </div>
@@ -275,7 +275,7 @@ const EReceipt: React.FC = () => {
                         </span>
                       </div>
                     )}
-                    <div className="flex justify-between text-[14px] font-bold pt-2.5 border-t border-dashed border-black/[0.1] dark:border-white/[0.12] tracking-tight text-[#FF3B30] dark:text-[#FF453A] mt-2">
+                    <div className="flex justify-between text-[14px] font-semibold pt-2.5 border-t border-dashed border-black/[0.1] dark:border-white/[0.12] tracking-tight text-[#FF3B30] dark:text-[#FF453A] mt-2">
                       <span>Due Amount (COD)</span>
                       <span className="tabular-nums">
                         {formatPrice(Math.max(0, order.total - order.advanceAmount - (order.courierPaymentDetails?.amount || 0)))}

@@ -86,7 +86,7 @@ export default function BundleDeals() {
           className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-8 bg-white dark:bg-[#1C1C1E] border border-black/[0.06] dark:border-white/[0.1] p-5 sm:p-7 rounded-[26px] shadow-xs"
         >
           <div className="space-y-1 min-w-0">
-            <h1 className="ds-apple-display text-[clamp(1.3rem,3vw,1.85rem)] font-bold tracking-[-0.02em] leading-tight flex items-center gap-2">
+            <h1 className="ds-apple-display text-[clamp(1.3rem,3vw,1.85rem)] font-semibold tracking-[-0.02em] leading-tight flex items-center gap-2">
               <span className="truncate">Dynamic Bundles</span>
               <Zap className="w-5 h-5 text-[#FF9500] dark:text-[#FF9F0A] fill-current shrink-0" />
             </h1>
@@ -123,7 +123,7 @@ export default function BundleDeals() {
                 <span className="text-xs font-semibold uppercase tracking-[0.04em] text-[#6E6E73] dark:text-[#8E8E93]">
                   Bundle Items ({currentBundle.length})
                 </span>
-                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#248A3D]/10 dark:bg-[#30D158]/15 text-[#248A3D] dark:text-[#30D158] text-xs font-bold tabular-nums">
+                <span className="inline-flex items-center px-3 py-1 rounded-full bg-[#248A3D]/10 dark:bg-[#30D158]/15 text-[#248A3D] dark:text-[#30D158] text-xs font-semibold tabular-nums">
                   Save {formatPrice(savings)}
                 </span>
               </div>
@@ -149,7 +149,7 @@ export default function BundleDeals() {
                         {product.name}
                       </h3>
                       <div className="flex items-center gap-2.5 tabular-nums">
-                        <span className="text-lg sm:text-xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                        <span className="text-lg sm:text-xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                           {formatPrice(
                             Math.floor(
                               product.isOffer && product.offerPrice
@@ -168,7 +168,7 @@ export default function BundleDeals() {
                   {idx < currentBundle.length - 1 && (
                     <div className="flex items-center gap-3">
                       <div className="flex-1 h-px bg-black/[0.06] dark:bg-white/[0.08]" />
-                      <span className="w-7 h-7 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center text-xs font-bold text-[#6E6E73] dark:text-[#8E8E93]">
+                      <span className="w-7 h-7 rounded-full bg-[#F5F5F7] dark:bg-[#2C2C2E] flex items-center justify-center text-xs font-medium text-[#6E6E73] dark:text-[#8E8E93]">
                         +
                       </span>
                       <div className="flex-1 h-px bg-black/[0.06] dark:bg-white/[0.08]" />
@@ -179,7 +179,7 @@ export default function BundleDeals() {
             </motion.div>
 
             <div className="bg-white dark:bg-[#1C1C1E] rounded-[28px] p-6 sm:p-8 lg:sticky lg:top-20 border border-black/[0.06] dark:border-white/[0.1] shadow-sm space-y-6">
-              <h2 className="text-xl font-bold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2">
+              <h2 className="text-xl font-semibold tracking-tight text-[#1D1D1F] dark:text-[#F5F5F7] flex items-center gap-2">
                 <Gift className="w-5 h-5 text-[#0071E3] dark:text-[#0A84FF]" />
                 <span>Bundle Order Summary</span>
               </h2>
@@ -197,7 +197,7 @@ export default function BundleDeals() {
                   <span className="font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     Bundle Price
                   </span>
-                  <span className="text-2xl font-bold text-[#1D1D1F] dark:text-[#F5F5F7]">
+                  <span className="text-2xl font-semibold text-[#1D1D1F] dark:text-[#F5F5F7]">
                     {formatPrice(discountPrice)}
                   </span>
                 </div>

@@ -366,7 +366,7 @@ const SignIn: React.FC = () => {
 
         {hasPendingOrder && (
           <div className="mb-4 p-3.5 rounded-2xl bg-[#0071E3]/8 dark:bg-[#0A84FF]/14 border border-[#0071E3]/20 dark:border-[#0A84FF]/25 text-xs text-[#1D1D1F] dark:text-[#F5F5F7]">
-            <p className="font-bold">
+            <p className="font-semibold">
               Log in or create a new account to view your order
             </p>
             <p className="mt-0.5 text-[11px] opacity-80">

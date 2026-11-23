@@ -729,7 +729,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-[14px] font-bold text-zinc-700 dark:text-zinc-200">
+              <span className="text-[14px] font-semibold text-zinc-700 dark:text-zinc-200">
                 {avatarInitial}
               </span>
             )}
@@ -938,7 +938,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
                 className="w-full h-full object-cover"
               />
             ) : (
-              <span className="text-[14px] font-bold text-zinc-700 dark:text-zinc-200">
+              <span className="text-[14px] font-semibold text-zinc-700 dark:text-zinc-200">
                 {avatarInitial}
               </span>
             )}
@@ -1229,6 +1229,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
           </AnimatePresence>
           <NewsVideoPlayer
             videoSource={resolvedVideo}
+            posterUrl={(post as any).thumbnailUrl || (post as any).videoThumbnail || (post as any).coverUrl || post.images?.[0] || ""}
             bgMusicUrl={post.music?.audioUrl || post.music?.url}
             bgMusicVolume={post.music?.bgMusicVolume ?? 1.0}
             videoVolume={post.music?.videoVolume ?? 1.0}
@@ -1305,7 +1306,7 @@ export const LoopPostCard: React.FC<LoopPostCardProps> = ({
               </motion.div>
             )}
           </AnimatePresence>
-          <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-bold tracking-wider">
+          <span className="absolute bottom-3 left-3 z-20 px-2 py-0.5 rounded-md bg-black/65 text-white text-[10px] font-medium tracking-wider">
             GIF
           </span>
           {playableCardBgMusicUrl && (
